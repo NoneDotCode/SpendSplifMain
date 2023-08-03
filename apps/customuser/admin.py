@@ -1,1 +1,13 @@
-# Register your models here.
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+
+from apps.customuser.models import CustomUser
+
+
+class CustomUserAdmin(UserAdmin):
+    # Add any additional fields you want to display in the user list view
+    list_display = ("id", "username", "email", "language", "tag", "password")
+
+
+# Register your custom admin
+admin.site.register(CustomUser, CustomUserAdmin)
