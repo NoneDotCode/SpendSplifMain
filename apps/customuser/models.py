@@ -29,5 +29,6 @@ class CustomUser(AbstractUser):
         """
         if not self.tag:
             self.tag = self.generate_random_tag()
-
+        if not self.id:
+            self.set_password(self.password)
         super().save(*args, **kwargs)
