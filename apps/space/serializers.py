@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Space
+from apps.space.models import Space
 
 
 class SpaceSerializer(serializers.ModelSerializer):
