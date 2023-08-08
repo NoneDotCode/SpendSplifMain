@@ -9,7 +9,6 @@ env = environ.Env()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 
-
 # Quick-start development settings - unsuitable for production
 
 
@@ -18,9 +17,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG")
 
-
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -43,11 +40,10 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "customuser.CustomUser"
 
-
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-        "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -74,7 +70,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
-
 
 # Database
 
@@ -106,7 +101,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 
 LANGUAGE_CODE = "en-us"
@@ -119,7 +113,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
@@ -128,7 +121,6 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
-
 
 # jwt
 
