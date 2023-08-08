@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "corsheaders",
     # Custom apps
     "apps.customuser",
+    "apps.space",
 ]
 
 # Custom user model auth
@@ -77,8 +78,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Database
 
-DATABASES = {"default": dj_database_url.parse(env("DATABASE_URL"))}
-
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env.int("DB_PORT"),
+    }
+}
 
 # Password validation
 
