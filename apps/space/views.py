@@ -2,8 +2,8 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse_lazy
 
-from .serializers import SpaceSerializer
-from .models import Space
+from apps.space.models import Space
+from apps.space.serializers import SpaceSerializer
 
 
 class CreateSpace(generics.CreateAPIView):
