@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import *
+from apps.space.views import AllSpaces, CreateSpace, EditSpace
 
 urlpatterns = [
     path('create_space/', CreateSpace.as_view(), name='create_space'),
