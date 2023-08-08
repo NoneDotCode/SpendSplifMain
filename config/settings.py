@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     # Custom apps
     "apps.customuser",
     "apps.space",
+    "apps.account",
 ]
 
 # Custom user model auth

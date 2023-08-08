@@ -16,3 +16,11 @@ class AllSpaces(generics.ListAPIView):
 
     def get_queryset(self):
         return Space.objects.filter(owner_id=self.request.user.id)
+
+
+class EditSpace(generics.RetrieveUpdateAPIView):
+    serializer_class = SpaceSerializer
+
+    def get_queryset(self):
+        pk = self.kwargs.get('pk')
+        return Space.objects.filter(pk=pk)
