@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import *
+
+from .models import Space
 
 
 class SpaceSerializer(serializers.ModelSerializer):
@@ -7,4 +8,4 @@ class SpaceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Space
-        fields = ('title', 'total_balance', 'owner')
+        fields = ("title", "total_balance", "owner")
