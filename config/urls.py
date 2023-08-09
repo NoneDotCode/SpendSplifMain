@@ -10,6 +10,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("apps.customuser.urls")),
     path("api/v1/", include("apps.space.urls")),
+    path("api/v1/", include("apps.account.urls")),
     # JWT
     path("api/v1/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/v1/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
