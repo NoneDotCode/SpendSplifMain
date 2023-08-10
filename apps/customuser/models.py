@@ -15,6 +15,7 @@ class CustomUser(AbstractUser):
     language = models.CharField(max_length=20, choices=Language.choices, default=Language.ENGLISH)
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
     email = models.EmailField(unique=True, null=False, blank=False)
+    username = models.CharField(max_length=150, unique=False, null=False, blank=False)
 
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
