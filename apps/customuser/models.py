@@ -20,6 +20,9 @@ class CustomUser(AbstractUser):
     groups = models.ManyToManyField(Group, related_name="custom_users")
     user_permissions = models.ManyToManyField(Permission, related_name="custom_users")
 
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
+
     def generate_random_tag(self):
         return random.randint(1, 9999)
 
