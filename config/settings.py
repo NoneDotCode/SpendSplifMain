@@ -1,7 +1,6 @@
 import os
 from datetime import timedelta
 
-import dj_database_url
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -34,6 +33,9 @@ INSTALLED_APPS = [
     # Custom apps
     "apps.customuser",
     "apps.space",
+    'apps.account',
+    'apps.category',
+    'apps.history',
 ]
 
 # Custom user model auth
