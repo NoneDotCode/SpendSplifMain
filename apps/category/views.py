@@ -16,17 +16,17 @@ class CreateCategory(generics.CreateAPIView):
 
 
 class AllCategory(generics.ListAPIView):
-    model = Category
-    login_url = reverse_lazy('token_obtain_pair')
     serializer_class = CategorySerializer
 
     def get_queryset(self):
-        return Category.objects.all()
+        return Category.objects.filter(self.request.data.get('father_space_id'))
 
 
 class EditCategory(generics.UpdateAPIView):
-    queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
+    def get_queryset(self):
+        return Category.objects.filter(self.request.data.get('father_space_id'))
 
 
 @csrf_exempt
