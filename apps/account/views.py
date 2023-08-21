@@ -5,6 +5,10 @@ from .models import Account
 from .serializers import AccountSerializer
 
 
+class CreateAccount(generics.CreateAPIView):
+    serializer_class = AccountSerializer
+
+
 class AllAccounts(generics.ListAPIView):
     serializer_class = AccountSerializer
 
@@ -18,7 +22,3 @@ class EditAccount(generics.RetrieveUpdateAPIView):
     def get_queryset(self):
         pk = self.kwargs.get('pk')
         return Account.objects.filter(pk=pk)
-
-
-class CreateAccount(generics.CreateAPIView):
-    serializer_class = AccountSerializer
