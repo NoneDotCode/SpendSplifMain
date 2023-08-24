@@ -9,4 +9,4 @@ class ViewHistory(generics.ListAPIView):
     model = History
 
     def get_queryset(self):
-        return History.objects.filter(father_space_id=self.request.data.get('space_pk'))
+        return History.objects.filter(father_space_id=self.request.data.get())

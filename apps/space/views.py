@@ -39,7 +39,7 @@ class EditSpace(generics.ListAPIView, generics.UpdateAPIView):
     def put(self, request, *args, **kwargs):
         pk = self.kwargs.get('pk')
         space = Space.objects.get(pk=pk)
-        space.title = request.data.get('title')
+        space.title = request.data.get()
         space.save()
         serializer = SpaceSerializer(space)
         return Response(serializer.data, status=status.HTTP_200_OK)
