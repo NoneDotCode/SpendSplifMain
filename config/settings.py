@@ -1,14 +1,12 @@
 import os
 from datetime import timedelta
 
-import dj_database_url
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 env = environ.Env()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
-
 
 # Quick-start development settings - unsuitable for production
 
@@ -18,9 +16,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG")
 
-
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -36,12 +32,16 @@ INSTALLED_APPS = [
     "corsheaders",
     # Custom apps
     "apps.customuser",
+    "apps.space",
+    'apps.account',
+    'apps.category',
+    'apps.history',
+    'apps.converter',
 ]
 
 # Custom user model auth
 
 AUTH_USER_MODEL = "customuser.CustomUser"
-
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -74,11 +74,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-
 # Database
 
-DATABASES = {"default": dj_database_url.parse(env("DATABASE_URL"))}
-
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env.int("DB_PORT"),
+    }
+}
 
 # Password validation
 
@@ -97,7 +104,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 
 LANGUAGE_CODE = "en-us"
@@ -110,7 +116,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
@@ -119,7 +124,6 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
-
 
 # jwt
 
