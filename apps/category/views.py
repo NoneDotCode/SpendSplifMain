@@ -19,14 +19,14 @@ class AllCategory(generics.ListAPIView):
     serializer_class = CategorySerializer
 
     def get_queryset(self):
-        return Category.objects.filter(self.request.data.get('father_space_id'))
+        return Category.objects.filter(self.request.data.get())
 
 
 class EditCategory(generics.UpdateAPIView):
     serializer_class = CategorySerializer
 
     def get_queryset(self):
-        return Category.objects.filter(self.request.data.get('father_space_id'))
+        return Category.objects.filter(self.request.data.get())
 
 
 @csrf_exempt
