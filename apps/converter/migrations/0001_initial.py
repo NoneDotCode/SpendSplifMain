@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 import requests
+from apps.converter.constants import CURRENCIES
 
 
 def fill_currencies(apps, schema_editor):
@@ -12,17 +13,14 @@ def fill_currencies(apps, schema_editor):
 
     result = []
 
-    with open("P:\My_Projects\SpendSpl\\apps\converter\currencies.txt", "r") as file:
-        for i in file.readlines()[2:]:
-            for j in [(i[2:-13].strip() + " - " + i[36:].strip()[:-1].strip()).split(' - ')]:
-                result.append(j + [rates[j[1]]])
+    for i in CURRENCIES:
+        result.append(i + [rates[i[1]], ])
 
     for i in sorted(result, key=lambda x: x[0]):
         Currency.objects.create(currency=i[0], iso_code=i[1], euro=i[2])
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
