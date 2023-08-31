@@ -2,6 +2,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 
 from apps.converter.models import Currency
+from apps.converter.utils import update_currencies
 
 
 class ConvertCurrencyView(generics.RetrieveAPIView):
@@ -13,4 +14,5 @@ class ConvertCurrencyView(generics.RetrieveAPIView):
         euro_amount = amount / Currency.objects.get(iso_code=from_currency).euro
         converted_amount = round(euro_amount * Currency.objects.get(iso_code=to_currency).euro, 2)
 
+        update_currencies()
         return Response({'converted_amount': converted_amount})
