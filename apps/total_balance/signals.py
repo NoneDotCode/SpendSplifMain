@@ -1,9 +1,10 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from apps.total_balance.utils import convert_currency
+from apps.converter.utils import convert_currencies
 
 from apps.account.models import Account
+
 from apps.total_balance.models import TotalBalance
 
 
@@ -33,7 +34,9 @@ def update_total_balance(sender, instance, **kwargs):
         currency = t_balance.currency
         converted_balance = 0
         for i in accounts:
-            converted_balance += convert_currency(i.currency, currency, int(i.balance))
+            converted_balance += convert_currencies(from_currency=i.currency,
+                                                    to_currency=currency,
+                                                    amount=int(i.balance))
         t_balance.sum_of_balances = converted_balance
         t_balance.save()
         return t_balance
