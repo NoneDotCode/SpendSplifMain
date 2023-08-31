@@ -1,7 +1,7 @@
 from django.db import models
-from django.db.models import Sum
 
 from apps.account.models import Account
+
 from apps.space.models import Space
 
 
