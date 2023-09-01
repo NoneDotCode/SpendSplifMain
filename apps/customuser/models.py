@@ -4,7 +4,7 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.validators import MaxValueValidator
 from django.db import models
 
-from apps.customuser.constants import Language
+from apps.customuser.constants import Language, Currency
 
 
 class CustomUser(AbstractUser):
@@ -15,12 +15,18 @@ class CustomUser(AbstractUser):
     language = models.CharField(max_length=20, choices=Language.choices, default=Language.ENGLISH)
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
     email = models.EmailField(unique=True, null=False, blank=False)
+    username = models.CharField(max_length=150, unique=False, null=False, blank=False)
+    currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
 
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
     user_permissions = models.ManyToManyField(Permission, related_name="custom_users")
 
-    def generate_random_tag(self):
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
+
+    @staticmethod
+    def generate_random_tag():
         return random.randint(1, 9999)
 
     def save(self, *args, **kwargs):
