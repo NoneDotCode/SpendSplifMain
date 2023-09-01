@@ -25,7 +25,8 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
-    def generate_random_tag(self):
+    @staticmethod
+    def generate_random_tag():
         return random.randint(1, 9999)
 
     def save(self, *args, **kwargs):

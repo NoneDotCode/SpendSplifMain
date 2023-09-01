@@ -7,7 +7,7 @@ class Language(models.TextChoices):
     """
 
     ENGLISH = "ENGLISH", "English"
-    ESPAÑOL = "ESPAÑOL", "Español"
+    SPANISH = "ESPAÑOL", "Español"
     CHINESE = "中国", "中国"
     ARABIC = "العربية", "العربية"
     RUSSIAN = "РУССКИЙ", "Русский"
