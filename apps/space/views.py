@@ -12,7 +12,6 @@ class CreateSpace(generics.CreateAPIView):
 
 class AllSpaces(generics.ListAPIView):
     model = Space
-    login_url = reverse_lazy("token_obtain_pair")
     serializer_class = SpaceSerializer
 
     def get_queryset(self):
