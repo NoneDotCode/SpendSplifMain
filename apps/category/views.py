@@ -8,7 +8,6 @@ from rest_framework.utils import json
 from apps.account.models import Account
 from apps.category.models import Category
 from apps.category.serializer import CategorySerializer
-from apps.history.models import History
 
 
 class CreateCategory(generics.CreateAPIView):
@@ -40,10 +39,4 @@ def spend(request):
     cat.minus += number
     acc.save()
     cat.save()
-    History.objects.create(number=data['number'],
-                           currency=acc.currency,
-                           comment=data['comment'],
-                           from_acc=acc.title,
-                           to_cat=cat.title,
-                           father_space_id=acc.father_space_id)
     return redirect(reverse_lazy('my_categories'))
