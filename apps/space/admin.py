@@ -1,3 +1,5 @@
+from apps.space.models import Space
+
 from django.contrib import admin
 
-# Register your models here.
+admin.site.register(Space)

@@ -1,24 +1,34 @@
-from rest_framework import generics, status
-from rest_framework.response import Response
+from rest_framework import generics
 
-from .models import Account
-from .serializers import AccountSerializer
+from apps.account.models import Account
+from apps.account.serializers import AccountSerializer
+from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace
 
 
-class AllAccounts(generics.ListAPIView):
+class CreateAccount(generics.CreateAPIView):
+    serializer_class = AccountSerializer
+
+
+class ViewAccount(generics.ListAPIView):
     serializer_class = AccountSerializer
 
     def get_queryset(self):
-        return Account.objects.filter(father_space_id=self.request.data.get('space_pk'))
+        return Account.objects.filter(father_space_id=self.kwargs.get("space_pk"))
 
 
 class EditAccount(generics.RetrieveUpdateAPIView):
     serializer_class = AccountSerializer
+    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
         return Account.objects.filter(pk=pk)
 
 
-class CreateAccount(generics.CreateAPIView):
+class DeleteAccount(generics.RetrieveDestroyAPIView):
     serializer_class = AccountSerializer
+    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace)
+
+    def get_queryset(self):
+        pk = self.kwargs.get('pk')
+        return Account.objects.filter(pk=pk)
