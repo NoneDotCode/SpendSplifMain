@@ -9,8 +9,6 @@ class Category(models.Model):
     minus = models.DecimalField(max_digits=20, decimal_places=2)
     limit = models.DecimalField(max_digits=20, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    time_update = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
-
