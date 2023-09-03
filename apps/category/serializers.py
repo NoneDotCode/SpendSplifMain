@@ -10,8 +10,4 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ('title', 'minus', 'limit', 'father_space')
-
-
-class SpendSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+        fields = ('title', 'spent', 'limit', 'father_space')
