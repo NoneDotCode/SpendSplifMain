@@ -13,7 +13,7 @@ class AllAccounts(generics.ListAPIView):
     serializer_class = AccountSerializer
 
     def get_queryset(self):
-        return Account.objects.filter(father_space_id=self.request.data.get('space_pk'))
+        return Account.objects.filter(father_space_id=self.request.data.get())
 
 
 class EditAccount(generics.RetrieveUpdateAPIView):
