@@ -33,7 +33,8 @@ INSTALLED_APPS = [
     "corsheaders",
     # Custom apps
     "apps.customuser",
-    "apps.space",
+    "apps.settings",
+    "apps.account",
 ]
 
 # Custom user model auth
