@@ -1,6 +1,5 @@
 from rest_framework import generics
 
-
 from apps.space.models import Space
 from apps.space.serializers import SpaceSerializer
 from apps.space.permissions import IsOwner

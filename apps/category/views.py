@@ -1,12 +1,7 @@
-from django.db import transaction
-from django.shortcuts import redirect
-
 from rest_framework import generics, status
-from rest_framework.decorators import permission_classes
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-from rest_framework.reverse import reverse_lazy
-from rest_framework.utils import json
+from rest_framework.permissions import IsAdminUser
 
 from apps.account.models import Account
 from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwnerOfSpace
@@ -15,6 +10,7 @@ from apps.account.serializers import AccountSerializer
 from apps.category.models import Category
 from apps.category.serializers import CategorySerializer
 from apps.category.permissions import SpendPermission
+from apps.category.tasks import clear_all_spent
 
 from apps.space.models import Space
 
@@ -63,7 +59,8 @@ class SpendView(generics.GenericAPIView):
     serializer_class = AccountSerializer
     permission_classes = (SpendPermission,)
 
-    def put(self, request, *args, **kwargs):
+    @staticmethod
+    def put(request, *args, **kwargs):
         space_pk = kwargs.get('space_pk')
         from_pk = kwargs.get('from')
         try:
@@ -83,3 +80,15 @@ class SpendView(generics.GenericAPIView):
         category.spent += amount
         category.save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
+
+
+class ClearSpent(generics.GenericAPIView):
+    permission_classes = (IsAdminUser,)
+
+    def get_queryset(self):
+        return Category.objects.all()
+
+    @staticmethod
+    def put(request):
+        clear_all_spent.delay()
+        return Response({"success": "All spent cleared"}, status=status.HTTP_200_OK)
