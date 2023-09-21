@@ -174,7 +174,3 @@ CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_BACKEND = "django-db"
-
-# celery-beat
-
-CELERY_BEAT_SCHEDULER = "django-celery-beat.schedulers:DatabaseScheduler"

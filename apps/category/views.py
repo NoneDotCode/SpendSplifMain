@@ -1,17 +1,13 @@
 from rest_framework import generics, status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
 
 from apps.account.models import Account
 from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwnerOfSpace
 from apps.account.serializers import AccountSerializer
-
 from apps.category.models import Category
-from apps.category.serializers import CategorySerializer
 from apps.category.permissions import SpendPermission
-from apps.category.tasks import clear_all_spent
-
+from apps.category.serializers import CategorySerializer
 from apps.space.models import Space
 
 
@@ -80,15 +76,3 @@ class SpendView(generics.GenericAPIView):
         category.spent += amount
         category.save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
-
-
-class ClearSpent(generics.GenericAPIView):
-    permission_classes = (IsAdminUser,)
-
-    def get_queryset(self):
-        return Category.objects.all()
-
-    @staticmethod
-    def put(request):
-        clear_all_spent.delay()
-        return Response({"success": "All spent cleared"}, status=status.HTTP_200_OK)
