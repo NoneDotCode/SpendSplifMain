@@ -4,7 +4,7 @@ from apps.space.models import Space
 
 
 class History(models.Model):
-    number = models.DecimalField(max_digits=20, decimal_places=2)
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
     currency = models.CharField(max_length=3)
     comment = models.CharField(max_length=300)
     from_acc = models.CharField(max_length=24)

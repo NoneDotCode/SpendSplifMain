@@ -1,3 +1,5 @@
+from apps.history.models import History
+
 from django.contrib import admin
 
-# Register your models here.
+admin.site.register(History)
