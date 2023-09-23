@@ -5,10 +5,14 @@ from rest_framework.response import Response
 from apps.account.models import Account
 from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwnerOfSpace
 from apps.account.serializers import AccountSerializer
+
 from apps.category.models import Category
 from apps.category.permissions import SpendPermission
 from apps.category.serializers import CategorySerializer
+
 from apps.space.models import Space
+
+from apps.history.models import HistoryExpense
 
 
 class CreateCategory(generics.CreateAPIView):
@@ -75,4 +79,15 @@ class SpendView(generics.GenericAPIView):
         account.save()
         category.spent += amount
         category.save()
+        comment = request.data.get("comment")
+        if comment is None:
+            comment = ""
+        HistoryExpense.objects.create(
+            amount=amount,
+            currency=account.currency,
+            comment=comment,
+            from_acc=account.title,
+            to_cat=category.title,
+            father_space_id=space_pk
+        )
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)

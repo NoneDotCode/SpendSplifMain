@@ -8,6 +8,8 @@ from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwn
 
 from apps.space.models import Space
 
+from apps.history.models import HistoryIncome
+
 
 class CreateAccount(generics.CreateAPIView):
     serializer_class = AccountSerializer
@@ -63,6 +65,16 @@ class IncomeView(generics.GenericAPIView):
         if amount is not None and amount > 0:
             account.balance += amount
             account.save()
+            comment = request.data.get("comment")
+            if comment is None:
+                comment = ""
+            HistoryIncome.objects.create(
+                amount=amount,
+                currency=account.currency,
+                comment=comment,
+                account=account,
+                father_space_id=space_pk
+            )
         else:
             return Response({"error": "Please, fill out row amount, numbers bigger than 0."})
         return Response({"success": "Income successfully completed."}, status=status.HTTP_200_OK)
