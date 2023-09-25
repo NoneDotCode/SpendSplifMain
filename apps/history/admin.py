@@ -1,3 +1,6 @@
+from apps.history.models import HistoryExpense, HistoryIncome
+
 from django.contrib import admin
 
-# Register your models here.
+admin.site.register(HistoryExpense)
+admin.site.register(HistoryIncome)
