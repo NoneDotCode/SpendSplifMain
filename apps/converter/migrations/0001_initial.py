@@ -6,10 +6,17 @@ import requests
 
 from apps.converter.constants import CURRENCIES
 
+import environ
+import os
+
+env = environ.Env()
+BASE_DIR = os.path.dirname(os.path.abspath("../../config/.."))
+environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
+
 
 def fill_currencies(apps, schema_editor):
     Currency = apps.get_model('converter', 'Currency')
-    url = str.__add__('http://data.fixer.io/api/latest?access_key=', "65268712d3852ba0ad7d085115ac7118")
+    url = str.__add__('http://data.fixer.io/api/latest?access_key=', env("FIXER_API_TOKEN"))
     data = requests.get(url).json()
     rates = data["rates"]
 
