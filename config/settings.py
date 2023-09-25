@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     "apps.space",
     "apps.account",
     "apps.category",
-    "apps.history"
+    "apps.history",
+    "apps.converter",
 ]
 
 # Custom user model auth

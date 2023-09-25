@@ -37,6 +37,6 @@ CURRENCIES = [
     ['Tajikistani Somoni', 'TJS'], ['Tanzanian Shilling', 'TZS'], ['Thai Baht', 'THB'],
     ['Trinidad and Tobago Dollar', 'TTD'], ['Tunisian Dinar', 'TND'], ['Turkish Lira', 'TRY'],
     ['Turkmenistan New Manat', 'TMT'], ['Ugandan Shilling', 'UGX'], ['Ukrainian Hryvnia', 'UAH'],
-    ['UAE Dirham', 'AED'], ['Uruguayan Peso', 'UYU'], ['Uzbekistani Sum', 'UZS'], ['Vanuatu Vatu', 'VUV'],
-    ['Venezuelan Bolivar Soberano', 'VES'], ['Vietnamese Dong', 'VND'], ['West African CFA Franc', 'XOF'],
-    ['Yemeni Rial', 'YER'], ['Zambian Kwacha', 'ZMW'], ['Zimbabwean Dollar', 'ZWL'], ['United States dollar', 'USD']]
+    ['UAE Dirham', 'AED'], ['United States dollar', 'USD'], ['Uruguayan Peso', 'UYU'], ['Uzbekistani Sum', 'UZS'],
+    ['Vanuatu Vatu', 'VUV'], ['Venezuelan Bolivar Soberano', 'VES'], ['Vietnamese Dong', 'VND'],
+    ['West African CFA Franc', 'XOF'], ['Yemeni Rial', 'YER'], ['Zambian Kwacha', 'ZMW'], ['Zimbabwean Dollar', 'ZWL']]
