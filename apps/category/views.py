@@ -14,6 +14,10 @@ from apps.space.models import Space
 
 from apps.history.models import HistoryExpense
 
+from apps.total_balance.models import TotalBalance
+
+from apps.converter.utils import convert_currencies
+
 
 class CreateCategory(generics.CreateAPIView):
     serializer_class = CategorySerializer
@@ -90,4 +94,10 @@ class SpendView(generics.GenericAPIView):
             to_cat=category.title,
             father_space_id=space_pk
         )
+        total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
+        if total_balance:
+            total_balance[0].balance -= convert_currencies(amount=amount,
+                                                           from_currency=account.currency,
+                                                           to_currency=total_balance[0].currency)
+            total_balance[0].save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
