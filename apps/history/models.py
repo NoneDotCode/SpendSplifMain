@@ -2,10 +2,12 @@ from django.db import models
 
 from apps.space.models import Space
 
+from apps.customuser.constants import Currency
+
 
 class HistoryExpense(models.Model):
     amount = models.DecimalField(max_digits=20, decimal_places=2)
-    currency = models.CharField(max_length=3)
+    currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     comment = models.CharField(max_length=300)
     from_acc = models.CharField(max_length=24)
     to_cat = models.CharField(max_length=24, null=True)
@@ -15,7 +17,7 @@ class HistoryExpense(models.Model):
 
 class HistoryIncome(models.Model):
     amount = models.DecimalField(max_digits=20, decimal_places=2)
-    currency = models.CharField(max_length=3)
+    currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     comment = models.CharField(max_length=300)
     account = models.CharField(max_length=24)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
