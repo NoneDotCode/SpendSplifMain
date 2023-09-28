@@ -8,6 +8,8 @@ from apps.account.permissions import IsOwnerOfSpace
 
 from apps.converter.utils import convert_currencies
 
+from apps.category.models import Category
+
 
 class ViewTotalBalance(generics.ListAPIView):
     serializer_class = TotalBalanceSerializer
@@ -30,7 +32,14 @@ class EditTotalBalance(generics.RetrieveUpdateAPIView):
         serializer.is_valid(raise_exception=True)
         currency = request.data.get("currency")
         if currency == instance.currency:
-            return Response(serializer.data)
+            return Response({"error": "you changed nothing"})
+        for category in Category.objects.filter(father_space_id=instance.father_space_id):
+            print(category)
+            category.spent = convert_currencies(amount=category.spent,
+                                                from_currency=instance.currency,
+                                                to_currency=currency)
+            print(category.spent)
+            category.save()
         serializer.save(balance=convert_currencies(amount=instance.balance,
                                                    from_currency=instance.currency,
                                                    to_currency=currency),
