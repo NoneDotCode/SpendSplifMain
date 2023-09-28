@@ -1,10 +1,12 @@
 from django.db import models
 
+from apps.customuser.constants import Currency as CurrencyConstants
 
-# Create your models here.
+
 class Currency(models.Model):
     currency = models.CharField(max_length=30)
-    iso_code = models.CharField(max_length=3)
+    iso_code = models.CharField(max_length=4, choices=CurrencyConstants.choices,
+                                default=CurrencyConstants.UNITED_STATES_DOLLAR)
     euro = models.DecimalField(max_digits=10, decimal_places=2)
     time_update = models.DateTimeField(auto_now=True)
 

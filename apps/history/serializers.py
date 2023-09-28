@@ -1,9 +1,15 @@
 from rest_framework import serializers
 
-from apps.history.models import History
+from apps.history.models import HistoryExpense, HistoryIncome
 
 
-class HistorySerializer(serializers.ModelSerializer):
+class HistoryExpenseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = History
-        fields = ('number', 'currency', 'comment', 'from_acc', 'to_cat')
+        model = HistoryExpense
+        fields = ("amount", "currency", "comment", "from_acc", "to_cat", "created")
+
+
+class HistoryIncomeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoryIncome
+        fields = ("amount", "currency", "comment", "account", "created")

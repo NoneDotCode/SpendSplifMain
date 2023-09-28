@@ -16,7 +16,7 @@ class CustomUserRegistrationView(generics.CreateAPIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Представление для получения JWT-токена через email.
+    View to receive a JWT-token via e-mail.
     """
 
     serializer_class = EmailTokenObtainPairSerializer
