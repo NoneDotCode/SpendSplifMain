@@ -11,10 +11,10 @@ class SpendPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         space_pk = view.kwargs.get('space_pk')
-        from_pk = view.kwargs.get('from')
+        account_pk = request.data.get('account_pk')
         category_pk = view.kwargs.get('pk')
         try:
-            account = Account.objects.get(pk=from_pk)
+            account = Account.objects.get(pk=account_pk)
             category = Category.objects.get(pk=category_pk)
             space = Space.objects.get(pk=space_pk)
         except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist):

@@ -57,10 +57,9 @@ class SpendView(generics.GenericAPIView):
 
     @staticmethod
     def put(request, *args, **kwargs):
-        space_pk = kwargs.get('space_pk')
-        from_pk = kwargs.get('from')
+        account_pk = request.data.get('account_pk')
         try:
-            account = Account.objects.get(pk=from_pk)
+            account = Account.objects.get(pk=account_pk)
         except Account.DoesNotExist:
             return Response({"error": "Account didn't found"}, status=status.HTTP_404_NOT_FOUND)
         category_id = kwargs.get('pk')
