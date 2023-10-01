@@ -51,3 +51,11 @@ class ViewGoals(generics.ListAPIView):
 
     def get_queryset(self):
         return Goal.objects.filter(father_space_id=self.kwargs.get('space_pk'))
+
+
+class DeleteGoal(generics.RetrieveDestroyAPIView):
+    serializer_class = GoalSerializer
+    permission_classes = (IsOwnerOfSpace, IsInRightSpace)
+
+    def get_queryset(self):
+        return Goal.objects.filter(pk=self.kwargs.get("pk"))
