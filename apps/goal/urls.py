@@ -1,10 +1,9 @@
 from django.urls import path
 
-from apps.goal.views import CreateGoal, EditGoal, ViewGoals, TransferToGoalView
+from apps.goal.views import CreateGoal, EditGoal, ViewGoals
 
 urlpatterns = [
     path('create_goal/', CreateGoal.as_view(), name='create_goal'),
     path('my_goals/', ViewGoals.as_view(), name='view_goals'),
     path('my_goals/<int:pk>/', EditGoal.as_view(), name='edit_goal'),
-    path('my_goals/<int:goal_pk>/transfer/', TransferToGoalView.as_view(), name='transfer_to_goal')
 ]
