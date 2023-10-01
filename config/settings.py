@@ -169,3 +169,19 @@ SIMPLE_JWT = {
 # cors
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+#email settings
+SITE_ID = 2
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.yandex.ru"
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+
+EMAIL_HOST_USER = "spendsplif@gmail.com"
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_SECRET_KEY")
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+SERVER_EMAIL = EMAIL_HOST_USER
+EMAIL_ADMIN = EMAIL_HOST_USER
