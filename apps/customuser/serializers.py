@@ -67,6 +67,9 @@ class VerifyEmailSerializer(serializers.ModelSerializer):
 
         if code != self.request.user.verify_code:
             raise serializers.ValidationError("Incorrect code")
+        
+        self.request.user.verify_email = True
+        self.request.user.save()
 
         return data
 
