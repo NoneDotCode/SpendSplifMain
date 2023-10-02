@@ -18,6 +18,11 @@ class CustomUser(AbstractUser):
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
 
+    verify_code = models.PositiveIntegerField(null=True, blank=True)
+    verify_email = models.BooleanField(default=False)
+
+    password_reset_code = models.PositiveIntegerField(blank=True, bull=True)
+
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
     user_permissions = models.ManyToManyField(Permission, related_name="custom_users")
@@ -25,9 +30,11 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
+
     @staticmethod
     def generate_random_tag():
         return random.randint(1, 9999)
+
 
     def save(self, *args, **kwargs):
         """
@@ -38,3 +45,7 @@ class CustomUser(AbstractUser):
         if not self.id:
             self.set_password(self.password)
         super().save(*args, **kwargs)
+
+
+    def __str__(self):
+        return f"{self.username} - {self.email}"
