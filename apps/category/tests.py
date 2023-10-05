@@ -9,7 +9,7 @@ from apps.customuser.models import CustomUser
 from apps.space.models import Space
 
 
-class AccountTestCase(APITestCase):
+class CategoryTestCase(APITestCase):
     def setUp(self):
         self.client = APIClient()
         self.user1 = CustomUser.objects.create_user(username='user1', email='gmail1@gmail.com', password='password1')
