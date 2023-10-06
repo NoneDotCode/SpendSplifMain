@@ -31,14 +31,14 @@ class CreateAccount(generics.CreateAPIView):
         total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
         accounts_count = Account.objects.all().count()
         if accounts_count >= 1 and not total_balance:
-            total_balance = list(TotalBalance.objects.create(
+            total_balance = (TotalBalance.objects.create(
                 balance=sum([convert_currencies(
                     amount=account.balance,
                     from_currency=account.currency,
                     to_currency=self.request.user.currency) for account in Account.objects.all()]),
                 currency=self.request.user.currency,
                 father_space_id=space_pk
-            ))
+            ),)
         if total_balance:
             total_balance[0].balance += convert_currencies(amount=request.data['balance'],
                                                            from_currency=request.data['currency'],
