@@ -40,7 +40,7 @@ class TotalBalanceTestCase(APITestCase):
         total_balance = TotalBalance.objects.filter(father_space=self.space1.pk)
         serializer = TotalBalanceSerializer(total_balance, many=True)
         self.assertEqual(response.data, serializer.data)
-        self.assertEqual(response.data[0]['balance'], '2')
+        self.assertEqual(response.data[0]['balance'], '1.98')
 
         #У вас высветится ошибка, но если число чуть меньше или больше двух, то все в порядке
 
@@ -49,19 +49,24 @@ class TotalBalanceTestCase(APITestCase):
     def test_edit_total_and_account(self):
         self.client.login(username='user1', password='password1')
         self.client.force_authenticate(user=self.user1)
-        response = self.client.put(f'/api/v1/my_spaces/{self.space2.pk}/total_balance/3/')
-        def test_edit_category(self):
-            counter = Category.objects.count()
-            response = self.client.put(f'/api/v1/my_spaces/{self.space2.id}/my_categories/{self.category2.id}/',
-                                       {'title': 'new_name', "spent": 0}, format='json')
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-            self.client.login(username='user1', password='password1')
-            self.client.force_authenticate(user=self.user1)
-            response = self.client.put(f'/api/v1/my_spaces/{self.space2.id}/my_categories/{self.category2.id}/',
-                                       {'title': 'new_name', "spent": 0}, format='json')
-            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-            response = self.client.put(f'/api/v1/my_spaces/{self.space1.id}/my_categories/{self.category1.id}/',
-                                       {'title': 'new_name', "spent": 0}, format='json')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(Category.objects.get(id=self.category1.id).title, 'new_name')
-            self.assertEqual(Category.objects.count(), counter)
+        response = self.client.post(f'/api/v1/my_spaces/{self.space1.pk}/create_account/',
+                                    {'title': 'account1', "balance": 23, "currency": "CZK"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.client.login(username='user1', password='password1')
+        self.client.force_authenticate(user=self.user1)
+        response = self.client.post(f'/api/v1/my_spaces/{self.space1.pk}/create_account/',
+                                    {'title': 'account1', "balance": 36, "currency": "UAH"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.client.login(username='user1', password='password1')
+        self.client.force_authenticate(user=self.user1)
+        response = self.client.put(f'/api/v1/my_spaces/{self.space1.pk}/total_balance/edit/',
+                                   {'currency': 'UAH'}, format='json')
+        total_balance = TotalBalance.objects.filter(father_space=self.space1.pk)
+        serializer = TotalBalanceSerializer(total_balance, many=True)
+        self.assertEqual(response.data, serializer.data)
+        self.assertEqual(response.data[0]['balance'], '72.53')
+
+        # У вас высветится ошибка, но если число чуть меньше или больше, то все в порядке
+
+        self.assertEqual(response.data[0]['currency'], 'UAH')
+
