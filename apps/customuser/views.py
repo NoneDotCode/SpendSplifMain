@@ -18,7 +18,6 @@ class CustomUserRegistrationView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
 
 
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     View to receive a JWT-token via e-mail.
@@ -27,15 +26,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
 
 
-
 class VerifyEmailView(generics.UpdateAPIView):
-    '''
+    """
     Verification almost
-    '''
+    """
     serializer_class = VerifyEmailSerializer
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
-
 
 
 class SendVerifCodeView(generics.RetrieveAPIView):
@@ -46,54 +43,50 @@ class SendVerifCodeView(generics.RetrieveAPIView):
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
 
-
     def get(self, request, *args, **kwargs):
         user = CustomUser.objects.get(email=request.user.email)
 
         try:
-            code = getVerifyCode()
-            sendCodeToNewUser(user.email, code, "register")
+            code = get_verify_code()
+            send_сode_to_new_user(user.email, code, "register")
 
             user.verify_code = code
             user.save()
 
             return Response({"message": "successfully"})
 
-        except Exception:
+        except ():
             return Response({"message": "sending error"})
 
 
-
 class SendResetCodeView(generics.RetrieveAPIView):
-    '''
+    """
     sending a code for reset password
-    '''
+    """
     serializer_class = CustomUserSerializer
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
-
 
     def get(self, request, *args, **kwargs):
         user = CustomUser.objects.get(email=request.user.email)
 
         try:
-            code = getVerifyCode()
-            sendCodeToNewUser(user.email, code, "resetPassword")
+            code = get_verify_code()
+            send_сode_to_new_user(user.email, code, "resetPassword")
 
             user.password_reset_code = code
             user.save()
 
             return Response({"message": "successfully"})
 
-        except Exception:
+        except ():
             return Response({"message": "sending error"})
 
 
-
 class ResetPasswordView(generics.UpdateAPIView):
-    '''
+    """
     Verification almost
-    '''
+    """
     serializer_class = ResetPasswordSerializer
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)

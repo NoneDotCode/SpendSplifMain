@@ -21,7 +21,7 @@ class CustomUser(AbstractUser):
     verify_code = models.PositiveIntegerField(null=True, blank=True)
     verify_email = models.BooleanField(default=False)
 
-    password_reset_code = models.PositiveIntegerField(blank=True, bull=True)
+    password_reset_code = models.PositiveIntegerField(blank=True, null=True)
 
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
@@ -30,11 +30,9 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
-
     @staticmethod
     def generate_random_tag():
         return random.randint(1, 9999)
-
 
     def save(self, *args, **kwargs):
         """
@@ -45,7 +43,6 @@ class CustomUser(AbstractUser):
         if not self.id:
             self.set_password(self.password)
         super().save(*args, **kwargs)
-
 
     def __str__(self):
         return f"{self.username} - {self.email}"
