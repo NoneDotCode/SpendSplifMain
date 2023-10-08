@@ -50,7 +50,7 @@ class DeleteCategory(generics.RetrieveDestroyAPIView):
 class SpendView(generics.GenericAPIView):
 
     def get_queryset(self):
-        return Account.objects.filter(pk=self.kwargs['from'])
+        return Account.objects.filter(pk=self.kwargs['account_pk'])
 
     serializer_class = AccountSerializer
     permission_classes = (SpendPermission,)
