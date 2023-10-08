@@ -3,11 +3,10 @@ from django.core.mail import send_mail
 from random import randint
 
 
-
-def sendCodeToNewUser(email: str, code: int, flag: str):
-    '''
+def send_code_to_new_user(email: str, code: int, flag: str):
+    """
     Sending a verification code to a new user
-    '''
+    """
     if flag == "register":
         subject: str = "registration"
         message: str = f'''
@@ -24,16 +23,14 @@ def sendCodeToNewUser(email: str, code: int, flag: str):
         subject=subject,
         message=message,
         from_email="spendsplif@gmail.com",
-        recipient_list=[email],
-        fail_silently=False,
+        recipient_list=[email]
     )
 
     return True
 
 
-
-def getVerifyCode():
-    '''
+def get_verify_code():
+    """
     Returns verification code
-    '''
+    """
     return randint(1000, 9999)
