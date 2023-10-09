@@ -33,11 +33,16 @@ INSTALLED_APPS = [
     "celery",
     "django_celery_results",
     "django_celery_beat",
+    "drf_multiple_model",
     # Custom apps
     "apps.customuser",
     "apps.space",
     "apps.account",
     "apps.category",
+    "apps.history",
+    "apps.converter",
+    "apps.total_balance",
+    "apps.goal",
 ]
 
 # Custom user model auth
