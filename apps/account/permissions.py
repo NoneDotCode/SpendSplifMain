@@ -20,7 +20,10 @@ class IsInRightSpace(permissions.BasePermission):
 class IsOwnerOfSpace(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        return Space.objects.get(pk=request.parser_context['kwargs'].get('space_pk')).owner == request.user
+        try:
+            return Space.objects.get(pk=request.parser_context['kwargs'].get('space_pk')).owner == request.user
+        except (Space.DoesNotExist,):
+            return False
 
 
 class IncomePermission(permissions.BasePermission):
