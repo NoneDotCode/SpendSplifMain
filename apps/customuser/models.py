@@ -21,7 +21,7 @@ class CustomUser(AbstractUser):
     verify_code = models.PositiveIntegerField(null=True, blank=True)
     verify_email = models.BooleanField(default=False)
 
-    password_reset_code = models.PositiveIntegerField(blank=True, bull=True)
+    password_reset_code = models.PositiveIntegerField(blank=True, null=True)
 
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
