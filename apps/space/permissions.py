@@ -8,14 +8,12 @@ class IsMemberOfSpace(BasePermission):
     Allows access only to members of the space.
     """
 
-    def has_permission(self, request, view):
-        # Assuming the view has a method to get the current space ID
-        space_id = view.get_space_id()
-        return request.user.spaces.filter(id=space_id).exists()
-
     def has_object_permission(self, request, view, obj):
         # If the object itself is a space, you can check directly
+        print(isinstance(obj, Space))
         if isinstance(obj, Space):
+            print(request.user)
+            print(obj.members.all())
             return request.user in obj.members.all()
         # If the object is related to a space, you'll need to adjust this logic
         # For example, if obj has a space attribute
@@ -236,3 +234,12 @@ class CanTransfer(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return obj.members.filter(id=request.user.id, memberpermissions__transfer=True).exists()
+
+
+class IsMemberOrOwnerOrCanAddMember(BasePermission):
+    def has_permission(self, request, view):
+        # Логика для проверки, является ли пользователь членом пространства
+        if (IsMemberOfSpace().has_permission(request, view) and
+                (IsSpaceOwner().has_permission(request, view) or CanAddUsers().has_permission(request, view))):
+            return True
+        return False
