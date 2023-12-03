@@ -8,4 +8,4 @@ class SpaceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Space
-        fields = ("title", "owner")
+        fields = ("title", "members")

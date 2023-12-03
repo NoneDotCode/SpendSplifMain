@@ -9,9 +9,8 @@ from apps.customuser.models import CustomUser
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ("id", "username", "email", "password", "language", "currency")
+        fields = ("id", "username", "email", "password", "language", "currency", "tag")
         extra_kwargs = {"password": {"write_only": True}}
-
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -46,33 +45,29 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed('Must include "email" and "password"')
 
 
-
 class VerifyEmailSerializer(serializers.ModelSerializer):
-    '''
+    """
     Mail verification
-    '''
+    """
     code = serializers.IntegerField(required=True)
-
 
     class Meta:
         model = CustomUser
         fields = ("verify_code",)
 
-
     def validate(self, data: dict):
-        '''
+        """
         Checking the validity of the entered code
-        '''
+        """
         code: str = data["code"]
 
         if code != self.request.user.verify_code:
             raise serializers.ValidationError("Incorrect code")
-        
+
         self.request.user.verify_email = True
         self.request.user.save()
 
         return data
-
 
 
 class ResetPasswordSerializer(serializers.ModelSerializer):
@@ -82,11 +77,9 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
     code = serializers.IntegerField(required=True)
     new_password = serializers.CharField(required=True)
 
-
-    class Meta: 
+    class Meta:
         model = CustomUser
         fields = ("password_reset_code",)
-
 
     def validate(self, data: dict) -> dict:
         code: str = data["code"]

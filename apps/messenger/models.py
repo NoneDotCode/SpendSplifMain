@@ -1,6 +1,7 @@
 from django.db import models
 
 from apps.customuser.models import CustomUser
+from apps.space.models import Space
 
 
 class DmChat(models.Model):
@@ -19,3 +20,7 @@ class DmMessage(models.Model):
 
     def __str__(self):
         return self.text
+
+
+class Space_group(models.Model):
+    father_space = models.IntegerField(Space)
