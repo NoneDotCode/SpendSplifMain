@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission
 
+from apps.customuser.models import CustomUser
 from apps.space.models import Space
 
 
@@ -236,10 +237,55 @@ class CanTransfer(BasePermission):
         return obj.members.filter(id=request.user.id, memberpermissions__transfer=True).exists()
 
 
-class IsMemberOrOwnerOrCanAddMember(BasePermission):
+class IsMemberAndOwnerOrCanAddMember(BasePermission):
+    message = "You do not have permission to perform this action."
+
     def has_permission(self, request, view):
-        # Логика для проверки, является ли пользователь членом пространства
-        if (IsMemberOfSpace().has_permission(request, view) and
-                (IsSpaceOwner().has_permission(request, view) or CanAddUsers().has_permission(request, view))):
+        space_pk = view.kwargs.get("pk")
+        user_pk = request.data.get("user_pk")
+
+        try:
+            space = Space.objects.get(pk=space_pk)
+            user = CustomUser.objects.get(pk=user_pk)
+        except (Space.DoesNotExist, CustomUser.DoesNotExist):
+            return False
+
+        if request.user not in space.members.all():
+            return False
+
+        # Check if the user is the owner of the space
+        if space.memberpermissions_set.filter(member=request.user, owner=True).exists():
             return True
-        return False
+
+        # Check if the user has permission to remove members from the space
+        if not space.memberpermissions_set.filter(member=request.user, add_users=True).exists():
+            return False
+
+        return True
+
+
+class IsMemberAndOwnerOrCanRemoveMember(BasePermission):
+    message = "You do not have permission to perform this action."
+
+    def has_permission(self, request, view):
+        space_pk = view.kwargs.get("pk")
+        user_pk = request.data.get("user_pk")
+
+        try:
+            space = Space.objects.get(pk=space_pk)
+            user = CustomUser.objects.get(pk=user_pk)
+        except (Space.DoesNotExist, CustomUser.DoesNotExist):
+            return False
+
+        if request.user not in space.members.all():
+            return False
+
+        # Check if the user is the owner of the space
+        if space.memberpermissions_set.filter(member=request.user, owner=True).exists():
+            return True
+
+        # Check if the user has permission to remove members from the space
+        if not space.memberpermissions_set.filter(member=request.user, remove_users=True).exists():
+            return False
+
+        return True

@@ -4,8 +4,9 @@ from rest_framework.response import Response
 
 from apps.customuser.models import CustomUser
 from apps.space.models import Space, MemberPermissions
-from apps.space.serializers import SpaceSerializer, AddMemberToSpaceSerializer
-from apps.space.permissions import IsSpaceOwner, IsMemberOfSpace, IsMemberOrOwnerOrCanAddMember
+from apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
+from apps.space.permissions import (IsSpaceOwner, IsMemberOfSpace, IsMemberAndOwnerOrCanAddMember,
+                                    IsMemberAndOwnerOrCanRemoveMember, CanEditUsers)
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -48,10 +49,12 @@ class DeleteSpace(generics.RetrieveDestroyAPIView):
 
 
 class AddMemberToSpace(generics.GenericAPIView):
-    serializer_class = AddMemberToSpaceSerializer
-    permission_classes = (IsMemberOrOwnerOrCanAddMember,)
+    serializer_class = AddAndRemoveMemberSerializer
+    permission_classes = (IsMemberAndOwnerOrCanAddMember,)
 
-    def put(self, request, *args, **kwargs):
+    @staticmethod
+    def put(request, *args, **kwargs):
+        print(f"Active permission classes: {AddMemberToSpace.permission_classes}")
         space_pk = kwargs.get("pk")
         user_pk = request.data.get("user_pk")
 
@@ -72,3 +75,54 @@ class AddMemberToSpace(generics.GenericAPIView):
 
         # Return success answer
         return Response({"success": "User successfully added to the space."}, status=status.HTTP_200_OK)
+
+
+class RemoveMemberFromSpace(generics.GenericAPIView):
+    serializer_class = AddAndRemoveMemberSerializer
+    permission_classes = (IsMemberAndOwnerOrCanRemoveMember,)
+
+    @staticmethod
+    def put(request, *args, **kwargs):
+        space_pk = kwargs.get("pk")
+        user_pk = request.data.get("user_pk")
+
+        try:
+            space = Space.objects.get(pk=space_pk)
+            user = CustomUser.objects.get(pk=user_pk)
+        except (Space.DoesNotExist, CustomUser.DoesNotExist):
+            return Response({"error": "Space or user not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user not in space.members.all():
+            return Response({"error": "User is not member of the space already."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        space.members.remove(user)
+
+        return Response({"success": "User successfully removed from the space."}, status=status.HTTP_200_OK)
+
+
+class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
+    serializer_class = MemberPermissionsSerializer
+    permission_classes = (CanEditUsers,)
+
+    def get_queryset(self):
+        return MemberPermissions.objects.filter(space_id=self.kwargs.get("space_pk"),
+                                                member_id=self.kwargs.data.get("member_id"))
+
+    def update(self, request, *args, **kwargs):
+        # Defining which permissions need to edit
+        permissions_to_update = request.data
+
+        # Getting object MemberPermissions
+        instance = MemberPermissions.objects.get(space_id=kwargs.get("pk"),
+                                                 member_id=kwargs.get("member_id"))
+
+        # Изменяем переданные права
+        for key, value in permissions_to_update.items():
+            setattr(instance, key, value)
+
+        # Save edited permissions
+        instance.save()
+
+        # Return successfully response
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)
