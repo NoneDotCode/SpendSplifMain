@@ -3,6 +3,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 
 from apps.customuser.models import CustomUser
+from apps.messenger.models import SpaceGroup
 from apps.space.models import Space, MemberPermissions
 from apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from apps.space.permissions import (IsSpaceOwner, IsMemberOfSpace, IsMemberAndOwnerOrCanAddMember,
@@ -69,6 +70,10 @@ class AddMemberToSpace(generics.GenericAPIView):
         if user in space.members.all():
             return Response({"error": "User is member of the space already."},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        if not SpaceGroup.objects.filter(father_space=space_pk).exists():
+            space_group = SpaceGroup(father_space_id=space_pk)
+            space_group.save()
 
         # Add user to the space.
         space.members.add(user)
