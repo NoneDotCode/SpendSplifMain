@@ -17,28 +17,23 @@ class CreateChatView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        owner_1_username = request.data.get('owner_1')
-        owner_2 = request.user
-
         try:
-            owner_1 = CustomUser.objects.get(username=owner_1_username)
-            # Check if both owners exist before proceeding
-            if not CustomUser.objects.filter(username=owner_2.username).exists():
-                return Response({"error": "Owner 2 does not exist"},
-                                status=status.HTTP_404_NOT_FOUND)
-
-            request.data['owner_1'] = owner_1.username
-            request.data['owner_2'] = owner_2.username
-
-            serializer = DmChatSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except CustomUser.DoesNotExist:
-            # If either owner does not exist, return an appropriate error
+            owner_1_data = request.data.get('owner_1').split('#')
+            owner_2 = request.user
+            owner_1 = CustomUser.objects.get(username=owner_1_data[0], tag=owner_1_data[1])
+        except (CustomUser.DoesNotExist,):
             return Response({"error": "One or both owners do not exist"},
                             status=status.HTTP_404_NOT_FOUND)
+
+        if DmChat.objects.filter(owner_1=owner_1, owner_2=owner_2).exists():
+            return Response({"error": "Chat already exists"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        new_chat = DmChat.objects.create(owner_1=owner_1, owner_2=owner_2)
+        return Response({
+            "success": f"New DmChat with {owner_1.username}#{owner_1.tag}-{owner_2.username}#{owner_2.tag} created"
+        },
+            status=status.HTTP_200_OK)
 
 
 class DmChatView(generics.GenericAPIView):
