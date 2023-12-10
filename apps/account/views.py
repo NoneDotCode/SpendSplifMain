@@ -60,8 +60,8 @@ class IncomeView(generics.GenericAPIView):
         account_pk = kwargs.get('pk')
         account = Account.objects.get(pk=account_pk)
         amount = request.data.get('amount')
-        if amount is not None and amount > 0:
-            account.balance += amount
+        if amount is not None and int(amount) > 0:
+            account.balance += int(amount)
             account.save()
         else:
             return Response({"error": "Please, fill out row amount, numbers bigger than 0."})
