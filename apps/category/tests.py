@@ -2,7 +2,6 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
 from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
 from apps.category.models import Category
 from apps.category.serializers import CategorySerializer
 from apps.customuser.models import CustomUser

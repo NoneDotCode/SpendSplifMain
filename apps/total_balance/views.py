@@ -23,8 +23,11 @@ class EditTotalBalance(generics.RetrieveUpdateAPIView):
     serializer_class = TotalBalanceSerializer
     permission_classes = (IsOwnerOfSpace,)
 
-    def get_queryset(self):
-        return TotalBalance.objects.filter(father_space_id=self.kwargs["space_pk"])
+    # def get_queryset(self):
+    #     return TotalBalance.objects.filter(father_space_id=self.kwargs["space_pk"])
+
+    def get_object(self):
+        return TotalBalance.objects.get(father_space_id=self.kwargs.get("space_pk"))
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -34,11 +37,9 @@ class EditTotalBalance(generics.RetrieveUpdateAPIView):
         if currency == instance.currency:
             return Response({"error": "you changed nothing"})
         for category in Category.objects.filter(father_space_id=instance.father_space_id):
-            print(category)
             category.spent = convert_currencies(amount=category.spent,
                                                 from_currency=instance.currency,
                                                 to_currency=currency)
-            print(category.spent)
             category.save()
         serializer.save(balance=convert_currencies(amount=instance.balance,
                                                    from_currency=instance.currency,
