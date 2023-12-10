@@ -58,7 +58,7 @@ class DeleteCategory(generics.RetrieveDestroyAPIView):
 class SpendView(generics.GenericAPIView):
 
     def get_queryset(self):
-        return Account.objects.filter(pk=self.kwargs['from'])
+        return Account.objects.filter(pk=self.kwargs['account_pk'])
 
     serializer_class = AccountSerializer
     permission_classes = (SpendPermission,)
@@ -76,7 +76,7 @@ class SpendView(generics.GenericAPIView):
             category = Category.objects.get(pk=category_id)
         except Category.DoesNotExist:
             return Response({"error": "Category didn't found"})
-        if amount > account.balance:
+        if int(amount) > int(account.balance):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
