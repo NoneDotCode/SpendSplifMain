@@ -1,10 +1,44 @@
 import random
 
-from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.auth.models import AbstractUser, Group, Permission, BaseUserManager
 from django.core.validators import MaxValueValidator
 from django.db import models
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 
 from apps.customuser.constants import Language, Currency
+
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, username, email, password, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+
+        existing_tags = set(CustomUser.objects.filter(username=username).values_list('tag', flat=True))
+        available_tags = set(range(1, 10000)) - existing_tags
+        if not available_tags:
+            raise ValidationError("Too many people registered with this username, try another please.")
+
+        tag = random.choice(list(available_tags))
+        email = self.normalize_email(email)
+        user = self.model(email=email, tag=tag, **extra_fields)
+
+        user.set_password(password)
+        user.save(using=self._db)
+
+    def create_superuser(self, email, password=None, username=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        existing_tags = set(CustomUser.objects.filter(username=username).values_list('tag', flat=True))
+        available_tags = set(range(1, 10000)) - existing_tags
+        if not available_tags:
+            raise ValidationError("Too many people registered with this username, try another please.")
+
+        tag = random.choice(list(available_tags))
+
+        return self.create_user(email, password, tag=tag, **extra_fields)
 
 
 class CustomUser(AbstractUser):
@@ -18,6 +52,11 @@ class CustomUser(AbstractUser):
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
 
+    verify_code = models.PositiveIntegerField(null=True, blank=True)
+    verify_email = models.BooleanField(default=False)
+
+    password_reset_code = models.PositiveIntegerField(blank=True, null=True)
+
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
     user_permissions = models.ManyToManyField(Permission, related_name="custom_users")
@@ -25,16 +64,22 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
-    @staticmethod
-    def generate_random_tag():
-        return random.randint(1, 9999)
-
     def save(self, *args, **kwargs):
         """
         Save the user to the database.
         """
         if not self.tag:
-            self.tag = self.generate_random_tag()
+            existing_tags = set(CustomUser.objects.filter(username=self.username).values_list('tag', flat=True))
+            available_tags = set(range(1, 10000)) - existing_tags
+
+            if not available_tags:
+                raise ValidationError("Too many people registered with this username, try another please.")
+
+            self.tag = random.choice(list(available_tags))
+
         if not self.id:
             self.set_password(self.password)
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.username} - {self.email}"
