@@ -6,14 +6,6 @@ from apps.messenger.models import DmChat, CustomUser
 
 
 class DmChatSerializer(serializers.ModelSerializer):
-    owner_1 = serializers.SlugRelatedField(
-        queryset=CustomUser.objects.all(),
-        slug_field='username'
-    )
-    owner_2 = serializers.SlugRelatedField(
-        queryset=CustomUser.objects.all(),
-        slug_field='username'
-    )
 
     class Meta:
         model = DmChat

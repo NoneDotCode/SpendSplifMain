@@ -30,8 +30,8 @@ class MessengerTestCase(APITestCase):
 
         self.client.login(username='user1', password='password1')
         self.client.force_authenticate(user=self.user1)
-        response = self.client.post('/api/v1/create_chat/', {'owner_1': self.user2.username}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post('/api/v1/create_chat/', {'owner_1': f"{self.user2.username}#{self.user2.tag}"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(DmChat.objects.count(), counter + 1)
 
