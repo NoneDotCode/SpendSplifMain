@@ -111,8 +111,8 @@ class IncomeView(generics.GenericAPIView):
         account_pk = kwargs.get('pk')
         account = Account.objects.get(pk=account_pk)
         amount = request.data.get('amount')
-        if amount is not None and amount > 0:
-            account.balance += amount
+        if amount is not None and int(amount) > 0:
+            account.balance += int(amount)
             account.save()
             comment = request.data.get("comment")
             if comment is None:
