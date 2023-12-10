@@ -31,7 +31,7 @@ CURRENCIES = [
     ['Romanian Leu', 'RON'], ['Russian Ruble', 'RUB'], ['Rwandan Franc', 'RWF'], ['Saint Helena Pound', 'SHP'],
     ['Samoan Tala', 'WST'], ['Saudi Riyal', 'SAR'], ['Seychellois Rupee', 'SCR'], ['Sierra Leonean Leone', 'SLL'],
     ['Singapore Dollar', 'SGD'], ['Solomon Islands Dollar', 'SBD'], ['Somali Shilling', 'SOS'],
-    ['South African Rand', 'ZAR'], ['South Korean Won', 'KRW'], ['South Sudanese Pound', 'SSP'],
+    ['South African Rand', 'ZAR'], ['South Korean Won', 'KRW'],
     ['Sri Lankan Rupee', 'LKR'], ['Sudanese Pound', 'SDG'], ['Surinamese Dollar', 'SRD'], ['Swazi Lilangeni', 'SZL'],
     ['Swedish Krona', 'SEK'], ['Swiss Franc', 'CHF'], ['Syrian Pound', 'SYP'], ['New Taiwan Dollar', 'TWD'],
     ['Tajikistani Somoni', 'TJS'], ['Tanzanian Shilling', 'TZS'], ['Thai Baht', 'THB'],

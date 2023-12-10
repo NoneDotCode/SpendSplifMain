@@ -22,5 +22,12 @@ class DmMessage(models.Model):
         return self.text
 
 
-class Space_group(models.Model):
-    father_space = models.IntegerField(Space)
+class SpaceGroup(models.Model):
+    father_space = models.OneToOneField(Space, on_delete=models.CASCADE)
+
+
+class MessageGroup(models.Model):
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    text = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    father_group = models.ForeignKey(SpaceGroup, on_delete=models.CASCADE)
