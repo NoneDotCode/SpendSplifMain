@@ -96,8 +96,10 @@ class CanDeleteAccounts(BasePermission):
     Allows access only to users who can delete accounts in the space
     """
 
-    def has_object_permission(self, request, view, obj):
-        return obj.members.filter(id=request.user.id, memberpermissions__delete_accounts=True).exists()
+    def has_permission(self, request, view):
+        return Space.objects.get(pk=view.kwargs.get("space_pk")).members.filter(
+            id=request.user.id, memberpermissions__delete_accounts=True
+        ).exists()
 
 
 class CanEditAccounts(BasePermission):
@@ -114,8 +116,10 @@ class CanCreateAccounts(BasePermission):
     Allows access only to users who can create accounts in the space.
     """
 
-    def has_object_permission(self, request, view, obj):
-        return obj.members.filter(id=request.user.id, memberpermissions__create_accounts=True).exists()
+    def has_permission(self, request, view):
+        return Space.objects.get(pk=view.kwargs.get("space_pk")).members.filter(
+            id=request.user.id, memberpermissions__create_accounts=True
+        ).exists()
 
 
 """Permissions for managing users"""

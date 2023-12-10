@@ -8,7 +8,7 @@ from apps.account.models import Account
 class IsOwnerOfFatherSpace(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        return Space.objects.get(pk=obj.father_space_id).owner == request.user
+        return Space.objects.get(pk=obj.father_space_id).members.filter()
 
 
 class IsInRightSpace(permissions.BasePermission):

@@ -19,12 +19,12 @@ from drf_multiple_model.views import ObjectMultipleModelAPIView
 from apps.total_balance.models import TotalBalance
 from apps.total_balance.serializers import TotalBalanceSerializer
 
-from apps.space.permissions import IsSpaceOwner
+from apps.space.permissions import IsSpaceOwner, IsMemberOfSpace, CanCreateAccounts
 
 
 class CreateAccount(generics.CreateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsSpaceOwner,)
+    permission_classes = ((IsSpaceOwner or CanCreateAccounts),)
 
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
@@ -51,7 +51,7 @@ class CreateAccount(generics.CreateAPIView):
 
 class ViewAccount(ObjectMultipleModelAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsSpaceOwner,)
+    permission_classes = (IsMemberOfSpace,)
 
     def get_querylist(self):
         space_pk = self.kwargs.get("space_pk")
