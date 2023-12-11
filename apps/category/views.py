@@ -1,10 +1,8 @@
 from rest_framework import generics, status
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.account.models import Account
-from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwnerOfSpace
 from apps.account.serializers import AccountSerializer
 
 from apps.category.models import Category
@@ -22,7 +20,7 @@ from apps.converter.utils import convert_currencies
 
 class CreateCategory(generics.CreateAPIView):
     serializer_class = CategorySerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ()
 
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
@@ -34,7 +32,7 @@ class CreateCategory(generics.CreateAPIView):
 
 class ViewCategory(generics.ListAPIView):
     serializer_class = CategorySerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = ()
 
     def get_queryset(self):
         return Category.objects.filter(father_space_id=self.kwargs.get("space_pk"))
@@ -42,7 +40,7 @@ class ViewCategory(generics.ListAPIView):
 
 class EditCategory(generics.RetrieveUpdateAPIView):
     serializer_class = CategorySerializer
-    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace, IsAuthenticated,)
+    permission_classes = ()
 
     def get_queryset(self):
         return Category.objects.filter(father_space_id=self.kwargs.get("space_pk"))
@@ -50,7 +48,7 @@ class EditCategory(generics.RetrieveUpdateAPIView):
 
 class DeleteCategory(generics.RetrieveDestroyAPIView):
     serializer_class = CategorySerializer
-    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace, IsAuthenticated,)
+    permission_classes = ()
 
     def get_queryset(self):
         return Category.objects.filter(pk=self.kwargs.get('pk'))
@@ -62,11 +60,12 @@ class SpendView(generics.GenericAPIView):
         return Account.objects.filter(pk=self.kwargs['account_pk'])
 
     serializer_class = AccountSerializer
-    permission_classes = (SpendPermission, IsAuthenticated,)
+    permission_classes = (SpendPermission,)
 
     @staticmethod
     def put(request, *args, **kwargs):
-        account_pk = request.data.get('account_pk')
+        space_pk = kwargs.get('space_pk')
+        account_pk = kwargs.get('account_pk')
         try:
             account = Account.objects.get(pk=account_pk)
         except Account.DoesNotExist:
@@ -93,11 +92,6 @@ class SpendView(generics.GenericAPIView):
             comment=comment,
             from_acc=account.title,
             to_cat=category.title,
-            father_space_id=space_pk)
-        total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
-        if total_balance:
-            total_balance[0].balance -= convert_currencies(amount=amount,
-                                                           from_currency=account.currency,
-                                                           to_currency=total_balance[0].currency)
-            total_balance[0].save()
+            father_space_id=space_pk
+        )
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)

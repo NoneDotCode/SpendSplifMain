@@ -30,10 +30,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    # Additional libraries
+    "drf_multiple_model",
+    "drf_yasg",
+    # Celery
     "celery",
     "django_celery_results",
     "django_celery_beat",
-    "drf_multiple_model",
     # Custom apps
     "apps.customuser",
     "apps.space",
