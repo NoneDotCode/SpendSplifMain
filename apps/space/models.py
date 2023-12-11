@@ -47,4 +47,5 @@ class MemberPermissions(models.Model):
     remove_bank_accounts = models.BooleanField(default=True, verbose_name="can remove bank accounts from space")
     """Basic perms"""
     spend = models.BooleanField(default=True, verbose_name="can spends")
+    income = models.BooleanField(default=True, verbose_name="can income")
     transfer = models.BooleanField(default=True, verbose_name="can transfers")

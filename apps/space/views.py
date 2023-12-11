@@ -54,7 +54,6 @@ class AddMemberToSpace(generics.GenericAPIView):
 
     @staticmethod
     def put(request, *args, **kwargs):
-        print(f"Active permission classes: {AddMemberToSpace.permission_classes}")
         space_pk = kwargs.get("pk")
         user_pk = request.data.get("user_pk")
 

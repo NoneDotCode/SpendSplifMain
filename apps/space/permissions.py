@@ -109,15 +109,6 @@ class CanEditAccounts(BasePermission):
         return obj.members.filter(id=request.user.id, memberpermissions__edit_accounts=True).exists()
 
 
-class CanCreateAccounts(BasePermission):
-    """
-    Allows access only to users who can create accounts in the space.
-    """
-
-    def has_object_permission(self, request, view, obj):
-        return obj.members.filter(id=request.user.id, memberpermissions__create_accounts=True).exists()
-
-
 """Permissions for managing users"""
 
 
