@@ -3,11 +3,9 @@ from drf_multiple_model.views import ObjectMultipleModelAPIView
 from apps.history.models import HistoryIncome, HistoryExpense
 from apps.history.serializers import HistoryIncomeSerializer, HistoryExpenseSerializer
 
-from apps.account.permissions import IsOwnerOfSpace
-
 
 class HistoryView(ObjectMultipleModelAPIView):
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = ()
 
     def get_querylist(self):
         space_pk = self.kwargs["space_pk"]

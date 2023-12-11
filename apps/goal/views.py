@@ -15,8 +15,6 @@ from apps.account.models import Account
 
 from apps.converter.utils import convert_currencies
 
-from apps.account.permissions import IsOwnerOfSpace, IsInRightSpace
-
 from apps.space.models import Space
 
 from apps.total_balance.models import TotalBalance
@@ -24,7 +22,7 @@ from apps.total_balance.models import TotalBalance
 
 class CreateGoal(generics.CreateAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = ()
 
     def get_queryset(self):
         return Goal.objects.filter(father_space_id=self.kwargs.get('space_pk'))
@@ -39,7 +37,7 @@ class CreateGoal(generics.CreateAPIView):
 
 class EditGoal(generics.RetrieveUpdateAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace, IsInRightSpace)
+    permission_classes = ()
 
     def get_queryset(self):
         return Goal.objects.filter(pk=self.kwargs.get('pk'))
@@ -47,7 +45,7 @@ class EditGoal(generics.RetrieveUpdateAPIView):
 
 class ViewGoals(generics.ListAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = ()
 
     def get_queryset(self):
         return Goal.objects.filter(father_space_id=self.kwargs.get('space_pk'))
@@ -55,7 +53,7 @@ class ViewGoals(generics.ListAPIView):
 
 class DeleteGoal(generics.RetrieveDestroyAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace, IsInRightSpace)
+    permission_classes = ()
 
     def get_queryset(self):
         return Goal.objects.filter(pk=self.kwargs.get("pk"))
