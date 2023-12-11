@@ -7,14 +7,14 @@ class Language(models.TextChoices):
     """
 
     ENGLISH = "ENGLISH", "English"
-    SPANISH = "ESPAÑOL", "Español"
-    CHINESE = "中国", "中国"
-    ARABIC = "العربية", "العربية"
-    RUSSIAN = "РУССКИЙ", "Русский"
-    JAPANESE = "日本語", "日本語"
-    UKRAINIAN = "УКРАЇНСЬКА", "Українська"
-    GERMAN = "DEUTSCH", "Deutsch"
-    FRENCH = "FRANÇAISE", "Française"
+    SPANISH = "SPANISH", "Español"
+    CHINESE = "CHINESE", "中国"
+    ARABIC = "ARABIC", "العربية"
+    RUSSIAN = "RUSSIAN", "Русский"
+    JAPANESE = "JAPANESE", "日本語"
+    UKRAINIAN = "UKRAINIAN", "Українська"
+    GERMAN = "GERMAN", "Deutsch"
+    FRENCH = "FRENCH", "Française"
 
 
 class Currency(models.TextChoices):

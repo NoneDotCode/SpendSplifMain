@@ -3,15 +3,16 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
 from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
-from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwnerOfSpace, IncomePermission
+from apps.account.serializers import AccountSerializer, IncomeSerializer
+from apps.account.permissions import (IsMemberAndCanCreateAccountsOrOwner, IsMemberAndCanEditAccountsOrOwner,
+                                      IsMemberAndCanDeleteAccountsOrOwner, IncomePermission, IsSpaceMember)
 
 from apps.space.models import Space
 
 
 class CreateAccount(generics.CreateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsMemberAndCanCreateAccountsOrOwner,)
 
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
@@ -20,9 +21,9 @@ class CreateAccount(generics.CreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
-class ViewAccount(generics.ListAPIView):
+class ViewAccounts(generics.ListAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsSpaceMember,)
 
     def get_queryset(self):
         return Account.objects.filter(father_space_id=self.kwargs.get("space_pk"))
@@ -30,7 +31,7 @@ class ViewAccount(generics.ListAPIView):
 
 class EditAccount(generics.RetrieveUpdateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace)
+    permission_classes = (IsMemberAndCanEditAccountsOrOwner,)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -39,7 +40,7 @@ class EditAccount(generics.RetrieveUpdateAPIView):
 
 class DeleteAccount(generics.RetrieveDestroyAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace)
+    permission_classes = (IsMemberAndCanDeleteAccountsOrOwner,)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -51,7 +52,7 @@ class IncomeView(generics.GenericAPIView):
     def get_queryset(self):
         return Account.objects.filter(pk=self.kwargs['pk'])
 
-    serializer_class = AccountSerializer
+    serializer_class = IncomeSerializer
     permission_classes = (IncomePermission,)
 
     @staticmethod
@@ -60,8 +61,8 @@ class IncomeView(generics.GenericAPIView):
         account_pk = kwargs.get('pk')
         account = Account.objects.get(pk=account_pk)
         amount = request.data.get('amount')
-        if amount is not None and amount > 0:
-            account.balance += amount
+        if amount is not None and int(amount) > 0:
+            account.balance += int(amount)
             account.save()
         else:
             return Response({"error": "Please, fill out row amount, numbers bigger than 0."})
