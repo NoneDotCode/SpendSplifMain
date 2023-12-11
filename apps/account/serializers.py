@@ -11,3 +11,8 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ('title', 'balance', 'currency', 'included_in_total_balance', 'father_space')
+
+
+class IncomeSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+
