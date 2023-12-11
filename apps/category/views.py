@@ -47,33 +47,3 @@ class DeleteCategory(generics.RetrieveDestroyAPIView):
 
     def get_queryset(self):
         return Category.objects.filter(pk=self.kwargs.get('pk'))
-
-
-class SpendView(generics.GenericAPIView):
-
-    def get_queryset(self):
-        return Account.objects.filter(pk=self.kwargs['account_pk'])
-
-    serializer_class = AccountSerializer
-    permission_classes = (SpendPermission,)
-
-    @staticmethod
-    def put(request, *args, **kwargs):
-        account_pk = request.data.get('account_pk')
-        try:
-            account = Account.objects.get(pk=account_pk)
-        except Account.DoesNotExist:
-            return Response({"error": "Account didn't found"}, status=status.HTTP_404_NOT_FOUND)
-        category_id = kwargs.get('pk')
-        amount = request.data.get('amount')
-        try:
-            category = Category.objects.get(pk=category_id)
-        except Category.DoesNotExist:
-            return Response({"error": "Category didn't found"})
-        if int(amount) > int(account.balance):
-            return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
-        account.balance -= amount
-        account.save()
-        category.spent += amount
-        category.save()
-        return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)

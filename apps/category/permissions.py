@@ -60,18 +60,3 @@ class IsMemberAndCanDeleteCategoriesOrOwner(permissions.BasePermission):
         return ((user in space.members.all()) and
                 (space.members.filter(id=user.id, memberpermissions__delete_categories=True).exists() or
                  space.members.filter(id=user.id, memberpermissions__owner=True).exists()))
-
-
-class SpendPermission(permissions.BasePermission):
-    def has_permission(self, request, view):
-        user = request.user
-        space_pk = view.kwargs.get('space_pk')
-        account_pk = request.data.get('account_pk')
-        category_pk = view.kwargs.get('pk')
-        try:
-            account = Account.objects.get(pk=account_pk)
-            category = Category.objects.get(pk=category_pk)
-            space = Space.objects.get(pk=space_pk)
-        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist):
-            return False
-        return space.owner == user and account.father_space == space and category.father_space == space
