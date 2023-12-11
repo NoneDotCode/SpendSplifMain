@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.converter",
     "apps.total_balance",
     "apps.goal",
+    "apps.messenger",
 ]
 
 # Custom user model auth

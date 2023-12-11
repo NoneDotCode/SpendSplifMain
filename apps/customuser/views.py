@@ -2,14 +2,14 @@ from rest_framework import generics, permissions, authentication
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import CustomUser
-from .serializers import (
+from apps.customuser.models import CustomUser
+from apps.customuser.serializers import (
     CustomUserSerializer,
     EmailTokenObtainPairSerializer,
     VerifyEmailSerializer,
     ResetPasswordSerializer,
 )
-from .utils import *
+from apps.customuser.utils import get_verify_code, send_code_to_new_user
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -48,14 +48,14 @@ class SendVerifCodeView(generics.RetrieveAPIView):
 
         try:
             code = get_verify_code()
-            send_сode_to_new_user(user.email, code, "register")
+            send_code_to_new_user(user.email, code, "register")
 
             user.verify_code = code
             user.save()
 
             return Response({"message": "successfully"})
 
-        except ():
+        except (Exception,):
             return Response({"message": "sending error"})
 
 
@@ -72,14 +72,14 @@ class SendResetCodeView(generics.RetrieveAPIView):
 
         try:
             code = get_verify_code()
-            send_сode_to_new_user(user.email, code, "resetPassword")
+            send_code_to_new_user(user.email, code, "resetPassword")
 
             user.password_reset_code = code
             user.save()
 
             return Response({"message": "successfully"})
 
-        except ():
+        except (Exception,):
             return Response({"message": "sending error"})
 
 

@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from apps.account.models import Account
 from apps.account.serializers import AccountSerializer
-from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IsOwnerOfSpace, IncomePermission
+from apps.account.permissions import IsOwnerOfFatherSpace, IsInRightSpace, IncomePermission
 
 from apps.space.models import Space
 
@@ -19,26 +19,28 @@ from drf_multiple_model.views import ObjectMultipleModelAPIView
 from apps.total_balance.models import TotalBalance
 from apps.total_balance.serializers import TotalBalanceSerializer
 
+from apps.space.permissions import IsSpaceOwner, IsMemberOfSpace, CanCreateAccounts
+
 
 class CreateAccount(generics.CreateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = ((IsSpaceOwner or CanCreateAccounts),)
 
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space.pk
         total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
-        accounts_count = Account.objects.all().count()
+        accounts_count = Account.objects.filter(father_space=space_pk).count()
         if accounts_count >= 1 and not total_balance:
-            total_balance = list(TotalBalance.objects.create(
+            total_balance = [TotalBalance.objects.create(
                 balance=sum([convert_currencies(
                     amount=account.balance,
                     from_currency=account.currency,
                     to_currency=self.request.user.currency) for account in Account.objects.all()]),
                 currency=self.request.user.currency,
                 father_space_id=space_pk
-            ))
+            ),]
         if total_balance:
             total_balance[0].balance += convert_currencies(amount=request.data['balance'],
                                                            from_currency=request.data['currency'],
@@ -49,7 +51,7 @@ class CreateAccount(generics.CreateAPIView):
 
 class ViewAccount(ObjectMultipleModelAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsMemberOfSpace,)
 
     def get_querylist(self):
         space_pk = self.kwargs.get("space_pk")
@@ -67,7 +69,7 @@ class ViewAccount(ObjectMultipleModelAPIView):
 
 class EditAccount(generics.RetrieveUpdateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace)
+    permission_classes = (IsInRightSpace,)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -76,7 +78,7 @@ class EditAccount(generics.RetrieveUpdateAPIView):
 
 class DeleteAccount(generics.RetrieveDestroyAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsOwnerOfFatherSpace, IsInRightSpace)
+    permission_classes = (IsInRightSpace,)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -103,7 +105,7 @@ class IncomeView(generics.GenericAPIView):
         return Account.objects.filter(pk=self.kwargs['pk'])
 
     serializer_class = AccountSerializer
-    permission_classes = (IncomePermission,)
+    permission_classes = ()
 
     @staticmethod
     def put(request, *args, **kwargs):

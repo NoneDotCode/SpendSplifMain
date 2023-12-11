@@ -23,7 +23,7 @@ def send_code_to_new_user(email: str, code: int, flag: str):
         subject=subject,
         message=message,
         from_email="spendsplif@gmail.com",
-        recipient_list=[email]
+        recipient_list=[email],
     )
 
     return True

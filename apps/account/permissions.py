@@ -8,7 +8,7 @@ from apps.account.models import Account
 class IsOwnerOfFatherSpace(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        return Space.objects.get(pk=obj.father_space_id).owner == request.user
+        return Space.objects.get(pk=obj.father_space_id).members.filter()
 
 
 class IsInRightSpace(permissions.BasePermission):
@@ -20,10 +20,7 @@ class IsInRightSpace(permissions.BasePermission):
 class IsOwnerOfSpace(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        try:
-            return Space.objects.get(pk=request.parser_context['kwargs'].get('space_pk')).owner == request.user
-        except (Space.DoesNotExist,):
-            return False
+        return Space.objects.get(pk=request.parser_context['kwargs'].get('space_pk')).members == request.user
 
 
 class IncomePermission(permissions.BasePermission):
