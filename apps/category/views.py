@@ -7,7 +7,7 @@ from apps.account.permissions import IsSpaceMember
 from apps.account.serializers import AccountSerializer
 
 from apps.category.models import Category
-from apps.category.permissions import (SpendPermission, IsMemberAndCanCreateCategoriesOrOwner,
+from apps.category.permissions import (IsMemberAndCanCreateCategoriesOrOwner,
                                        IsMemberAndCanEditCategoriesOrOwner, IsMemberAndCanDeleteCategoriesOrOwner)
 from apps.category.serializers import CategorySerializer
 from apps.space.models import Space
