@@ -20,9 +20,9 @@ class MemberPermissions(models.Model):
     space = models.ForeignKey(Space, verbose_name="space", on_delete=models.CASCADE)
     owner = models.BooleanField(default=False)
     """Users"""
-    remove_users = models.BooleanField(default=True, verbose_name="can remove users from space")
-    edit_users = models.BooleanField(default=True, verbose_name="can edit users' permissions in space")
-    add_users = models.BooleanField(default=True, verbose_name="can add users to space")
+    remove_members = models.BooleanField(default=True, verbose_name="can remove users from space")
+    edit_members = models.BooleanField(default=True, verbose_name="can edit users' permissions in space")
+    add_members = models.BooleanField(default=True, verbose_name="can add users to space")
     """Accounts"""
     delete_accounts = models.BooleanField(default=True, verbose_name="can delete accounts")
     edit_accounts = models.BooleanField(default=True, verbose_name="can edit accounts")
@@ -48,3 +48,4 @@ class MemberPermissions(models.Model):
     """Basic perms"""
     spend = models.BooleanField(default=True, verbose_name="can spends")
     transfer = models.BooleanField(default=True, verbose_name="can transfers")
+    income = models.BooleanField(default=True, verbose_name="can income")
