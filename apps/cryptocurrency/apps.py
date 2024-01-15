@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class SpendConfig(AppConfig):
+class CryptocurrencyConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.spend'
+    name = 'apps.cryptocurrency'
