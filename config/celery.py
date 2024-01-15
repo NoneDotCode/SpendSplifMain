@@ -23,8 +23,12 @@ app.conf.beat_schedule = {
     },
     "update_crypto_prices_every_2_minutes": {
         "task": "apps.cryptocurrency.tasks.update_crypto_prices",
-        "schedule": crontab(minute="*/2")
-    }
+        "schedule": crontab(minute="*/2"),
+    },
+    'update_stock_prices_every_minute': {
+        'task': 'apps.api_stocks.tasks.update_stock_prices',
+        'schedule': crontab(minute="*/3"),
+    },
 }
 
 app.autodiscover_tasks()
