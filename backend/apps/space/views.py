@@ -2,11 +2,11 @@ from django.db import transaction
 from rest_framework import generics, status
 from rest_framework.response import Response
 
-from apps.customuser.models import CustomUser
-from apps.space.models import Space, MemberPermissions
-from apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
-from apps.space.permissions import (IsSpaceOwner, IsMemberOfSpace, IsMemberAndOwnerOrCanAddMember,
-                                    IsMemberAndOwnerOrCanRemoveMember, CanEditUsers)
+from backend.apps.customuser.models import CustomUser
+from backend.apps.space.models import Space, MemberPermissions
+from backend.apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
+from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, IsMemberAndOwnerOrCanRemoveMember,
+                                            CanAddMembers)
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -34,7 +34,7 @@ class ListOfSpaces(generics.ListAPIView):
 
 class EditSpace(generics.RetrieveUpdateAPIView):
     serializer_class = SpaceSerializer
-    permission_classes = (IsMemberOfSpace, IsSpaceOwner,)
+    permission_classes = (IsSpaceMember, IsSpaceOwner,)
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
@@ -42,7 +42,7 @@ class EditSpace(generics.RetrieveUpdateAPIView):
 
 class DeleteSpace(generics.RetrieveDestroyAPIView):
     serializer_class = SpaceSerializer
-    permission_classes = (IsMemberOfSpace, IsSpaceOwner,)
+    permission_classes = (IsSpaceMember, IsSpaceOwner,)
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
@@ -50,7 +50,7 @@ class DeleteSpace(generics.RetrieveDestroyAPIView):
 
 class AddMemberToSpace(generics.GenericAPIView):
     serializer_class = AddAndRemoveMemberSerializer
-    permission_classes = (IsMemberAndOwnerOrCanAddMember,)
+    permission_classes = (IsSpaceMember and (IsSpaceOwner or CanAddMembers))
 
     @staticmethod
     def put(request, *args, **kwargs):
@@ -103,7 +103,7 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
 
 class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
     serializer_class = MemberPermissionsSerializer
-    permission_classes = (CanEditUsers,)
+    permission_classes = ()
 
     def get_queryset(self):
         return MemberPermissions.objects.filter(space_id=self.kwargs.get("space_pk"),

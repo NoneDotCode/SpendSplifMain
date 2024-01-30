@@ -1,9 +1,9 @@
 from rest_framework.test import APITestCase
 from rest_framework.test import APIClient
 from rest_framework import status
-from apps.space.models import Space
+from backend.apps.space.models import Space
 from apps.customuser.models import CustomUser
-from apps.space.serializers import SpaceSerializer
+from backend.apps.space.serializers import SpaceSerializer
 
 
 class SpaceTestCase(APITestCase):

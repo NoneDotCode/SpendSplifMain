@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.space.views import ListOfSpaces, CreateSpace, EditSpace, DeleteSpace, AddMemberToSpace, RemoveMemberFromSpace, \
+from backend.apps.space.views import ListOfSpaces, CreateSpace, EditSpace, DeleteSpace, AddMemberToSpace, RemoveMemberFromSpace, \
     MemberPermissionsEdit
 
 urlpatterns = [

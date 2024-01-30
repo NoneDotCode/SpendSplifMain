@@ -1,6 +1,6 @@
 from django.db import models
 
-from apps.customuser.models import CustomUser
+from backend.apps.customuser.models import CustomUser
 
 
 class Space(models.Model):

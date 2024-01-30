@@ -1,7 +1,7 @@
 from rest_framework.permissions import BasePermission
 
 from apps.customuser.models import CustomUser
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
 
 class IsMemberAndOwnerOrCanRemoveMember(BasePermission):
