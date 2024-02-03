@@ -2,14 +2,14 @@ from rest_framework import generics, permissions, authentication
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from apps.customuser.models import CustomUser
-from apps.customuser.serializers import (
+from backend.apps.customuser.models import CustomUser
+from backend.apps.customuser.serializers import (
     CustomUserSerializer,
     EmailTokenObtainPairSerializer,
     VerifyEmailSerializer,
     ResetPasswordSerializer,
 )
-from apps.customuser.utils import get_verify_code, send_code_to_new_user
+from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):

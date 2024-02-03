@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from apps.customuser.models import CustomUser
+from backend.apps.customuser.models import CustomUser
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
