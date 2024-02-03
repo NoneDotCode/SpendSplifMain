@@ -1,8 +1,8 @@
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
-from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
+from backend.apps.account.models import Account
+from backend.apps.account.serializers import AccountSerializer
 from apps.customuser.models import CustomUser
 from apps.space.models import Space
 

@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from apps.account.models import Account
+from backend.apps.account.models import Account
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
 
 class AccountSerializer(serializers.ModelSerializer):
@@ -15,4 +15,3 @@ class AccountSerializer(serializers.ModelSerializer):
 
 class IncomeSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=20, decimal_places=2)
-

@@ -1,8 +1,8 @@
 from django.db import models
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
-from apps.customuser.constants import Currency
+from backend.apps.customuser.constants import Currency
 
 
 class Account(models.Model):

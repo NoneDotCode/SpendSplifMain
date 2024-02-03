@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.account.views import ViewAccounts, EditAccount, CreateAccount, DeleteAccount, IncomeView
+from backend.apps.account.views import ViewAccounts, EditAccount, CreateAccount, DeleteAccount, IncomeView
 
 urlpatterns = [
     path("create_account/", CreateAccount.as_view(), name="create_account"),

@@ -1,23 +1,19 @@
 from rest_framework import generics, status
-from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
-from apps.account.models import Account
-from apps.account.serializers import AccountSerializer, IncomeSerializer
-from apps.account.permissions import (IsMemberAndCanCreateAccountsOrOwner, IsMemberAndCanEditAccountsOrOwner,
-                                      IsMemberAndCanDeleteAccountsOrOwner, IncomePermission, IsSpaceMember)
-
-from apps.space.models import Space
+from backend.apps.account.models import Account
+from backend.apps.account.serializers import AccountSerializer, IncomeSerializer
+from backend.apps.account.permissions import (IsSpaceMember, IsSpaceOwner, CanCreateAccounts, CanEditAccounts,
+                                              CanDeleteAccounts, IncomePermission)
 
 
 class CreateAccount(generics.CreateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsMemberAndCanCreateAccountsOrOwner,)
+    permission_classes = (IsSpaceMember & (IsSpaceOwner | CanCreateAccounts),)
 
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
-        space = get_object_or_404(Space, pk=space_pk)
-        request.data['father_space'] = space.pk
+        request.data['father_space'] = space_pk
         return super().create(request, *args, **kwargs)
 
 
@@ -31,7 +27,7 @@ class ViewAccounts(generics.ListAPIView):
 
 class EditAccount(generics.RetrieveUpdateAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsMemberAndCanEditAccountsOrOwner,)
+    permission_classes = (IsSpaceMember, CanEditAccounts)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -40,7 +36,7 @@ class EditAccount(generics.RetrieveUpdateAPIView):
 
 class DeleteAccount(generics.RetrieveDestroyAPIView):
     serializer_class = AccountSerializer
-    permission_classes = (IsMemberAndCanDeleteAccountsOrOwner,)
+    permission_classes = (IsSpaceMember, CanDeleteAccounts)
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -53,7 +49,7 @@ class IncomeView(generics.GenericAPIView):
         return Account.objects.filter(pk=self.kwargs['pk'])
 
     serializer_class = IncomeSerializer
-    permission_classes = (IncomePermission,)
+    permission_classes = (IsSpaceMember, IncomePermission,)
 
     @staticmethod
     def put(request, *args, **kwargs):
