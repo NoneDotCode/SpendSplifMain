@@ -1,5 +1,6 @@
 # Запуск проекта
 
+- в репозитории фронта есть [баш скрипты](https://github.com/TARFASH/SpendSpl/tree/develop/src/utils/dev) для линукса они ещё не совсем готовые
 - Корневая директория SpendSplif
   - ветка `feature/user`
 - Открываем консоль
@@ -7,10 +8,12 @@
 - Открываем ещё одну консоль
   - `docker ps`
   - `docker exec -it <id контейнера spendsplif-backend> bash`
+    - или `docker exec -it $SS_CONTAINER_ID sh -c "python manage.py makemigrations && python manage.py migrate"` чтобы пропустить шаги ниже
   - (не будет работать без предыдущего шага)
 - Далее активируется консоль контейнера проекта (внутри докер контейнера), там прописываем:
   - `python manage.py makemigrations`
   - `python manage.py migrate`
+  - также, эта консоль не должна быть постоянно открытой. Т.е. можно выполнить миграции и потом её спокойно закрывать.
 - Готово
   - **http://127.0.0.1:8000/**
 
