@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
-from apps.category.models import Category
+from backend.apps.category.models import Category
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
 
 class CategorySerializer(serializers.ModelSerializer):

@@ -1,6 +1,6 @@
 from celery import shared_task
 
-from apps.category.models import Category
+from backend.apps.category.models import Category
 
 
 @shared_task(bind=True)

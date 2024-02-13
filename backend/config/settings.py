@@ -35,10 +35,10 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django_celery_beat",
     # Custom apps
-    "apps.customuser",
-    "apps.space",
-    "apps.account",
-    "apps.category",
+    "backend.apps.customuser",
+    "backend.apps.space",
+    "backend.apps.account",
+    "backend.apps.category",
 ]
 
 # Custom user model auth
@@ -170,14 +170,15 @@ CORS_ALLOW_ALL_ORIGINS = True
 # celery
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = "redis://127.0.0.1:6379"
+CELERY_BROKER_URL = "redis://redis:6379/0"
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_BACKEND = "django-db"
+DJANGO_CELERY_BEAT_TZ_AWARE = False
 
+# Email settings
 
-#email settings
 SITE_ID = 2
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

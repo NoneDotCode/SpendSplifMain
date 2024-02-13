@@ -1,16 +1,14 @@
 FROM python:3.11
 
-WORKDIR /backend
-
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-COPY requirements.txt requirements.txt
+COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir django gunicorn
 
-COPY . .
+COPY ../ /SpendSplif/backend
 
-EXPOSE 8000
+WORKDIR /SpendSplif
 
-ENTRYPOINT ["python", "manage.py"]
-CMD ["runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]

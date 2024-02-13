@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from apps.customuser.constants import Language, Currency
+from backend.apps.customuser.constants import Language, Currency
 
 
 class CustomUserManager(BaseUserManager):
