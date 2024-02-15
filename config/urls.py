@@ -27,12 +27,8 @@ urlpatterns = [
     path("api/v1/", include("apps.customuser.urls")),
     path("api/v1/", include("apps.space.urls")),
     path("api/v1/", include("apps.messenger.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.account.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.category.urls")),
+    path("api/v1/", include("apps.api_stocks.urls")),
     path("api/v1/my_spaces/<int:space_pk>/", include("apps.history.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.total_balance.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.goal.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.spend.urls")),
     # JWT
     path("api/v1/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/v1/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),

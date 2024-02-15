@@ -40,12 +40,7 @@ INSTALLED_APPS = [
     # Custom apps
     "apps.customuser",
     "apps.space",
-    "apps.account",
-    "apps.category",
     "apps.history",
-    "apps.converter",
-    "apps.total_balance",
-    "apps.goal",
     "apps.messenger",
     "apps.cryptocurrency",
     "apps.api_stocks",
