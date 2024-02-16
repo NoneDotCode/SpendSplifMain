@@ -3,11 +3,13 @@ import random
 from django.contrib.auth.models import AbstractUser, Group, Permission, BaseUserManager
 from django.core.validators import MaxValueValidator
 from django.db import models
-from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
 
-from apps.customuser.constants import Language, Currency
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
+
+
+from backend.apps.customuser.constants import Language, Currency
 
 
 class CustomUserManager(BaseUserManager):
@@ -52,8 +54,7 @@ class CustomUser(AbstractUser):
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
 
-    verify_code = models.PositiveIntegerField(null=True, blank=True)
-    verify_email = models.BooleanField(default=False)
+    verify_code = models.CharField(max_length=12, blank=True, null=True)
 
     password_reset_code = models.PositiveIntegerField(blank=True, null=True)
 
@@ -79,6 +80,18 @@ class CustomUser(AbstractUser):
 
         if not self.id:
             self.set_password(self.password)
+
+        if self.verify_code is None:
+            verify_code = get_random_string(length=8)
+            self.verify_code = verify_code
+            self.is_active = False
+
+            subject = 'Email Verification'
+            message = f'Your verification code: {verify_code}'
+            from_email = 'spendsplif@gmail.com'
+            to_email = self.email
+            send_mail(subject, message, from_email, [to_email])
+
         super().save(*args, **kwargs)
 
     def __str__(self):
