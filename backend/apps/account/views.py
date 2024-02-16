@@ -6,7 +6,7 @@ from backend.apps.account.serializers import AccountSerializer, IncomeSerializer
 from backend.apps.account.permissions import (IsSpaceMember, IsSpaceOwner, CanCreateAccounts, CanEditAccounts,
                                               CanDeleteAccounts, IncomePermission)
 
-from backend.apps.history import HistoryIncome
+from backend.apps.history.views import HistoryIncome
 
 
 class CreateAccount(generics.CreateAPIView):
