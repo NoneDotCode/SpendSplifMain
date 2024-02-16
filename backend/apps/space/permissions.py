@@ -8,7 +8,7 @@ class IsSpaceMember(BasePermission):
     def has_permission(self, request, view):
 
         try:
-            space = Space.objects.get(pk=view.kwargs.get("pk"))
+            space = Space.objects.get(pk=view.kwargs.get("pk", ))
         except Space.DoesNotExist:
             return False
 
@@ -21,7 +21,7 @@ class IsSpaceMember(BasePermission):
 class IsSpaceOwner(BasePermission):
 
     def has_permission(self, request, view):
-        space = Space.objects.get(pk=view.kwargs.get("pk"))
+        space = Space.objects.get(pk=view.kwargs.get("pk", ))
 
         if not space.memberpermissions_set.filter(member=request.user, owner=True).exists():
             return False
@@ -32,7 +32,7 @@ class IsSpaceOwner(BasePermission):
 class CanAddMembers(BasePermission):
 
     def has_permission(self, request, view):
-        space = Space.objects.get(pk=view.kwargs.get("pk"))
+        space = Space.objects.get(pk=view.kwargs.get("pk", ))
 
         if not space.memberpermissions_set.filter(member=request.user, add_members=True).exists():
             return False
@@ -43,7 +43,7 @@ class CanAddMembers(BasePermission):
 class CanRemoveMembers(BasePermission):
 
     def has_permission(self, request, view):
-        space = Space.objects.get(pk=view.kwargs.get("pk"))
+        space = Space.objects.get(pk=view.kwargs.get("pk", ))
 
         if not space.memberpermissions_set.filter(member=request.user, remove_members=True).exists():
             return False
@@ -54,7 +54,7 @@ class CanRemoveMembers(BasePermission):
 class CanEditMembers(BasePermission):
 
     def has_permission(self, request, view):
-        space = Space.objects.get(pk=view.kwargs.get("pk"))
+        space = Space.objects.get(pk=view.kwargs.get("pk", ))
 
         if not space.memberpermissions_set.filter(member=request.user, edit_members=True).exists():
             return False

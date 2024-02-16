@@ -13,3 +13,8 @@ class HistoryIncomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryIncome
         fields = ("amount", "currency", "comment", "account", "created")
+
+
+class DailyIncomeSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    total_income = serializers.DecimalField(max_digits=20, decimal_places=2)

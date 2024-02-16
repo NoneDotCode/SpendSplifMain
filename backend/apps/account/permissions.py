@@ -10,7 +10,7 @@ class IsSpaceMember(BasePermission):
     def has_permission(self, request, view):
 
         try:
-            space = Space.objects.get(pk=view.kwargs.get("space_pk"))
+            space = Space.objects.get(pk=view.kwargs.get("space_pk", ))
         except Space.DoesNotExist:
             return False
 
@@ -23,7 +23,7 @@ class IsSpaceMember(BasePermission):
 class IsSpaceOwner(BasePermission):
 
     def has_permission(self, request, view):
-        space = Space.objects.get(pk=view.kwargs.get("space_pk"))
+        space = Space.objects.get(pk=view.kwargs.get("space_pk", ))
 
         if not space.memberpermissions_set.filter(member=request.user, owner=True).exists():
             return False
@@ -35,7 +35,7 @@ class CanCreateAccounts(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get("space_pk")
+        space_pk = view.kwargs.get("space_pk", )
         space = Space.objects.get(pk=space_pk)
 
         return space.members.filter(id=user.id, memberpermissions__create_accounts=True).exists()
@@ -45,8 +45,8 @@ class CanEditAccounts(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get("space_pk")
-        account_pk = view.kwargs.get("pk")
+        space_pk = view.kwargs.get("space_pk", )
+        account_pk = view.kwargs.get("pk", )
         space = Space.objects.get(pk=space_pk)
 
         try:
@@ -65,8 +65,8 @@ class CanDeleteAccounts(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get("space_pk")
-        account_pk = view.kwargs.get("pk")
+        space_pk = view.kwargs.get("space_pk", )
+        account_pk = view.kwargs.get("pk", )
         space = Space.objects.get(pk=space_pk)
 
         try:
@@ -85,8 +85,8 @@ class IncomePermission(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get('space_pk')
-        account_pk = view.kwargs.get('pk')
+        space_pk = view.kwargs.get('space_pk', )
+        account_pk = view.kwargs.get('pk', )
         space = Space.objects.get(pk=space_pk)
 
         try:

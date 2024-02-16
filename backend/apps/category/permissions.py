@@ -11,7 +11,7 @@ class CanCreateCategories(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space = Space.objects.get(pk=view.kwargs.get("space_pk"))
+        space = Space.objects.get(pk=view.kwargs.get("space_pk", ))
 
         return space.members.filter(id=user.id, memberpermissions__create_categories=True).exists()
 
@@ -20,8 +20,8 @@ class CanEditCategories(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get("space_pk")
-        category_pk = view.kwargs.get("pk")
+        space_pk = view.kwargs.get("space_pk", )
+        category_pk = view.kwargs.get("pk", )
         space = Space.objects.get(pk=space_pk)
 
         try:
@@ -36,12 +36,12 @@ class CanEditCategories(permissions.BasePermission):
                 space.members.filter(id=user.id, memberpermissions__edit_categories=True).exists())
 
 
-class CanDeleteAccounts(permissions.BasePermission):
+class CanDeleteCategories(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get("space_pk")
-        category_pk = view.kwargs.get("pk")
+        space_pk = view.kwargs.get("space_pk", )
+        category_pk = view.kwargs.get("pk", )
         space = Space.objects.get(pk=space_pk)
 
         try:
