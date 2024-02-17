@@ -4,7 +4,7 @@ from django.db import migrations, models
 
 import requests
 
-from apps.converter.constants import CURRENCIES
+from backend.apps.converter.constants import CURRENCIES
 
 import environ
 import os

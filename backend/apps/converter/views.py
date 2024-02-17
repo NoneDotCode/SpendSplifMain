@@ -1,7 +1,7 @@
 from rest_framework import generics
 from rest_framework.response import Response
 
-from apps.converter.utils import convert_currencies
+from backend.apps.converter.utils import convert_currencies
 
 
 class ConvertCurrencyView(generics.RetrieveAPIView):

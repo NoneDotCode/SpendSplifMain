@@ -2,7 +2,7 @@ import requests
 
 from celery import shared_task
 
-from apps.converter.models import Currency
+from backend.apps.converter.models import Currency
 
 import environ
 import os
@@ -14,8 +14,8 @@ from apps.space.models import Space
 from apps.category.models import Category
 
 env = environ.Env()
-BASE_DIR = os.path.dirname(os.path.abspath("../../config/.."))
-environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
+BASE_DIR = os.path.dirname(os.path.abspath("../../.."))
+environ.Env.read_env(os.path.join(BASE_DIR, "../../../config/dev.env"))
 
 
 @shared_task(bing=True)

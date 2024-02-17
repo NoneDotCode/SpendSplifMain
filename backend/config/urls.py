@@ -9,7 +9,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("apps.customuser.urls")),
     path("api/v1/", include("apps.space.urls")),
-    path("api/v1/", include("apps.history.urls")),
     path("api/v1/my_spaces/<int:space_pk>/", include("apps.account.urls")),
     path("api/v1/my_spaces/<int:space_pk>/", include("apps.category.urls")),
     path("api/v1/my_spaces/<int:space_pk>/", include("apps.history.urls")),
