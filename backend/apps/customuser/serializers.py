@@ -28,8 +28,8 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             'password': attrs.get('password')
         }
         """
-        email = attrs.get("email", )
-        password = attrs.get("password", )
+        email = attrs.get("email")
+        password = attrs.get("password")
 
         if email and password:
             user = authenticate(email=email, password=password)
