@@ -7,7 +7,7 @@ from backend.apps.converter.models import Currency
 import environ
 import os
 
-from apps.total_balance.models import TotalBalance
+from backend.apps.total_balance.models import TotalBalance
 
 from apps.space.models import Space
 

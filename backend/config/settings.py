@@ -43,12 +43,6 @@ INSTALLED_APPS = [
     "apps.category",
     "apps.history",
     "apps.converter",
-    "backend.apps.customuser",
-    "backend.apps.space",
-    "backend.apps.account",
-    "backend.apps.category",
-    "backend.apps.history",
-    "apps.converter",
     "apps.total_balance",
 ]
 
@@ -181,7 +175,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # celery
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = "redis://redis:6379/0" # "redis://127.0.0.1:6379" if not in docker
+CELERY_BROKER_URL = "redis://redis:6379/0"  # "redis://127.0.0.1:6379" if not in docker
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"

@@ -2,13 +2,11 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
 from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
 from apps.category.models import Category
-from apps.category.serializers import CategorySerializer
 from apps.customuser.models import CustomUser
 from apps.space.models import Space
-from apps.total_balance.models import TotalBalance
-from apps.total_balance.serializers import TotalBalanceSerializer
+from backend.apps.total_balance.models import TotalBalance
+from backend.apps.total_balance.serializers import TotalBalanceSerializer
 
 
 class TotalBalanceTestCase(APITestCase):

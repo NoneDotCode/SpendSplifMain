@@ -1,10 +1,10 @@
 from django.db import models
 
-from apps.account.models import Account
+from backend.apps.account.models import Account
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
-from apps.customuser.constants import Currency
+from backend.apps.customuser.constants import Currency
 
 
 class TotalBalance(models.Model):

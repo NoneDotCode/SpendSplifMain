@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.total_balance.models import TotalBalance
+from backend.apps.total_balance.models import TotalBalance
 
 
 class TotalBalanceSerializer (serializers.ModelSerializer):
