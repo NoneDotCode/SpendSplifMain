@@ -3,6 +3,8 @@ from datetime import timedelta
 
 import environ
 
+# -*- coding: utf-8 -*-
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 env = environ.Env()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
