@@ -5,7 +5,7 @@ from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 
 from backend.apps.category.models import Category
 from backend.apps.category.permissions import (CanCreateCategories, CanEditCategories,
-                                               IsMemberAndCanDeleteCategoriesOrOwner)
+                                               )
 from backend.apps.category.serializers import CategorySerializer
 from backend.apps.space.models import Space
 
@@ -40,7 +40,7 @@ class EditCategory(generics.RetrieveUpdateAPIView):
 
 class DeleteCategory(generics.RetrieveDestroyAPIView):
     serializer_class = CategorySerializer
-    permission_classes = (IsMemberAndCanDeleteCategoriesOrOwner,)
+    permission_classes = ()
 
     def get_queryset(self):
         return Category.objects.filter(pk=self.kwargs.get('pk'))
