@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    'corsheaders'
     # Celery
     "celery",
     "django_celery_results",
@@ -166,6 +167,12 @@ SIMPLE_JWT = {
 # cors
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:5173",
+    "http://127.0.0.1:8000"
+]
 
 # celery
 
