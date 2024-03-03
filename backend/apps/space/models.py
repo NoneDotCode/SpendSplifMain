@@ -49,4 +49,3 @@ class MemberPermissions(models.Model):
     spend = models.BooleanField(default=True, verbose_name="can spends")
     income = models.BooleanField(default=True, verbose_name="can income")
     transfer = models.BooleanField(default=True, verbose_name="can transfers")
-    income = models.BooleanField(default=True, verbose_name="can income")

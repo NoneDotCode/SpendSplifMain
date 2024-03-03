@@ -1,10 +1,10 @@
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
-from apps.account.models import Account
-from apps.category.models import Category
-from apps.customuser.models import CustomUser
-from apps.space.models import Space
+from backend.apps.account.models import Account
+from backend.apps.category.models import Category
+from backend.apps.customuser.models import CustomUser
+from backend.apps.space.models import Space
 from backend.apps.total_balance.models import TotalBalance
 from backend.apps.total_balance.serializers import TotalBalanceSerializer
 
