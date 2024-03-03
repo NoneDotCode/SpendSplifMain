@@ -20,7 +20,13 @@ class DailyIncomeSerializer(serializers.Serializer):
     total_income = serializers.DecimalField(max_digits=20, decimal_places=2)
 
 
-class HistoryAutoDataSerializer(serializers.ModelSerializer):
+class HistoryIncomeAutoDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryIncome
+        fields = '__all__'
+
+
+class HistoryExpenseAutoDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoryExpense
         fields = '__all__'

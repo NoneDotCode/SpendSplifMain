@@ -10,7 +10,7 @@ from backend.apps.customuser.constants import Currency
 class HistoryExpense(models.Model):
     amount = models.DecimalField(max_digits=20, decimal_places=2)
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
-    comment = models.CharField(max_length=300)
+    comment = models.CharField(max_length=300, null=True, blank=True)
     from_acc = models.CharField(max_length=24)
     to_cat = models.CharField(max_length=24, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
