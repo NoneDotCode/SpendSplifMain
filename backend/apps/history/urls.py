@@ -1,8 +1,9 @@
 from django.urls import path
 
-from backend.apps.history.views import HistoryView, DailyIncomeView
+from backend.apps.history.views import HistoryView, DailyIncomeView, AutoDataView
 
 urlpatterns = [
-    path('my_history/<int:space_pk>', HistoryView.as_view(), name='check_space_history'),
-    path('daily_income/<int:space_pk>/', DailyIncomeView.as_view(), name='daily_income'),
+    path('my_history/', HistoryView.as_view(), name='check_space_history'),
+    path('daily_income/', DailyIncomeView.as_view(), name='daily_income'),
+    path('auto_data/', AutoDataView.as_view(), name='auto_data'),
 ]
