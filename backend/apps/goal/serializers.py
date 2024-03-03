@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.goal.models import Goal
+from backend.apps.goal.models import Goal
 
 
 class GoalSerializer(serializers.ModelSerializer):

@@ -1,30 +1,18 @@
-from django.db import transaction
-from django.shortcuts import redirect
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.generics import get_object_or_404
-from rest_framework.response import Response
-from rest_framework.reverse import reverse_lazy
-from rest_framework.utils import json
-from rest_framework import generics, status
+from rest_framework import generics
 
-from apps.goal.serializers import GoalSerializer
-from apps.goal.models import Goal
-from apps.goal.permissions import TransferToGoalPermission
+from backend.apps.goal.serializers import GoalSerializer
+from backend.apps.goal.models import Goal
+from backend.apps.goal.permissions import CanCreateGoals, CanEditGoals, CanDeleteGoals
 
-from apps.account.models import Account
+from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 
-from apps.converter.utils import convert_currencies
-
-from apps.account.permissions import IsOwnerOfSpace, IsInRightSpace
-
-from apps.space.models import Space
-
-from apps.total_balance.models import TotalBalance
+from backend.apps.space.models import Space
 
 
 class CreateGoal(generics.CreateAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsSpaceMember & (IsSpaceOwner | CanCreateGoals),)
 
     def get_queryset(self):
         return Goal.objects.filter(father_space_id=self.kwargs.get('space_pk'))
@@ -33,13 +21,13 @@ class CreateGoal(generics.CreateAPIView):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space.pk
-        request.data['spent'] = 0
+        request.data['collected'] = 0
         return super().create(request, *args, **kwargs)
 
 
 class EditGoal(generics.RetrieveUpdateAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace, IsInRightSpace)
+    permission_classes = (IsSpaceMember, CanEditGoals)
 
     def get_queryset(self):
         return Goal.objects.filter(pk=self.kwargs.get('pk'))
@@ -47,7 +35,7 @@ class EditGoal(generics.RetrieveUpdateAPIView):
 
 class ViewGoals(generics.ListAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsSpaceMember,)
 
     def get_queryset(self):
         return Goal.objects.filter(father_space_id=self.kwargs.get('space_pk'))
@@ -55,7 +43,7 @@ class ViewGoals(generics.ListAPIView):
 
 class DeleteGoal(generics.RetrieveDestroyAPIView):
     serializer_class = GoalSerializer
-    permission_classes = (IsOwnerOfSpace, IsInRightSpace)
+    permission_classes = (IsSpaceMember, CanDeleteGoals)
 
     def get_queryset(self):
         return Goal.objects.filter(pk=self.kwargs.get("pk"))

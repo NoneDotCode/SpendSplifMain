@@ -1,6 +1,6 @@
 from django.db import models
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
 
 class Goal(models.Model):
