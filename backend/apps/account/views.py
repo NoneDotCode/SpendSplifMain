@@ -59,11 +59,11 @@ class IncomeView(generics.GenericAPIView):
         space_pk = kwargs.get('space_pk')
         account_pk = kwargs.get('pk')
         account = Account.objects.get(pk=account_pk)
-        amount = request.data.get('amount', )
+        amount = request.data.get('amount')
         if amount is not None and int(amount) > 0:
             account.balance += int(amount)
             account.save()
-            comment = request.data.get("comment", )
+            comment = request.data.get("comment")
             if comment is None:
                 comment = ""
             HistoryIncome.objects.create(
