@@ -9,9 +9,9 @@ import os
 
 from backend.apps.total_balance.models import TotalBalance
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
-from apps.category.models import Category
+from backend.apps.category.models import Category
 
 env = environ.Env()
 BASE_DIR = os.path.dirname(os.path.abspath("../../.."))

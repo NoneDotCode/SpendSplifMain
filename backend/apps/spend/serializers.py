@@ -3,15 +3,23 @@ from django_celery_beat.models import PeriodicTask
 from rest_framework import serializers
 
 
+class SpendSerializer(serializers.Serializer):
+    account_pk = serializers.IntegerField(required=True)
+    category_pk = serializers.IntegerField(required=True)
+    amount = serializers.IntegerField(required=True)
+    comment = serializers.CharField(required=False)
+
+
 class PeriodicSpendCreateSerializer(serializers.Serializer):
     account_pk = serializers.IntegerField(required=True)
     category_pk = serializers.IntegerField(required=True)
     amount = serializers.FloatField(required=True)
     title = serializers.CharField(required=True)
-    hour = serializers.CharField(required=False, default="00")
+    hour = serializers.CharField(required=False, default="10")
     minute = serializers.CharField(required=False, default="00")
     day_of_week = serializers.CharField(required=False, default="*")
     day_of_month = serializers.CharField(required=False, default="*")
+    month_of_year = serializers.CharField(required=False, default="*")
 
 
 class PeriodicSpendEditSerializer(serializers.Serializer):
@@ -23,3 +31,4 @@ class PeriodicSpendEditSerializer(serializers.Serializer):
     minute = serializers.CharField(required=False, default=None)
     day_of_week = serializers.CharField(required=False, default=None)
     day_of_month = serializers.CharField(required=False, default=None)
+    month_of_year = serializers.CharField(required=False, default=None)

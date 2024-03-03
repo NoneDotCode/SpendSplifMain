@@ -7,28 +7,28 @@ from rest_framework import generics, status
 from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 
-from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
-from apps.account.permissions import IsOwnerOfSpace
+from backend.apps.account.models import Account
+from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 
-from apps.category.models import Category
+from backend.apps.category.models import Category
 
-from apps.spend.permissions import SpendPermission
-from apps.spend.serializers import PeriodicSpendCreateSerializer, PeriodicSpendEditSerializer
+from backend.apps.spend.permissions import SpendPermission, CanCreatePeriodicSpends, CanDeletePeriodicSpends, \
+    CanEditPeriodicSpends
+from backend.apps.spend.serializers import PeriodicSpendCreateSerializer, PeriodicSpendEditSerializer, SpendSerializer
 
-from apps.converter.utils import convert_currencies
+from backend.apps.converter.utils import convert_currencies
 
-from apps.history.models import HistoryExpense
+from backend.apps.history.models import HistoryExpense
 
-from apps.total_balance.models import TotalBalance
+from backend.apps.total_balance.models import TotalBalance
 
-from apps.space.models import Space
+from backend.apps.space.models import Space
 
 
 class SpendView(generics.GenericAPIView):
 
-    serializer_class = AccountSerializer
-    permission_classes = (SpendPermission,)
+    serializer_class = SpendSerializer
+    permission_classes = (IsSpaceMember, SpendPermission)
 
     @staticmethod
     def put(request, *args, **kwargs):
@@ -73,7 +73,7 @@ class SpendView(generics.GenericAPIView):
 
 class PeriodicSpendCreateView(generics.GenericAPIView):
     serializer_class = PeriodicSpendCreateSerializer
-    permission_classes = (SpendPermission,)
+    permission_classes = (IsSpaceMember, CanCreatePeriodicSpends)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -87,11 +87,13 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         minute = serializer.validated_data.get("minute")
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
+        month_of_year = serializer.validated_data.get("month_of_year")
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
                                                                   day_of_week=day_of_week,
-                                                                  day_of_month=day_of_month)
+                                                                  day_of_month=day_of_month,
+                                                                  month_of_year=month_of_year)
         try:
             1 / amount
         except ZeroDivisionError:
@@ -111,7 +113,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
 
 
 class PeriodicSpendDeleteView(generics.GenericAPIView):
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsSpaceMember, CanDeletePeriodicSpends)
 
     @staticmethod
     def delete(request, *args, **kwargs):
@@ -128,7 +130,7 @@ class PeriodicSpendDeleteView(generics.GenericAPIView):
 
 class PeriodicSpendEditView(generics.GenericAPIView):
     serializer_class = PeriodicSpendEditSerializer
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsSpaceMember, CanEditPeriodicSpends)
 
     def put(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -142,6 +144,7 @@ class PeriodicSpendEditView(generics.GenericAPIView):
         minute = serializer.validated_data.get("minute")
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
+        month_of_year = serializer.validated_data.get("month_of_year")
 
         periodic_spend_pk = kwargs.get("pk")
         task = PeriodicTask.objects.get(pk=periodic_spend_pk)
@@ -159,15 +162,18 @@ class PeriodicSpendEditView(generics.GenericAPIView):
             task_crontab_dict = {"hour": task_crontab.hour,
                                  "minute": task_crontab.minute,
                                  "day_of_week": task_crontab.day_of_week,
-                                 "day_of_month": task_crontab.day_of_month}
-            crontab_vars = {"hour": hour, "minute": minute, "day_of_week": day_of_week, "day_of_month": day_of_month}
+                                 "day_of_month": task_crontab.day_of_month,
+                                 "month_of_year": task_crontab.month_of_year}
+            crontab_vars = {"hour": hour, "minute": minute, "day_of_week": day_of_week, "day_of_month": day_of_month,
+                            "month_of_year": month_of_year}
             for i in crontab_vars:
                 if crontab_vars[i] is None:
                     crontab_vars[i] = task_crontab_dict[i]
             schedule, created = CrontabSchedule.objects.get_or_create(hour=crontab_vars["hour"],
                                                                       minute=crontab_vars["minute"],
                                                                       day_of_week=crontab_vars["day_of_week"],
-                                                                      day_of_month=crontab_vars["day_of_month"])
+                                                                      day_of_month=crontab_vars["day_of_month"],
+                                                                      month_of_year=crontab_vars["month_of_year"])
             task.crontab = schedule
             task.save()
             return Response({"success": "Periodic Spend successfully edited."}, status=status.HTTP_200_OK)
@@ -175,7 +181,7 @@ class PeriodicSpendEditView(generics.GenericAPIView):
 
 
 class PeriodicSpendsGetView(generics.GenericAPIView):
-    permission_classes = (IsOwnerOfSpace,)
+    permission_classes = (IsSpaceMember,)
 
     @staticmethod
     def get(request, *args, **kwargs):
@@ -189,17 +195,18 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
 
         periodic_spends_list = list(filter(key, PeriodicTask.objects.all()))
         result = []
-        for i in periodic_spends_list:
+        for spend in periodic_spends_list:
             spend_args = ast.literal_eval(i.args)
             temp = {
-                "title": i.name.replace(f"periodic_spend_{request.user.id}_", ""),
+                "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
                 "account_pk": spend_args[0],
                 "category_pk": spend_args[1],
                 "amount": spend_args[3],
-                "hour": i.crontab.hour,
-                "minute": i.crontab.minute,
-                "day_of_week": i.crontab.day_of_week,
-                "day_of_month": i.crontab.day_of_month
+                "hour": spend.crontab.hour,
+                "minute": spend.crontab.minute,
+                "day_of_week": spend.crontab.day_of_week,
+                "day_of_month": spend.crontab.day_of_month,
+                "month_of_year": spend.crontab.month_of_year
             }
             result.append(temp)
         return Response(result, status=status.HTTP_200_OK)

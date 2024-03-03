@@ -1,9 +1,9 @@
 from django.urls import path
 
-from apps.spend.views import SpendView
+from backend.apps.spend.views import SpendView
 
-from apps.spend.views import (PeriodicSpendCreateView, PeriodicSpendDeleteView, PeriodicSpendEditView,
-                              PeriodicSpendsGetView)
+from backend.apps.spend.views import (PeriodicSpendCreateView, PeriodicSpendDeleteView, PeriodicSpendEditView,
+                                      PeriodicSpendsGetView)
 
 urlpatterns = [
     path("spend/", SpendView.as_view(), name="spend"),
