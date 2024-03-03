@@ -1,12 +1,15 @@
 from django.db import transaction
-from rest_framework import generics, status
-from rest_framework.response import Response
+from rest_framework import generics
 
+from backend.apps.account.models import Account
+from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.space.models import Space, MemberPermissions
 from backend.apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
                                             CanEditMembers)
+from rest_framework.response import Response
+from rest_framework import status
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -22,6 +25,27 @@ class CreateSpace(generics.CreateAPIView):
                 member=self.request.user,
                 space=space,
                 owner=True
+            )
+
+            # Create two default categories for the newly created space
+            Category.objects.create(
+                title="Food",
+                limit=1000,
+                spent=0,
+                father_space=space
+            )
+
+            Category.objects.create(
+                title="Home",
+                spent=0,
+                father_space=space
+            )
+
+            Account.objects.create(
+                title="Cash",
+                balance=0,
+                currency=self.request.user.currency,
+                father_space=space
             )
 
 
