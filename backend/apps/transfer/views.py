@@ -1,16 +1,17 @@
 from rest_framework import status, generics
 from rest_framework.response import Response
 
-from apps.account.models import Account
-from apps.account.serializers import AccountSerializer
+from backend.apps.account.models import Account
+from backend.apps.account.serializers import AccountSerializer
+from backend.apps.account.permissions import IsSpaceMember
 
-from apps.converter.utils import convert_currencies
+from backend.apps.converter.utils import convert_currencies
 
-from apps.goal.models import Goal
+from backend.apps.goal.models import Goal
 
-from apps.total_balance.models import TotalBalance
+from backend.apps.total_balance.models import TotalBalance
 
-from apps.transfer.permissions import TransferPermission
+from backend.apps.transfer.permissions import TransferPermission
 
 
 class TransferView(generics.GenericAPIView):
@@ -19,7 +20,7 @@ class TransferView(generics.GenericAPIView):
         return Account.objects.filter(pk=self.kwargs.get("account_pk"))
 
     serializer_class = AccountSerializer
-    permission_classes = (TransferPermission,)
+    permission_classes = (IsSpaceMember, TransferPermission)
 
     @staticmethod
     def put(request, *args, **kwargs):
