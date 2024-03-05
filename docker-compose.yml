@@ -1,0 +1,53 @@
+version: '3'
+services:
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgresql
+      - redis
+    environment:
+      - DB_HOST=postgresql
+      - DB_PORT=5432
+      - POSTGRES_DB=spendsplif
+      - POSTGRES_USER=db_user
+      - POSTGRES_PASSWORD=password_default
+      - DJANGO_REDIS_HOST=redis
+      - DJANGO_REDIS_PORT=6379
+    command: ["python", "backend/manage.py", "runserver", "0.0.0.0:8000"]
+
+  postgresql:
+    image: postgres:15.5
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: spendsplif
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: password_default
+
+  redis:
+    image: redis:6.0.16
+    ports:
+      - "6379:6379"
+
+  celery-worker:
+    build:
+      context: ./backend
+    depends_on:
+      - redis
+      - postgresql
+      - backend
+    command: ["celery", "-A", "backend.config", "worker", "--pool=solo", "-l", "info"]
+
+  celery-beat:
+    build:
+      context: ./backend
+    depends_on:
+      - postgresql
+      - redis
+      - backend
+      - celery-worker
+    command: ["celery", "-A", "backend.config", "beat", "-l", "INFO", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
