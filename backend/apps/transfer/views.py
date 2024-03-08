@@ -8,6 +8,7 @@ from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.converter.utils import convert_currencies
 
 from backend.apps.goal.models import Goal
+from backend.apps.history.models import HistoryTransfer
 
 from backend.apps.total_balance.models import TotalBalance
 
@@ -46,6 +47,8 @@ class TransferView(generics.GenericAPIView):
                                                       to_currency=account.currency)
                 account.save()
                 goal.save()
+                HistoryTransfer.objects.create(from_goal=from_object, to_acc=to_object, father_space_id=space_pk,
+                                               amount=amount, currency=from_currency)
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)
         elif from_object == "account" and to_object == "goal":
             goal = Goal.objects.get(pk=request.data.get("to_goal"))
@@ -62,10 +65,15 @@ class TransferView(generics.GenericAPIView):
                                                      to_currency=to_currency)
                 account.save()
                 goal.save()
+                HistoryTransfer.objects.create(from_acc=from_object, to_goal=to_object, father_space_id=space_pk,
+                                               amount=amount, currency=to_currency)
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)
         elif from_object == "account" and to_object == "account":
             from_account = Account.objects.get(pk=request.data.get("from_account"))
             to_account = Account.objects.get(pk=request.data.get("to_account"))
+            currency = request.user.currency
+            if TotalBalance.objects.filter(father_space_id=space_pk):
+                currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
             if amount is not None and amount > 0:
                 if amount > from_account.balance:
                     return Response({"error": "You have not enough money on the account."})
@@ -75,4 +83,6 @@ class TransferView(generics.GenericAPIView):
                                                          to_currency=to_account.currency)
                 from_account.save()
                 to_account.save()
+                HistoryTransfer.objects.create(from_acc=from_object, to_acc=to_object, father_space_id=space_pk,
+                                               amount=amount, currency=currency)
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)
