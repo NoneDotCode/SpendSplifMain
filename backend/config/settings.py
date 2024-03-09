@@ -225,7 +225,7 @@ DJANGO_CELERY_BEAT_TZ_AWARE = False
 SITE_ID = 2
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.yandex.ru"
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
