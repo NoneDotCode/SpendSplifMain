@@ -1,3 +1,4 @@
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -44,13 +45,13 @@ class UpdateStocksAPIView_group1(APIView):
                             stock.save()
                     else:
                         response_data[symbol] = "No data available"
-                        print(f"No data available for {symbol}")
+                        
                 else:
                     response_data[symbol] = "Error retrieving data: 'values'"
-                    print(f"Error retrieving data for {symbol}: 'values' key not found")
+                    
             except Exception as e:
                 response_data[symbol] = f"Error retrieving data: {e}"
-                print(f"Error retrieving data for {symbol}: {e}")
+                
 
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -60,21 +61,20 @@ class Update_Stocks_APIView_group1_add(UpdateStocksAPIView_group1):
     symbols_to_check = ['ORCL', 'TSLA', 'BABA', 'JNJ']
 class UpdateStocksAPIView_group2(UpdateStocksAPIView_group1):
     symbols_to_check = ['BAC', 'XOM', 'GE', 'KO']
-class UpdateStocksAPIView_group2_add(UpdateStocksAPIView_group2):
+class UpdateStocksAPIView_group2_add(UpdateStocksAPIView_group1):
     symbols_to_check = ['PG', 'V', 'MA', 'JPM']
-class UpdateStocksAPIView_group3(UpdateStocksAPIView_group2):
+class UpdateStocksAPIView_group3(UpdateStocksAPIView_group1):
     symbols_to_check = ['PFE', 'INTC', 'CSCO', 'DIS']
-class UpdateStocksAPIView_group3_add(UpdateStocksAPIView_group3):
+class UpdateStocksAPIView_group3_add(UpdateStocksAPIView_group1):
     symbols_to_check = ['IBM', 'BA', 'NFLX', 'JCI']
-
-class UpdateStocksAPIView_group4(UpdateStocksAPIView_group3):
+class UpdateStocksAPIView_group4(UpdateStocksAPIView_group1):
     symbols_to_check = ['GM', 'CVX', 'PEP', 'GS']
-
-class UpdateStocksAPIView_group4_add(UpdateStocksAPIView_group4):
+class UpdateStocksAPIView_group4_add(UpdateStocksAPIView_group1):
     symbols_to_check = ['GE', 'CSCO', 'ORCL','MMM']
-
-class UpdateStocksAPIView_group5(UpdateStocksAPIView_group4):
+class UpdateStocksAPIView_group5(UpdateStocksAPIView_group1):
     symbols_to_check = ['HON']
+
+
 
 class StockAPIView(APIView):
     def get(self, request, *args, **kwargs):
@@ -83,7 +83,12 @@ class StockAPIView(APIView):
         stock_data = {}
 
         for stock in stocks:
-            stock_data[stock.symbol] = str(stock.price)
+            stock_data[stock.symbol] = {
+                'name': stock.name,
+                'symbol': stock.symbol,
+                'price': str(stock.price)
+            }
 
         return Response(stock_data, status=status.HTTP_200_OK)
+
 

@@ -7,13 +7,10 @@ logger = logging.getLogger(__name__)
 
 @shared_task()
 def update_crypto_prices():
-    print("Task started: update_crypto_prices")
     logger.info("Task started: update_crypto_prices")
     url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,eur'
     data = requests.get(url).json()
-    print(f"Data from API: {data}")
 
-    # Список криптовалют, которые нужно обновить или создать
     cryptocurrencies = [
         {'name': 'Bitcoin', 'symbol': 'bitcoin'},
         {'name': 'Ethereum', 'symbol': 'ethereum'}
@@ -21,17 +18,17 @@ def update_crypto_prices():
 
     for crypto in cryptocurrencies:
         symbol = crypto['symbol']
-        # Получение или создание объекта криптовалюты
-        obj, created = Cryptocurrency.objects.get_or_create(
-            symbol=symbol,
-            defaults={'name': crypto['name']}
-        )
-        print(f"{'Created' if created else 'Found'} {symbol} in database")
+        name = crypto['name']
+        
+        if symbol in data and data[symbol]['usd'] is not None:
+            price_usd = data[symbol]['usd']
+            price_eur = data[symbol]['eur']
+            obj, created = Cryptocurrency.objects.update_or_create(
+                symbol=symbol,
+                defaults={'name': name, 'price_usd': price_usd, 'price_eur': price_eur}
+            )
+            logger.info(f"{'Created' if created else 'Updated'} {symbol} in database with USD {price_usd} and EUR {price_eur}")
+        else:
+            logger.warning(f"No price data available for {symbol}")
 
-        if symbol in data:
-            obj.price_usd = data[symbol]['usd']
-            obj.price_eur = data[symbol]['eur']
-            obj.save()
-            print(f"Updated {symbol}: USD {obj.price_usd}, EUR {obj.price_eur}")
-
-    return "Crypto prices updated"
+    print('Crypto Prices updated')

@@ -21,13 +21,29 @@ app.conf.beat_schedule = {
         "task": "apps.converter.tasks.update_rates",
         "schedule": crontab(hour="00", minute="00")
     },
+    'update_stock_prices_1_every_11_minutes': {
+        'task': 'apps.api_stocks.tasks.update_stock_prices_1',
+        'schedule': crontab(minute="*/11"),
+    },
+    'update_stock_prices_2_every_13_minutes': {
+        'task': 'apps.api_stocks.tasks.update_stock_prices_2',
+        'schedule': crontab(minute="*/13"),
+    },
+    'update_stock_prices_3_every_14_minutes': {
+        'task': 'apps.api_stocks.tasks.update_stock_prices_3',
+        'schedule': crontab(minute="*/14"),
+    },
+    'update_stock_prices_4_every_10_minutes': {
+        'task': 'apps.api_stocks.tasks.update_stock_prices_4',
+        'schedule': crontab(minute="*/10"),
+    },
+    'update_stock_prices_5_every_12_minutes': {
+        'task': 'apps.api_stocks.tasks.update_stock_prices_5',
+        'schedule': crontab(minute="*/12")
+    },
     "update_crypto_prices_every_2_minutes": {
         "task": "apps.cryptocurrency.tasks.update_crypto_prices",
         "schedule": crontab(minute="*/2"),
-    },
-    'update_stock_prices_every_minute': {
-        'task': 'apps.api_stocks.tasks.update_stock_prices',
-        'schedule': crontab(minute="*/3"),
     },
 }
 

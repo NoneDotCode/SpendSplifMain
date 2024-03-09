@@ -1,33 +1,60 @@
-import os
 import requests
 from celery import shared_task
 from .models import Stock
 import environ
+import time
 
-# Инициализация environ
 env = environ.Env()
-environ.Env.read_env()  # Чтение .env файла
+environ.Env.read_env()
+
+
+def update_group_prices(api_key, symbols):
+    for symbol in symbols:
+        time_series_url = f'https://api.twelvedata.com/time_series?symbol={symbol}&interval=1min&apikey={api_key}'
+        time_series_response = requests.get(time_series_url)
+
+        data = time_series_response.json()
+        if 'values' in data:
+            values = data['values']
+            if values:
+                latest_data = values[-1]
+                current_price = latest_data.get('close', 'N/A')
+
+                stock, created = Stock.objects.update_or_create(symbol=symbol, defaults={'price': current_price})
+                if not created:
+                    stock.price = current_price
+                    stock.save()
+    print('Group Stocks prices updated')
+    time.sleep(65)
 
 @shared_task
-def update_stock_prices():
-    API_KEY = env('ALPHA_VANTAGE_API_KEY')
-    symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'FB']
+def update_stock_prices_1():
+    api_key = '296b89a58663457d9dcd754263b549bf'
+    group_1_symbols = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'ORCL', 'TSLA', 'BABA', 'JNJ']
+    update_group_prices(api_key, group_1_symbols)
+    
 
-    for symbol in symbols:
-        url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={API_KEY}'
-        data = requests.get(url).json()
+@shared_task
+def update_stock_prices_2():
+    api_key = '296b89a58663457d9dcd754263b549bf'
+    group_2_symbols = ['BAC', 'XOM', 'GE', 'KO', 'PG', 'V', 'MA', 'JPM']
+    update_group_prices(api_key, group_2_symbols)
+    
+@shared_task
+def update_stock_prices_3():
+    api_key = '296b89a58663457d9dcd754263b549bf'
+    group_3_symbols = ['PFE', 'INTC', 'CSCO', 'DIS', 'IBM', 'BA', 'NFLX', 'JCI']
+    update_group_prices(api_key, group_3_symbols)
 
-        if 'Global Quote' in data and '05. price' in data['Global Quote']:
-            price = data['Global Quote']['05. price']
-            stock, created = Stock.objects.get_or_create(
-                symbol=symbol,
-                defaults={'name': symbol, 'price': price}
-            )
-            if not created:
-                stock.price = price
-                stock.save()
-            print(f"{'Created' if created else 'Updated'} {symbol}: {stock.price}")
-        else:
-            print(f"Price data not available for {symbol}")
+@shared_task
+def update_stock_prices_4():
+    api_key = '296b89a58663457d9dcd754263b549bf'
+    group_4_symbols = ['GM', 'CVX', 'PEP', 'GS','GE', 'CSCO', 'ORCL','MMM']
+    update_group_prices(api_key, group_4_symbols)
 
-    return "Stock prices updated"
+@shared_task
+def update_stock_prices_5():
+    api_key = '296b89a58663457d9dcd754263b549bf'
+    group_5_symbols = ['HON']
+    update_group_prices(api_key, group_5_symbols)
+
