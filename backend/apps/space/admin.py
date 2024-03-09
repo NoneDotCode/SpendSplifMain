@@ -1,5 +1,5 @@
-from apps.space.models import Space
-from apps.space.models import MemberPermissions
+from backend.apps.space.models import Space
+from backend.apps.space.models import MemberPermissions
 
 from django.contrib import admin
 

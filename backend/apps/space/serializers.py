@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.space.models import Space, MemberPermissions
+from backend.apps.space.models import Space, MemberPermissions
 
 
 class SpaceSerializer(serializers.ModelSerializer):
