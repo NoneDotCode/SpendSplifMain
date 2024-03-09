@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from apps.customuser.models import CustomUser
+from backend.apps.customuser.models import CustomUser
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -20,6 +20,9 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     username_field = "email"
     username = None
+
+    def get_username(self, user):
+        return user.email
 
     def validate(self, attrs):
         """
