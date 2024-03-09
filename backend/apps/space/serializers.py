@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from backend.apps.history.models import HistoryIncome
 from backend.apps.space.models import Space, MemberPermissions
 
 

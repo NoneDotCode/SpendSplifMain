@@ -1,6 +1,7 @@
 from django.urls import path
 
 from backend.apps.customuser.views import *
+from backend.apps.customuser.views import *
 
 urlpatterns = [
     path("register/", CustomUserRegistrationView.as_view(), name="register"),
