@@ -1,8 +1,8 @@
 # Запуск проекта
 
-- В репозитории фронта есть [баш скрипты](https://github.com/TARFASH/SpendSpl/tree/develop/src/utils/dev) для линукса они ещё не совсем готовые
+- В репозитории фронта есть [баш скрипты](https://github.com/TARFASH/SpendSpl/tree/develop/src/utils/dev) для линукса
 - Корневая директория SpendSplif
-  - ветка `feature/user`
+  - ветка `feature/space`
 - Открываем консоль
   - `docker-compose up`
 - Открываем ещё одну консоль
