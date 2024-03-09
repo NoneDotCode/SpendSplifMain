@@ -3,19 +3,22 @@ from django.urls import include, path
 
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
-from apps.customuser.views import CustomTokenObtainPairView
+from backend.apps.customuser.views import CustomTokenObtainPairView
+
+base_space_url = "api/v1/my_spaces/<int:space_pk>/"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("apps.customuser.urls")),
     path("api/v1/", include("apps.space.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.account.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.category.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.history.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.total_balance.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.goal.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.spend.urls")),
-    path("api/v1/my_spaces/<int:space_pk>/", include("apps.transfer.urls")),
+    path(base_space_url, include("apps.account.urls")),
+    path(base_space_url, include("apps.category.urls")),
+    path(base_space_url, include("apps.history.urls")),
+    path(base_space_url, include("apps.total_balance.urls")),
+    path(base_space_url, include("apps.goal.urls")),
+    path(base_space_url, include("apps.spend.urls")),
+    path(base_space_url, include("apps.transfer.urls")),
+
     # JWT
     path("api/v1/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/v1/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
