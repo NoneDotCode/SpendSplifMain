@@ -21,6 +21,9 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "email"
     username = None
 
+    def get_username(self, user):
+        return user.email
+
     def validate(self, attrs):
         """
         credentials = {

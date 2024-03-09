@@ -7,6 +7,7 @@ from backend.apps.account.permissions import (IsSpaceMember, IsSpaceOwner, CanCr
                                               CanDeleteAccounts, IncomePermission)
 
 from backend.apps.history.models import HistoryIncome
+from rest_framework import generics
 
 
 class CreateAccount(generics.CreateAPIView):
