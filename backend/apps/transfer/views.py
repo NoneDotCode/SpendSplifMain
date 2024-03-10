@@ -47,8 +47,12 @@ class TransferView(generics.GenericAPIView):
                                                       to_currency=account.currency)
                 account.save()
                 goal.save()
-                HistoryTransfer.objects.create(from_goal=from_object, to_acc=to_object, father_space_id=space_pk,
-                                               amount=amount, currency=from_currency)
+                HistoryTransfer.objects.create(from_goal=from_object,
+                                               to_acc=to_object,
+                                               father_space_id=space_pk,
+                                               amount=amount,
+                                               amount_in_default_currency=amount,
+                                               currency=from_currency)
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)
         elif from_object == "account" and to_object == "goal":
             goal = Goal.objects.get(pk=request.data.get("to_goal"))
@@ -65,8 +69,14 @@ class TransferView(generics.GenericAPIView):
                                                      to_currency=to_currency)
                 account.save()
                 goal.save()
-                HistoryTransfer.objects.create(from_acc=from_object, to_goal=to_object, father_space_id=space_pk,
-                                               amount=amount, currency=to_currency)
+                HistoryTransfer.objects.create(from_acc=from_object,
+                                               to_goal=to_object,
+                                               father_space_id=space_pk,
+                                               amount_in_default_currency=convert_currencies(from_currency=account.currency,
+                                                   amount=amount,
+                                                   to_currency=to_currency),
+                                               amount=amount,
+                                               currency=to_currency)
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)
         elif from_object == "account" and to_object == "account":
             from_account = Account.objects.get(pk=request.data.get("from_account"))
@@ -83,6 +93,13 @@ class TransferView(generics.GenericAPIView):
                                                          to_currency=to_account.currency)
                 from_account.save()
                 to_account.save()
-                HistoryTransfer.objects.create(from_acc=from_object, to_acc=to_object, father_space_id=space_pk,
-                                               amount=amount, currency=currency)
+                HistoryTransfer.objects.create(from_acc=from_object,
+                                               to_acc=to_object,
+                                               father_space_id=space_pk,
+                                               amount=amount,
+                                               amount_in_default_currency=convert_currencies(from_currency=from_account.currency,
+                                                                                             amount=amount,
+                                                                                             to_currency=currency),
+                                               currency=currency,
+                                               )
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)

@@ -113,6 +113,9 @@ class IncomeView(generics.GenericAPIView):
         account_pk = kwargs.get('pk')
         account = Account.objects.get(pk=account_pk)
         amount = request.data.get('amount')
+        default_currency = request.user.currency
+        if TotalBalance.objects.filter(father_space_id=space_pk):
+            default_currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
         if amount is not None and int(amount) > 0:
             account.balance += int(amount)
             account.save()
@@ -122,6 +125,9 @@ class IncomeView(generics.GenericAPIView):
             HistoryIncome.objects.create(
                 amount=amount,
                 currency=account.currency,
+                amount_in_default_currency=convert_currencies(from_currency=account.currency,
+                                                              amount=amount,
+                                                              to_currency=default_currency),
                 comment=comment,
                 account=account,
                 father_space_id=space_pk
@@ -130,7 +136,7 @@ class IncomeView(generics.GenericAPIView):
             if total_balance:
                 total_balance[0].balance += convert_currencies(amount=amount,
                                                                from_currency=account.currency,
-                                                               to_currency=total_balance[0].currency)
+                                                               to_currency=default_currency)
                 total_balance[0].save()
         else:
             return Response({"error": "Please, fill out row amount, numbers bigger than 0."})

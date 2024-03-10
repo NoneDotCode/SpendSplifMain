@@ -31,6 +31,9 @@ def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_cu
     HistoryExpense.objects.create(
         amount=amount,
         currency=account.currency,
+        amount_in_default_currency=convert_currencies(from_currency=account.currency,
+                                                    amount=amount,
+                                                    to_currency=to_currency),
         comment=comment,
         from_acc=account.title,
         to_cat=category.title,
