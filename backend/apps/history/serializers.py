@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from backend.apps.history.models import HistoryExpense, HistoryIncome
+from backend.apps.history.models import HistoryExpense, HistoryIncome, HistoryTransfer
 from datetime import datetime
 
 class HistoryExpenseSerializer(serializers.ModelSerializer):
@@ -29,4 +29,10 @@ class HistoryIncomeAutoDataSerializer(serializers.ModelSerializer):
 class HistoryExpenseAutoDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryExpense
+        fields = '__all__'
+
+
+class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoryTransfer
         fields = '__all__'
