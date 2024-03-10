@@ -1,10 +1,9 @@
+from django.utils import timezone
+
+from .serializers import ExpenseSummarySerializer, StatisticViewSerializer
 from datetime import datetime, timedelta
-from rest_framework.views import APIView
-from datetime import datetime
 
 from drf_multiple_model.views import ObjectMultipleModelAPIView
-from django.db.models import Sum
-from django.http import JsonResponse
 
 from backend.apps.goal.serializers import GoalSerializer
 from backend.apps.history.models import HistoryIncome, HistoryExpense
@@ -15,6 +14,7 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from backend.apps.history.serializers import HistoryIncomeSerializer
+
 
 
 class HistoryView(ObjectMultipleModelAPIView):
@@ -31,60 +31,48 @@ class HistoryView(ObjectMultipleModelAPIView):
 
 
 class StatisticView(generics.ListAPIView):
+    serializer_class = StatisticViewSerializer
+
     def get_queryset(self):
-        space_pk = self.kwargs.get('space_pk')
-        today = datetime.now().date()
-        week_ago = today - timedelta(days=7)
+        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True)
 
-        return HistoryExpense.objects.filter(
-            created__date__range=(week_ago, today),
-            father_space_id=space_pk
-        )
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        ninety_days_ago = timezone.now() - timedelta(days=90)
+        year_ago = timezone.now() - timedelta(days=365)
 
-    def list(self, request, *args, **kwargs):
-        space_pk = self.kwargs.get('space_pk')
-        today = datetime.now().date()
-        week_ago = today - timedelta(days=7)
-        queryset = self.filter_queryset(self.get_queryset())
+        week_expenses = queryset.filter(created__gte=seven_days_ago)
+        month_expenses = queryset.filter(created__gte=thirty_days_ago)
+        recent_expenses = queryset.filter(created__gte=ninety_days_ago)
+        year_expenses = queryset.filter(created__gte=year_ago)
 
-        expenses = queryset.values('created__date', 'amount', 'currency')
-        total_expenses = expenses.aggregate(total=Sum('amount'))['total']
+        week_summary = self.calculate_summary(week_expenses)
+        month_summary = self.calculate_summary(month_expenses)
+        three_month_summary = self.calculate_summary(recent_expenses)
+        year_summary = self.calculate_summary(year_expenses)
 
-        incomes = HistoryIncome.objects.filter(
-            created__date__range=(week_ago, today),
-            father_space_id=space_pk
-        ).values('created__date', 'amount', 'currency')
-        total_incomes = incomes.aggregate(total=Sum('amount'))['total']
-
-        expenses_data = {}
-        expenses_percent = {}
-        incomes_data = {}
-        incomes_percent = {}
-
-        for expense in expenses:
-            date_str = expense['created__date'].strftime('%d.%m.%Y')
-            amount = f"{expense['amount']} {expense['currency']}"
-            expenses_data[date_str] = amount
-
-            percent = (expense['amount'] / total_expenses) * 100 if total_expenses else 0
-            expenses_percent[date_str] = f"{percent:.2f}%"
-
-        for income in incomes:
-            date_str = income['created__date'].strftime('%d.%m.%Y')
-            amount = f"{income['amount']} {income['currency']}"
-            incomes_data[date_str] = amount
-
-            percent = (income['amount'] / total_incomes) * 100 if total_incomes else 0
-            incomes_percent[date_str] = f"{percent:.2f}%"
-
-        response = {
-            'week_expenses': expenses_data,
-            'week_expenses_percent': expenses_percent,
-            'week_incomes': incomes_data,
-            'week_incomes_percent': incomes_percent,
+        formatted_result = {
+            "Week": week_summary,
+            "Month": month_summary,
+            "3 month": three_month_summary,
+            "Year": year_summary
         }
 
-        return Response(response)
+        return [formatted_result]
+
+    def calculate_summary(self, expenses):
+        summary = {}
+
+        for to_cat in set(expense.to_cat for expense in expenses):
+            category_expenses = expenses.filter(to_cat=to_cat)
+            summary[to_cat] = sum([int(expense.amount) for expense in category_expenses])
+
+        return summary
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class IncomeAutoDataView(generics.ListAPIView):

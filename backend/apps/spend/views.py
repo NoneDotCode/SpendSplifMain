@@ -199,7 +199,7 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
         periodic_spends_list = list(filter(key, PeriodicTask.objects.all()))
         result = []
         for spend in periodic_spends_list:
-            spend_args = ast.literal_eval(i.args)
+            spend_args = ast.literal_eval(spend.args)
             temp = {
                 "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
                 "account_pk": spend_args[0],
