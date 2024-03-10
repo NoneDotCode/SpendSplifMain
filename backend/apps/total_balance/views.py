@@ -9,6 +9,7 @@ from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 from backend.apps.converter.utils import convert_currencies
 
 from backend.apps.category.models import Category
+from backend.apps.goal.models import Goal
 
 
 class ViewTotalBalance(generics.ListAPIView):
@@ -42,4 +43,9 @@ class EditTotalBalance(generics.RetrieveUpdateAPIView):
                                                    from_currency=instance.currency,
                                                    to_currency=currency),
                         currency=currency)
+        for goal in Goal.objects.filter(father_space_id=instance.father_space_id):
+            goal.collected = convert_currencies(amount=goal.collected,
+                                                from_currency=instance.currency,
+                                                to_currency=currency)
+            goal.save()
         return Response(serializer.data)
