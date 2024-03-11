@@ -1,7 +1,11 @@
 from rest_framework import generics, permissions, authentication, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
+
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.conf import settings
 
@@ -13,6 +17,8 @@ from backend.apps.customuser.serializers import (
     ResetPasswordSerializer,
 )
 from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user, cookie_response_payload_handler
+
+from datetime import datetime
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -46,6 +52,42 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
             )
         return response
+
+
+class CustomTokenRefreshView(GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
+
+        if refresh_token is None:
+            return Response({'error': 'Refresh token not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            payload = RefreshToken(refresh_token)
+            user = CustomUser.objects.get(id=payload.payload['user_id'])
+            if user.is_active:
+                access_token = payload.access_token
+                new_refresh_token = payload.token
+                response_data = {
+                    'access': str(access_token),
+                }
+                response = Response(response_data)
+
+                refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
+
+                response.set_cookie(
+                    key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
+                    value=str(new_refresh_token),
+                    expires=refresh_token_expiration,
+                    httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
+                    samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
+                    secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
+                )
+                return response
+            else:
+                return Response({'error': 'User is inactive'}, status=status.HTTP_401_UNAUTHORIZED)
+        except (TokenError, InvalidToken) as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ConfirmRegistrationView(APIView):
