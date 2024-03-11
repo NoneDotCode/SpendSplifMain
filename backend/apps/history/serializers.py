@@ -17,12 +17,6 @@ class StatisticViewSerializer(serializers.Serializer):
         return instance
 
 
-class HistoryExpenseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HistoryExpense
-        fields = ("amount", "currency", "comment", "from_acc", "to_cat", "created")
-
-
 class HistoryIncomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryIncome
@@ -43,7 +37,8 @@ class HistoryIncomeAutoDataSerializer(serializers.ModelSerializer):
 class HistoryExpenseAutoDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryExpense
-        fields = '__all__'
+        fields = ("amount", "currency", "amount_in_default_currency", "comment",
+                  "from_acc", "to_cat", "periodic", "father_space", "created")
 
 
 class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):

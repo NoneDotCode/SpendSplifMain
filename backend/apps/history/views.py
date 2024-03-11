@@ -1,7 +1,8 @@
+from typing import Dict, List, Tuple, Union
 from django.utils import timezone
-
 from .serializers import ExpenseSummarySerializer, StatisticViewSerializer
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 from drf_multiple_model.views import ObjectMultipleModelAPIView
 
@@ -14,7 +15,6 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from backend.apps.history.serializers import HistoryIncomeSerializer
-
 
 
 class HistoryView(ObjectMultipleModelAPIView):
@@ -33,45 +33,68 @@ class HistoryView(ObjectMultipleModelAPIView):
 class StatisticView(generics.ListAPIView):
     serializer_class = StatisticViewSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> List[HistoryExpense]:
         queryset = HistoryExpense.objects.exclude(to_cat__isnull=True)
-
-        seven_days_ago = timezone.now() - timedelta(days=7)
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        ninety_days_ago = timezone.now() - timedelta(days=90)
-        year_ago = timezone.now() - timedelta(days=365)
-
-        week_expenses = queryset.filter(created__gte=seven_days_ago)
-        month_expenses = queryset.filter(created__gte=thirty_days_ago)
-        recent_expenses = queryset.filter(created__gte=ninety_days_ago)
-        year_expenses = queryset.filter(created__gte=year_ago)
-
-        week_summary = self.calculate_summary(week_expenses)
-        month_summary = self.calculate_summary(month_expenses)
-        three_month_summary = self.calculate_summary(recent_expenses)
-        year_summary = self.calculate_summary(year_expenses)
-
-        formatted_result = {
-            "Week": week_summary,
-            "Month": month_summary,
-            "3 month": three_month_summary,
-            "Year": year_summary
+        periods = [
+            (7, "week"),
+            (30, "month"),
+            (90, "three_month"),
+            (365, "year"),
+        ]
+        expenses = {
+            period: queryset.filter(created__gte=timezone.now() - timedelta(days=days))
+            for days, period in periods
         }
+        return expenses
 
-        return [formatted_result]
+    def get_summary_and_percentages(
+            self, expenses: List[HistoryExpense]
+    ) -> Tuple[Dict[str, float], Dict[str, int]]:
+        total = sum(expense.amount_in_default_currency for expense in expenses)
+        summary = {
+            expense.to_cat: sum(
+                expense.amount_in_default_currency
+                for expense in expenses
+                if expense.to_cat == category
+            )
+            for expense in expenses
+            for category in {expense.to_cat}
+        }
+        percentages = {}
+        for category, value in summary.items():
+            percentage = round(value / total * 100)
+            percentages[category] = percentage
 
-    def calculate_summary(self, expenses):
-        summary = {}
+        remaining_percentage = 100 - sum(percentages.values())
+        if remaining_percentage != 0:
+            sorted_percentages = sorted(percentages.items(), key=lambda x: x[1], reverse=True)
+            largest_category, _ = sorted_percentages[0]
+            percentages[largest_category] += remaining_percentage
 
-        for to_cat in set(expense.to_cat for expense in expenses):
-            category_expenses = expenses.filter(to_cat=to_cat)
-            summary[to_cat] = sum([int(expense.amount) for expense in category_expenses])
+        percentages = {category: f"{value}%" for category, value in percentages.items()}
+        return summary, percentages
 
-        return summary
+    def add_currency(self, data: Union[Dict, Decimal], currency: str) -> Union[Dict, str]:
+        if isinstance(data, Decimal):
+            return f"{data} {currency}"
+        else:
+            return {
+                key: f"{value} {currency}"
+                if isinstance(value, (int, float, Decimal))
+                else self.add_currency(value, currency)
+                for key, value in data.items()
+            }
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+        expenses = self.get_queryset()
+        formatted_result = {"Category": {}}
+        for period, period_expenses in expenses.items():
+            summary, percentages = self.get_summary_and_percentages(period_expenses)
+            formatted_result["Category"][period.capitalize()] = self.add_currency(
+                summary, request.user.currency
+            )
+            formatted_result["Category"][f"{period.capitalize()}_Percent"] = percentages
+        serializer = self.get_serializer(formatted_result, many=False)
         return Response(serializer.data)
 
 
@@ -129,35 +152,35 @@ class ExpenseAutoDataView(generics.ListAPIView):
     def get_queryset(self):
         father_space = self.kwargs["space_pk"]
         expense_data = [
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
              'from_acc': 'Cash', 'created': datetime(2023, 1, 30), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 1000, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 2000, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
              'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 11, 10), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 1000, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 12, 2), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 1000, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 12, 16), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 12, 31), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 100, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 1000, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 11), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
              'from_acc': 'Cash', 'created': datetime(2024, 3, 21), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 25), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 27), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 750, 'father_space': father_space, 'currency': 'USD',
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 29), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
              'from_acc': 'Cash', 'created': datetime(2024, 3, 31), 'comment': ''}
         ]
 
