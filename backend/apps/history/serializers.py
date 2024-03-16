@@ -11,7 +11,44 @@ class HistoryExpenseSerializer(serializers.ModelSerializer):
 
 
 class StatisticViewSerializer(serializers.Serializer):
+    Statistics = serializers.DictField()
+
+
+class CategoryViewSerializer(serializers.Serializer):
     week_summary = serializers.DictField(child=serializers.DecimalField(max_digits=20, decimal_places=2))
+
+    def to_representation(self, instance):
+        return instance
+
+
+class ExpensesViewSerializer(serializers.Serializer):
+    week = serializers.DictField()
+    week_percent = serializers.DictField()
+    analyze_week = serializers.CharField()
+    month = serializers.DictField()
+    month_percent = serializers.DictField()
+    analyze_month = serializers.CharField()
+    three_month = serializers.DictField()
+    three_month_percent = serializers.DictField()
+    analyze_three_month = serializers.CharField()
+    year = serializers.DictField()
+    year_percent = serializers.DictField()
+    analyze_year = serializers.CharField()
+
+
+class GoalTransferStatisticSerializer(serializers.Serializer):
+    week = serializers.DictField(child=serializers.CharField())
+    week_percent = serializers.DictField(child=serializers.CharField())
+    month = serializers.DictField(child=serializers.CharField())
+    month_percent = serializers.DictField(child=serializers.CharField())
+    three_month = serializers.DictField(child=serializers.CharField(), required=False)
+    three_month_percent = serializers.DictField(child=serializers.CharField(), required=False)
+    year = serializers.DictField(child=serializers.CharField(), required=False)
+    year_percent = serializers.DictField(child=serializers.CharField(), required=False)
+
+
+class IncomeStatisticViewSerializer(serializers.Serializer):
+    Period = serializers.DictField(child=serializers.DictField())
 
     def to_representation(self, instance):
         return instance
