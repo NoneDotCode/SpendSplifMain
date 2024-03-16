@@ -49,8 +49,7 @@ class CreateAccount(generics.CreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
-class ViewAccounts(generics.ListAPIView):
-    serializer_class = AccountSerializer
+class ViewAccounts(ObjectMultipleModelAPIView):
     permission_classes = (IsSpaceMember,)
 
     def get_querylist(self):
