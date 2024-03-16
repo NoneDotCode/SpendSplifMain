@@ -47,8 +47,8 @@ class TransferView(generics.GenericAPIView):
                                                       to_currency=account.currency)
                 account.save()
                 goal.save()
-                HistoryTransfer.objects.create(from_goal=from_object,
-                                               to_acc=to_object,
+                HistoryTransfer.objects.create(from_goal=goal.title,
+                                               to_acc=account.title,
                                                father_space_id=space_pk,
                                                amount=amount,
                                                amount_in_default_currency=amount,
@@ -69,8 +69,8 @@ class TransferView(generics.GenericAPIView):
                                                      to_currency=to_currency)
                 account.save()
                 goal.save()
-                HistoryTransfer.objects.create(from_acc=from_object,
-                                               to_goal=to_object,
+                HistoryTransfer.objects.create(from_acc=account.title,
+                                               to_goal=goal.title,
                                                father_space_id=space_pk,
                                                amount_in_default_currency=convert_currencies(from_currency=account.currency,
                                                    amount=amount,
@@ -93,8 +93,8 @@ class TransferView(generics.GenericAPIView):
                                                          to_currency=to_account.currency)
                 from_account.save()
                 to_account.save()
-                HistoryTransfer.objects.create(from_acc=from_object,
-                                               to_acc=to_object,
+                HistoryTransfer.objects.create(from_acc=from_account.title,
+                                               to_acc=to_account.title,
                                                father_space_id=space_pk,
                                                amount=amount,
                                                amount_in_default_currency=convert_currencies(from_currency=from_account.currency,
