@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 
+from django.db import transaction
+
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -14,9 +16,12 @@ from backend.apps.customuser.serializers import (
     CustomUserSerializer,
     EmailTokenObtainPairSerializer,
     VerifyEmailSerializer,
+    CustomTokenRefreshSerializer,
     ResetPasswordSerializer,
 )
 from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user, cookie_response_payload_handler
+
+from backend.apps.space.models import Space, MemberPermissions
 
 from datetime import datetime
 
@@ -56,6 +61,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class CustomTokenRefreshView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
+    serializer_class = CustomTokenRefreshSerializer
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
 
@@ -100,6 +106,16 @@ class ConfirmRegistrationView(APIView):
             user.is_active = True
             user.verify_code = "verified"
             user.save()
+            with transaction.atomic():
+                # Save the space instance
+                space = Space.objects.create(title="Main")
+
+                # Create a MemberPermissions instance setting the current user as the owner
+                MemberPermissions.objects.create(
+                    member=user,
+                    space=space,
+                    owner=True
+                )
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
