@@ -13,6 +13,10 @@ class CustomUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {"password": {"write_only": True}}
 
 
+class CustomTokenRefreshSerializer(serializers.Serializer):
+    access = serializers.CharField(read_only=True)
+
+
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Serializer for JWT authentication with email instead of username.
