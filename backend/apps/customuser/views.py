@@ -14,6 +14,7 @@ from backend.apps.customuser.serializers import (
     CustomUserSerializer,
     EmailTokenObtainPairSerializer,
     VerifyEmailSerializer,
+    CustomTokenRefreshSerializer,
     ResetPasswordSerializer,
 )
 from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user, cookie_response_payload_handler
@@ -56,6 +57,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class CustomTokenRefreshView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
+    serializer_class = CustomTokenRefreshSerializer
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
 
