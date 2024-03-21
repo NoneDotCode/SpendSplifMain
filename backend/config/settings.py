@@ -172,7 +172,7 @@ SIMPLE_JWT = {
         'max_age': 86400,
         'httponly': True,
         'samesite': 'Lax',
-        'secure': True,
+        'secure': False,
         'path': '/',
         },
 
