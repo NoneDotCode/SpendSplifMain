@@ -22,29 +22,40 @@ class CategoryViewSerializer(serializers.Serializer):
 
 
 class ExpensesViewSerializer(serializers.Serializer):
-    week = serializers.DictField()
-    week_percent = serializers.DictField()
-    analyze_week = serializers.CharField()
-    month = serializers.DictField()
-    month_percent = serializers.DictField()
-    analyze_month = serializers.CharField()
-    three_month = serializers.DictField()
-    three_month_percent = serializers.DictField()
-    analyze_three_month = serializers.CharField()
-    year = serializers.DictField()
-    year_percent = serializers.DictField()
-    analyze_year = serializers.CharField()
+    Week = serializers.DictField()
+    Week_Percent = serializers.DictField()
+    Analyze_Week = serializers.CharField()
+    Month = serializers.DictField()
+    Month_Percent = serializers.DictField()
+    Analyze_Month = serializers.CharField()
+    Three_month = serializers.DictField()
+    Three_month_Percent = serializers.DictField()
+    Analyze_Three_month = serializers.CharField()
+    Year = serializers.DictField()
+    Year_Percent = serializers.DictField()
+    Analyze_Year = serializers.CharField()
 
 
 class GoalTransferStatisticSerializer(serializers.Serializer):
-    week = serializers.DictField(child=serializers.CharField())
-    week_percent = serializers.DictField(child=serializers.CharField())
-    month = serializers.DictField(child=serializers.CharField())
-    month_percent = serializers.DictField(child=serializers.CharField())
-    three_month = serializers.DictField(child=serializers.CharField(), required=False)
-    three_month_percent = serializers.DictField(child=serializers.CharField(), required=False)
-    year = serializers.DictField(child=serializers.CharField(), required=False)
-    year_percent = serializers.DictField(child=serializers.CharField(), required=False)
+    Week = serializers.DictField()
+    Week_Percent = serializers.DictField()
+    Analyze_Week = serializers.CharField()
+    Month = serializers.DictField()
+    Month_Percent = serializers.DictField()
+    Analyze_Month = serializers.CharField()
+    Three_month = serializers.DictField()
+    Three_month_Percent = serializers.DictField()
+    Analyze_Three_month = serializers.CharField()
+    Year = serializers.DictField()
+    Year_Percent = serializers.DictField()
+    Analyze_Year = serializers.CharField()
+
+
+class RecurringPaymentsStatisticSerializer(serializers.Serializer):
+    week = serializers.DictField(child=serializers.DictField(), allow_empty=True)
+    month = serializers.DictField(child=serializers.DictField(), allow_empty=True)
+    three_month = serializers.DictField(child=serializers.DictField(), allow_empty=True)
+    year = serializers.DictField(child=serializers.DictField(), allow_empty=True)
 
 
 class IncomeStatisticViewSerializer(serializers.Serializer):
