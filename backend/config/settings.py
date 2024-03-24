@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django_celery_results",
     "django_celery_beat",
     # Custom apps
+    "colorfield",
     "backend.apps.customuser",
     "backend.apps.space",
     "backend.apps.account",
