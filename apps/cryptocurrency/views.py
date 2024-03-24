@@ -1,18 +1,23 @@
 from rest_framework import generics
 from rest_framework.response import Response
 from .models import Cryptocurrency
+from rest_framework import status
+from rest_framework.views import APIView
+import requests
 
 class CryptocurrencyPriceView(generics.RetrieveAPIView):
-    def get(self, request, **kwargs):
-        symbol = request.query_params.get('symbol')
-        try:
-            cryptocurrency = Cryptocurrency.objects.get(symbol=symbol.upper())
-            return Response({
-                'name': cryptocurrency.name,
-                'symbol': cryptocurrency.symbol,
-                'price_usd': cryptocurrency.price_usd,
-                'price_eur': cryptocurrency.price_eur,
-                'last_updated': cryptocurrency.last_updated
-            })
-        except Cryptocurrency.DoesNotExist:
-            return Response({'error': 'Cryptocurrency not found'}, status=404)
+    def get(self, request,*args, **kwargs):
+        cryptocurrency = Cryptocurrency.objects.all()
+
+        crypto_data = {}
+
+        for crypto in cryptocurrency:
+            crypto_data[crypto.symbol] = {
+                'name': crypto.name,
+                'symbol': crypto.symbol,
+                'price_usd': str(crypto.price_usd),
+                'price_eur': str(crypto.price_eur),
+                'last_updated': crypto.last_updated,
+            }
+
+        return Response(crypto_data, status=status.HTTP_200_OK)
