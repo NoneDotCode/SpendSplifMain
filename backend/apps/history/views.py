@@ -1,15 +1,20 @@
 from typing import Dict, List, Tuple, Union
+
+from django.db.models import Sum
 from django.utils import timezone
-from .serializers import ExpenseSummarySerializer, IncomeStatisticViewSerializer, \
+from rest_framework.request import Request
+
+from .serializers import IncomeStatisticViewSerializer, \
     CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer
 from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
+import re
 
 from drf_multiple_model.views import ObjectMultipleModelAPIView
 
 from backend.apps.goal.serializers import GoalSerializer
 from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTransfer
-from backend.apps.history.serializers import HistoryExpenseSerializer, DailyIncomeSerializer, \
+from backend.apps.history.serializers import HistoryExpenseSerializer, \
     HistoryExpenseAutoDataSerializer, HistoryIncomeAutoDataSerializer, HistoryTransferAutoDataSerializer
 
 from rest_framework import generics
@@ -37,11 +42,15 @@ class StatisticView(generics.GenericAPIView):
         incomes_view = IncomeStatisticView.as_view()(request._request, *args, **kwargs)
         expenses_view = ExpensesStatisticView.as_view()(request._request, *args, **kwargs)
         goal_view = GoalTransferStatisticView.as_view()(request._request, *args, **kwargs)
+        balance_view = GeneralView.as_view()(request._request, *args, **kwargs)
+        recurring_payments = RecurringPaymentsStatistic.as_view()(request._request, *args, **kwargs)
         combined_data = {
-            "Categories": categories_view.data,
-            "Incomes": incomes_view.data,
             "Expenses": expenses_view.data,
+            "Balance": balance_view.data,
+            "Incomes": incomes_view.data,
             "Goals": goal_view.data,
+            "Recurring Payments": recurring_payments.data,
+            "Categories": categories_view.data,
         }
         return Response(combined_data)
 
@@ -49,76 +58,64 @@ class StatisticView(generics.GenericAPIView):
 class CategoryStatisticView(generics.ListAPIView):
     serializer_class = CategoryViewSerializer
 
-    def get_queryset(self) -> List[HistoryExpense]:
+    def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
         queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'])
-        periods = [
-            (7, "week"),
-            (30, "month"),
-            (90, "three_month"),
-            (365, "year"),
-        ]
-        expenses = {
-            period: queryset.filter(created__gte=timezone.now() - timedelta(days=days))
-            for days, period in periods
-        }
-        return expenses
+        periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
+        return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
-    def get_summary_and_percentages(
-        self, expenses: List[HistoryExpense]
-    ) -> Tuple[Dict[str, float], Dict[str, int]]:
+    def get_expenses_for_period(self, queryset, days: int) -> List[HistoryExpense]:
+        return queryset.filter(created__gte=timezone.now() - timedelta(days=days))
+
+    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, float], Dict[str, int]]:
         expenses = [expense for expense in expenses if expense.to_cat]
         total = sum(expense.amount_in_default_currency for expense in expenses)
-        summary = {
-            expense.to_cat: sum(
-                expense.amount_in_default_currency
-                for expense in expenses
-                if expense.to_cat == category
-            )
-            for expense in expenses
-            for category in {expense.to_cat}
-        }
-        percentages = {}
-        for category, value in summary.items():
-            percentage = round(value / total * 100)
-            percentages[category] = percentage
-        remaining_percentage = 100 - sum(percentages.values())
-        if remaining_percentage != 0:
-            sorted_percentages = sorted(
-                percentages.items(), key=lambda x: x[1], reverse=True
-            )
-            largest_category, _ = sorted_percentages[0]
-            percentages[largest_category] += remaining_percentage
-        percentages = {
-            category: f"{value}%" for category, value in percentages.items()
-        }
+        summary = self.get_summary(expenses)
+        percentages = self.get_percentages(summary, total)
         return summary, percentages
 
-    def add_currency(
-        self, data: Union[Dict, Decimal], currency: str
-    ) -> Union[Dict, str]:
+    def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, float]:
+        return {
+            expense.to_cat: sum(expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
+            for expense in expenses for category in {expense.to_cat}
+        }
+
+    def get_percentages(self, summary: Dict[str, float], total: float) -> Dict[str, int]:
+        percentages = {category: round(value / total * 100) for category, value in summary.items()}
+        remaining_percentage = 100 - sum(percentages.values())
+        if remaining_percentage != 0:
+            sorted_percentages = sorted(percentages.items(), key=lambda x: x[1], reverse=True)
+            if sorted_percentages:
+                largest_category, _ = sorted_percentages[0]
+                percentages[largest_category] += remaining_percentage
+        return {category: f"{value}%" for category, value in percentages.items()}
+
+    def add_currency(self, data: Union[Dict, Decimal], currency: str) -> Union[Dict, str]:
         if isinstance(data, Decimal):
             return f"{data} {currency}"
         else:
             return {
-                key: f"{value} {currency}"
-                if isinstance(value, (int, float, Decimal))
-                else self.add_currency(value, currency)
+                key: f"{value} {currency}" if isinstance(value, (int, float, Decimal)) else self.add_currency(value, currency)
                 for key, value in data.items()
             }
 
-    def list(self, request, *args, **kwargs):
-        expenses = self.get_queryset()
+    def format_result(self, expenses: Dict[str, List[HistoryExpense]], request) -> Dict:
         formatted_result = {}
         for period, period_expenses in expenses.items():
-            summary, percentages = self.get_summary_and_percentages(period_expenses)
-            formatted_result[period.capitalize()] = self.add_currency(
-                summary, request.user.currency
-            )
-            formatted_result[f"{period.capitalize()}_Percent"] = percentages
-            max_spending_category = max(summary, key=summary.get)
-            formatted_result[
-                f"Analyze_{period.capitalize()}"
-            ] = f"This {period}, you spend most on {max_spending_category} category"
+            if not period_expenses:
+                formatted_result[period.capitalize()] = {}
+                formatted_result[f"{period.capitalize()}_Percent"] = {}
+                formatted_result[f"Analyze_{period.capitalize()}"] = f"You didn't make any category expenditures this {period}"
+            else:
+                summary, percentages = self.get_summary_and_percentages(period_expenses)
+                formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+                formatted_result[f"{period.capitalize()}_Percent"] = percentages
+                max_spending_category = max(summary, key=summary.get)
+                formatted_result[f"Analyze_{period.capitalize()}"] = f"This {period}, you spend most on {max_spending_category} category"
+        return formatted_result
+
+    def list(self, request, *args, **kwargs) -> Response:
+        expenses = self.get_queryset()
+        formatted_result = self.format_result(expenses, request)
         serializer = self.get_serializer(formatted_result, many=False)
         return Response(serializer.data)
 
@@ -141,74 +138,71 @@ class IncomeStatisticView(generics.ListAPIView):
             'three_month': [],
             'year': [],
         }
+
         for income in incomes:
             days_since_creation = (now - income.created).days
+            periods['year'].append(income)
+            if days_since_creation < 90:
+                periods['three_month'].append(income)
+            if days_since_creation < 30:
+                periods['month'].append(income)
             if days_since_creation < 7:
                 periods['week'].append(income)
-            elif days_since_creation < 30:
-                periods['month'].append(income)
-            elif days_since_creation < 90:
-                periods['three_month'].append(income)
-            else:
-                periods['year'].append(income)
+
         return periods
 
-    def get_summary_and_percentages(
-        self, incomes: List[HistoryIncome]
-    ) -> Tuple[Dict[str, float], Dict[str, int]]:
+    def get_summary_and_percentages(self, incomes: List[HistoryIncome]) -> Tuple[Dict[str, float], Dict[str, int]]:
         total = sum(income.amount_in_default_currency for income in incomes)
         summary = {
             income.created.date().isoformat(): income.amount_in_default_currency
             for income in incomes
         }
         percentages = {}
+
         for date, value in summary.items():
             percentage = round(value / total * 100)
             percentages[date] = percentage
+
         remaining_percentage = 100 - sum(percentages.values())
         if remaining_percentage != 0:
-            sorted_percentages = sorted(
-                percentages.items(), key=lambda x: x[1], reverse=True
-            )
+            sorted_percentages = sorted(percentages.items(), key=lambda x: x[1], reverse=True)
             if sorted_percentages:
                 largest_date, _ = sorted_percentages[0]
                 percentages[largest_date] += remaining_percentage
+
         percentages = {date: f"{value}%" for date, value in percentages.items()}
         return summary, percentages
 
-    def add_currency(
-        self, data: Union[Dict, Decimal], currency: str
-    ) -> Union[Dict, str]:
+    def add_currency(self, data: Union[Dict, Decimal], currency: str) -> Union[Dict, str]:
         if isinstance(data, Decimal):
             return f"{data} {currency}"
         else:
             return {
-                key: f"{value} {currency}"
-                if isinstance(value, (int, float, Decimal))
-                else self.add_currency(value, currency)
+                key: f"{value} {currency}" if isinstance(value, (int, float, Decimal)) else self.add_currency(value, currency)
                 for key, value in data.items()
             }
 
-    def list(self, request, *args, **kwargs):
-        incomes = self.get_queryset()
+    def format_result(self, incomes: List[HistoryIncome], request: Request) -> Dict:
         periods = self.get_periods(incomes)
         formatted_result = {}
+
         for period, period_incomes in periods.items():
             summary, percentages = self.get_summary_and_percentages(period_incomes)
-            formatted_result[period.capitalize()] = self.add_currency(
-                summary, request.user.currency
-            )
+            formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
             formatted_result[f"{period.capitalize()}_Percent"] = percentages
+
             if summary:
                 max_income_date = max(summary, key=summary.get)
                 max_income_value = summary[max_income_date]
-                formatted_result[
-                    f"Analyze_{period.capitalize()}"
-                ] = f"For this {period} the most {max_income_value} {request.user.currency} you earned on {max_income_date}"
+                formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {request.user.currency} you earned on {max_income_date}"
             else:
-                formatted_result[
-                    f"Analyze_{period.capitalize()}"
-                ] = f"For this {period} you did not receive any income."
+                formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} you did not receive any income."
+
+        return formatted_result
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        incomes = self.get_queryset()
+        formatted_result = self.format_result(incomes, request)
         serializer = self.get_serializer(formatted_result, many=False)
         return Response(serializer.data)
 
@@ -216,7 +210,7 @@ class IncomeStatisticView(generics.ListAPIView):
 class ExpensesStatisticView(generics.ListAPIView):
     serializer_class = ExpensesViewSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> List[HistoryExpense]:
         return HistoryExpense.objects.filter(father_space=self.kwargs['space_pk'])
 
     def get_periods(self, expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
@@ -226,21 +220,22 @@ class ExpensesStatisticView(generics.ListAPIView):
         three_month_ago = now - timezone.timedelta(days=90)
         year_ago = now - timezone.timedelta(days=365)
         periods = {
-            'week': [],
-            'month': [],
-            'three_month': [],
-            'year': [],
+            'Week': [],
+            'Month': [],
+            'Three_month': [],
+            'Year': [],
         }
+
         for expense in expenses:
             days_since_creation = (now - expense.created).days
-            if days_since_creation < 7:
-                periods['week'].append(expense)
-            if days_since_creation < 30:
-                periods['month'].append(expense)
+            periods['Year'].append(expense)
             if days_since_creation < 90:
-                periods['three_month'].append(expense)
-            if days_since_creation >= 90:
-                periods['year'].append(expense)
+                periods['Three_month'].append(expense)
+            if days_since_creation < 30:
+                periods['Month'].append(expense)
+            if days_since_creation < 7:
+                periods['Week'].append(expense)
+
         return periods
 
     def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, Decimal], Dict[str, str]]:
@@ -253,6 +248,7 @@ class ExpensesStatisticView(generics.ListAPIView):
             'Loss': loss_expenses,
             'Recurring Spending': recurring_expenses,
         }
+
         if total_expenses == 0:
             percentages = {
                 'Category': '0 %',
@@ -265,24 +261,34 @@ class ExpensesStatisticView(generics.ListAPIView):
                 'Loss': f"{round((loss_expenses / total_expenses) * 100)} %",
                 'Recurring Spending': f"{round((recurring_expenses / total_expenses) * 100)} %",
             }
+
         return summary, percentages
 
     def analyze_expenses(self, expenses: List[HistoryExpense], period: str) -> str:
-        summary, percentages = self.get_summary_and_percentages(expenses)
-        max_category = max(percentages, key=percentages.get)
+        if not expenses:
+            return f"You haven't made a single spending spree this {period}"
+
+        _, percentages = self.get_summary_and_percentages(expenses)
+        max_category = max(percentages, key=lambda x: percentages[x].rstrip('%'))
         return f"The most you've spent this {period} on {max_category}"
 
-    def list(self, request, *args, **kwargs):
-        expenses = self.get_queryset()
+    def format_result(self, expenses: List[HistoryExpense], request: Request) -> Dict:
         periods = self.get_periods(expenses)
-        currency = expenses.first().currency if expenses else 'USD'
+        currency = request.user.currency
         result = {}
+
         for period, period_expenses in periods.items():
             summary, percentages = self.get_summary_and_percentages(period_expenses)
             summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
             result[period] = summary_with_currency
-            result[f'{period}_percent'] = percentages
-            result[f'analyze_{period}'] = self.analyze_expenses(period_expenses, period)
+            result[f'{period}_Percent'] = percentages
+            result[f'Analyze_{period}'] = self.analyze_expenses(period_expenses, period)
+
+        return result
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        expenses = self.get_queryset()
+        result = self.format_result(expenses, request)
         serializer = self.get_serializer(result)
         return Response(serializer.data)
 
@@ -291,77 +297,297 @@ class GoalTransferStatisticView(generics.ListAPIView):
     serializer_class = GoalTransferStatisticSerializer
 
     def get_queryset(self) -> List[HistoryTransfer]:
-        return HistoryTransfer.objects.exclude(to_goal__isnull=True).exclude(to_goal__exact='').filter(father_space=self.kwargs['space_pk'])
+        return HistoryTransfer.objects.exclude(to_goal__isnull=True) \
+            .exclude(to_goal__exact='') \
+            .filter(father_space=self.kwargs['space_pk']) \
+            .filter(periodic=False)
 
     def get_periods(self, transfers: List[HistoryTransfer]) -> Dict[str, List[HistoryTransfer]]:
-        now = timezone.now().replace(tzinfo=None)
-        week_ago = now - timezone.timedelta(days=7)
-        month_ago = now - timezone.timedelta(days=30)
-        three_month_ago = now - timezone.timedelta(days=90)
-        year_ago = now - timezone.timedelta(days=365)
-        periods = {
-            'week': [],
-            'month': [],
-            'three_month': [],
-            'year': [],
-        }
+        periods = self._init_periods()
+
         for transfer in transfers:
-            created = transfer.created.replace(tzinfo=None)
-            days_since_creation = (now - created).days
-            if days_since_creation < 7:
-                periods['week'].append(transfer)
-                periods['month'].append(transfer)
-                periods['three_month'].append(transfer)
-                periods['year'].append(transfer)
-            elif days_since_creation < 30:
-                periods['month'].append(transfer)
-                periods['three_month'].append(transfer)
-                periods['year'].append(transfer)
-            elif days_since_creation < 90:
-                periods['three_month'].append(transfer)
-                periods['year'].append(transfer)
-            else:
-                periods['year'].append(transfer)
+            created = self._normalize_datetime(transfer.created)
+            days_since_creation = self._days_since_creation(created)
+            self._add_to_periods(periods, transfer, days_since_creation)
+
         return periods
 
-    def get_summary(self, transfers: List[HistoryTransfer]) -> Dict[str, str]:
+    def _init_periods(self) -> Dict[str, List[HistoryTransfer]]:
+        return {
+            'Week': [],
+            'Month': [],
+            'Three_month': [],
+            'Year': [],
+        }
+
+    def _normalize_datetime(self, dt: datetime) -> datetime:
+        return dt.replace(tzinfo=None)
+
+    def _days_since_creation(self, created: datetime) -> int:
+        now = timezone.now().replace(tzinfo=None)
+        return (now - created).days
+
+    def _add_to_periods(self, periods: Dict[str, List[HistoryTransfer]], transfer: HistoryTransfer, days_since_creation: int) -> None:
+        if days_since_creation < 7:
+            periods['Week'].append(transfer)
+            periods['Month'].append(transfer)
+            periods['Three_month'].append(transfer)
+            periods['Year'].append(transfer)
+        elif days_since_creation < 30:
+            periods['Month'].append(transfer)
+            periods['Three_month'].append(transfer)
+            periods['Year'].append(transfer)
+        elif days_since_creation < 90:
+            periods['Three_month'].append(transfer)
+            periods['Year'].append(transfer)
+        else:
+            periods['Year'].append(transfer)
+
+    def get_summary(self, transfers: List[HistoryTransfer], currency: str) -> Dict[str, Dict[str, str]]:
         summary = {}
         for transfer in transfers:
-            goal = transfer.to_goal
-            amount = Decimal(str(transfer.amount))
-            currency = transfer.currency
-            if goal not in summary:
-                summary[goal] = f"{amount} {currency}"
-            else:
-                existing_amount = Decimal(summary[goal].split()[0])
-                summary[goal] = f"{existing_amount + amount} {currency}"
+            self._update_summary(summary, transfer, currency)
         return summary
 
-    def get_percentages(self, transfers: List[HistoryTransfer]) -> Dict[str, str]:
-        total_amount = sum(transfer.amount for transfer in transfers)
+    def _update_summary(self, summary: Dict[str, Dict[str, str]], transfer: HistoryTransfer, currency: str) -> None:
+        goal = transfer.to_goal
+        goal_amount = transfer.goal_amount
+        collected = transfer.amount_in_default_currency
+
+        if goal not in summary:
+            summary[goal] = {
+                "Goal_amount": f"{goal_amount} {currency}" if goal_amount else "",
+                "Collected": f"{collected} {currency}" if collected else "",
+            }
+        else:
+            existing_collected = Decimal(summary[goal]['Collected'].split()[0])
+            summary[goal]['Collected'] = f"{existing_collected + collected} {currency}"
+
+    def get_percentages(self, transfers: List[HistoryTransfer]) -> Dict[str, Dict[str, str]]:
+        goal_amounts = self._init_goal_amounts(transfers)
+        percentages = self._calculate_percentages(goal_amounts)
+        return percentages
+
+    def _init_goal_amounts(self, transfers: List[HistoryTransfer]) -> Dict[str, Dict[str, Decimal]]:
         goal_amounts = {}
         for transfer in transfers:
             goal = transfer.to_goal
-            amount = transfer.amount
-            goal_amounts.setdefault(goal, 0)
-            goal_amounts[goal] += amount
+            goal_amount = transfer.goal_amount
+            collected = transfer.amount_in_default_currency
+
+            goal_amounts.setdefault(goal, {'Goal_amount': goal_amount, 'Collected': Decimal('0')})
+            goal_amounts[goal]['Collected'] += collected
+
+        return goal_amounts
+
+    def _calculate_percentages(self, goal_amounts: Dict[str, Dict[str, Decimal]]) -> Dict[str, Dict[str, str]]:
         percentages = {}
-        for goal, amount in goal_amounts.items():
-            percentage = round(amount / total_amount * 100)
-            percentages[goal] = f"{percentage}%"
+        for goal, goal_data in goal_amounts.items():
+            goal_amount = goal_data['Goal_amount']
+            collected = goal_data['Collected']
+
+            if goal_amount:
+                collected_percentage = round(collected / goal_amount * 100)
+            else:
+                collected_percentage = 100
+
+            percentages[goal] = {
+                "Collected": f"{collected_percentage}%",
+            }
+
         return percentages
+
+    def analyze(self, summary: Dict[str, Dict[str, str]], currency: str) -> str:
+        goal_diffs = self._get_goal_diffs(summary, currency)
+        if goal_diffs:
+            closest_goal, smallest_diff = min(goal_diffs.items(), key=lambda x: x[1])
+            rounded_diff = int(round(smallest_diff))
+            return f"You are closest to accumulating on goal {closest_goal}, you have {rounded_diff} {currency} to go."
+        else:
+            return f"You did not have any recurring expenses."
+
+    def _get_goal_diffs(self, summary: Dict[str, Dict[str, str]], currency: str) -> Dict[str, Decimal]:
+        goal_diffs = {}
+        for goal, data in summary.items():
+            goal_amount = data['Goal_amount'].split()[0] if data['Goal_amount'] else None
+            collected = data['Collected'].split()[0] if data['Collected'] else None
+            if goal_amount and collected:
+                goal_amount = Decimal(goal_amount)
+                collected = Decimal(collected)
+                diff = abs(goal_amount - collected)
+                goal_diffs[goal] = diff
+        return goal_diffs
 
     def list(self, request, *args, **kwargs):
         transfers = self.get_queryset()
         periods = self.get_periods(transfers)
+        currency = request.user.currency
         result = {}
+
         for period, period_transfers in periods.items():
-            summary = self.get_summary(period_transfers)
+            summary = self.get_summary(period_transfers, currency)
             percentages = self.get_percentages(period_transfers)
             result[period] = summary
-            result[f"{period}_percent"] = percentages
+            result[f"{period}_Percent"] = percentages
+            analysis_message = self.analyze(summary, currency)
+            result[f"Analyze_{period}"] = analysis_message
+
         serializer = self.get_serializer(result)
         return Response(serializer.data)
+
+
+class GeneralView(generics.GenericAPIView):
+    def get(self, request, space_pk, *args, **kwargs):
+        data = {}
+        data["Week"] = self.get_data_for_period(7, space_pk)
+        data["Analyze_Week"] = self.get_analysis(7, space_pk, data["Week"])
+        data["Month"] = self.get_data_for_period(30, space_pk)
+        data["Analyze_Month"] = self.get_analysis(30, space_pk, data["Month"])
+        data["Three_month"] = self.get_data_for_period(90, space_pk)
+        data["Analyze_Three_month"] = self.get_analysis(90, space_pk, data["Three_month"])
+        data["Year"] = self.get_data_for_period(365, space_pk)
+        data["Analyze_Year"] = self.get_analysis(365, space_pk, data["Year"])
+        return Response(data)
+
+    def get_data_for_period(self, days, space_pk):
+        start_date = datetime.now() - timedelta(days=days)
+        end_date = datetime.now()
+
+        expenses = HistoryExpense.objects.filter(
+            created__range=[start_date, end_date],
+            father_space_id=space_pk
+        ).values('created').annotate(
+            expenses=Sum('amount_in_default_currency')
+        ).order_by('created')
+
+        incomes = HistoryIncome.objects.filter(
+            created__range=[start_date, end_date],
+            father_space_id=space_pk
+        ).values('created').annotate(
+            incomes=Sum('amount_in_default_currency')
+        ).order_by('created')
+
+        transfers = HistoryTransfer.objects.filter(
+            created__range=[start_date, end_date],
+            father_space_id=space_pk,
+            goal_is_done=True
+        ).values('created').annotate(
+            expenses=Sum('amount_in_default_currency')
+        ).order_by('created')
+
+        period_data = {}
+
+        for i in range((end_date - start_date).days + 1):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime('%d.%m.%Y')
+
+            expense = next((exp for exp in expenses if exp['created'].date() == date.date()), {'expenses': 0})
+            income = next((inc for inc in incomes if inc['created'].date() == date.date()), {'incomes': 0})
+            transfer = next((tr for tr in transfers if tr['created'].date() == date.date()), {'expenses': 0})
+
+            if expense['expenses'] or income['incomes'] or transfer['expenses']:
+                period_data[date_str] = {
+                    'incomes': self.format_amount(income['incomes'] or Decimal(0), space_pk),
+                    'expenses': self.format_amount(expense['expenses'] + transfer['expenses'] or Decimal(0), space_pk)
+                }
+
+        return period_data
+
+    def get_analysis(self, days, space_pk, period_data):
+        total_incomes = sum(float(re.sub(r'[^\d.]', '', day.get('incomes', '0'))) for day in period_data.values())
+        total_expenses = sum(float(re.sub(r'[^\d.]', '', day.get('expenses', '0'))) for day in period_data.values())
+
+        currency = self.request.user.currency
+        net_change = total_incomes - total_expenses
+        analysis = f"You have {self.format_amount(abs(net_change), space_pk)} {'more' if net_change > 0 else 'fewer'} {currency} this {'week' if days == 7 else 'month' if days == 30 else 'three months' if days == 90 else 'year'}."
+        return analysis
+
+    def format_amount(self, amount, space_pk):
+        # Преобразуем Decimal в строку, затем извлекаем число из строки, округляем его и добавляем валюту
+        rounded_amount = round(float(re.sub(r'[^\d.]', '', str(amount))))
+        currency = self.request.user.currency
+        return f"{rounded_amount} {currency}"
+
+
+class RecurringPaymentsStatistic(generics.ListAPIView):
+    serializer_class = CategoryViewSerializer
+
+    def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
+        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'], periodic=True)
+        periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
+        return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
+
+    def get_expenses_for_period(self, queryset, days: int) -> List[HistoryExpense]:
+        return queryset.filter(created__gte=timezone.now() - timedelta(days=days))
+
+    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, float], Dict[str, int]]:
+        expenses = [expense for expense in expenses if expense.to_cat]
+        total = sum(expense.amount_in_default_currency for expense in expenses)
+        summary = self.get_summary(expenses)
+        percentages = self.get_percentages(summary, total)
+        return summary, percentages
+
+    def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, float]:
+        return {
+            expense.to_cat: sum(expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
+            for expense in expenses for category in {expense.to_cat}
+        }
+
+    def get_percentages(self, summary: Dict[str, float], total: float) -> Dict[str, int]:
+        percentages = {category: round(value / total * 100) for category, value in summary.items()}
+        remaining_percentage = 100 - sum(percentages.values())
+        if remaining_percentage != 0:
+            sorted_percentages = sorted(percentages.items(), key=lambda x: x[1], reverse=True)
+            if sorted_percentages:
+                largest_category, _ = sorted_percentages[0]
+                percentages[largest_category] += remaining_percentage
+        return {category: f"{value}%" for category, value in percentages.items()}
+
+    def add_currency(self, data: Union[Dict, Decimal], currency: str) -> Union[Dict, str]:
+        if isinstance(data, Decimal):
+            return f"{int(data)} {currency}"
+        else:
+            return {key: f"{int(value)} {currency}" if isinstance(value, (int, float, Decimal)) else self.add_currency(value, currency) for key, value in data.items()}
+
+    def format_result(self, expenses: Dict[str, List[HistoryExpense]], request: Request) -> Dict:
+        formatted_result = {}
+        for period, period_expenses in expenses.items():
+            summary, percentages = self.get_summary_and_percentages(period_expenses)
+            period_sum = sum(summary.values())
+            formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+            formatted_result[f"{period.capitalize()}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
+            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, request.user.currency, period)
+        return formatted_result
+
+    def get_percentage_for_summary(self, summary: Dict[str, float], period_sum: float) -> Dict[str, str]:
+        return {category: f"{round(value / period_sum * 100)}%" for category, value in summary.items()}
+
+    def get_analysis_message(self, summary: Dict[str, float], currency: str, period: str) -> str:
+        if summary:
+            max_spending_category = max(summary, key=summary.get)
+            max_spending_amount = summary[max_spending_category]
+            return f"This {period}, your biggest recurring expense {max_spending_category}, you have spent {self.add_currency(max_spending_amount, currency)}"
+        else:
+            return f"You did not have any recurring expenses this {period}."
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        expenses = self.get_queryset()
+        formatted_result = self.format_result(expenses, request)
+        serializer = self.get_serializer(formatted_result, many=False)
+        return Response(serializer.data)
+
+
+class StatisticSimulation(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        incomes_view = IncomeAutoDataView.as_view()(request._request, *args, **kwargs)
+        expenses_view = ExpenseAutoDataView.as_view()(request._request, *args, **kwargs)
+        transfer_view = TransferAutoDataView.as_view()(request._request, *args, **kwargs)
+        combined_data = {
+            "Incomes is ready": incomes_view.data,
+            "Spending is ready": expenses_view.data,
+            "Goals is ready": transfer_view.data,
+        }
+        return Response(combined_data)
 
 
 class IncomeAutoDataView(generics.ListAPIView):
