@@ -13,5 +13,5 @@ urlpatterns = [
     path('update_stocks_4_add/', UpdateStocksAPIView_group4_add.as_view(), name='update_stocks_4add'),
     path('update_stocks_5_add/', UpdateStocksAPIView_group5.as_view(), name='update_stocks_5add'),
 
-    path('update_stocks_all/', StockAPIView.as_view(), name='get_all_stocks')
+    path('get_stocks_all/', StockAPIView.as_view(), name='get_all_stocks')
 ]
