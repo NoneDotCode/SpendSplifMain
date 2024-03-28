@@ -39,18 +39,26 @@ class SpendView(generics.GenericAPIView):
             1 / amount
         except (TypeError, ZeroDivisionError):
             return Response({"error": "You should put amount bigger than 0."}, status=status.HTTP_400_BAD_REQUEST)
-        category = Category.objects.get(pk=request.data.get("category_pk"))
+        category_pk = request.data.get("category_pk")
         if amount > int(account.balance):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
         to_currency = request.user.currency
-        if TotalBalance.objects.filter(father_space_id=space_pk):
-            to_currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
-        category.spent += convert_currencies(amount=amount,
-                                             from_currency=account.currency,
-                                             to_currency=to_currency)
-        category.save()
+
+        category = None
+        
+        if category_pk:
+            category = Category.objects.filter(pk=category_pk).first()
+            if TotalBalance.objects.filter(father_space_id=space_pk).exists():  # Перевірка існування TotalBalance
+                total_balance = TotalBalance.objects.get(father_space_id=space_pk)
+                to_currency = total_balance.currency
+                category.spent += convert_currencies(amount=amount,
+                                                    from_currency=account.currency,
+                                                    to_currency=to_currency)
+                category.save()
+        else:
+            account.balance -= amount
         comment = request.data.get("comment")
         if comment is None:
             comment = ""
@@ -59,15 +67,14 @@ class SpendView(generics.GenericAPIView):
             currency=account.currency,
             comment=comment,
             from_acc=account.title,
-            to_cat=category.title,
+            to_cat=category.title if category else None,
             father_space_id=space_pk
         )
-        total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
-        if total_balance:
-            total_balance[0].balance -= convert_currencies(amount=amount,
-                                                           from_currency=account.currency,
-                                                           to_currency=total_balance[0].currency)
-            total_balance[0].save()
+        if 'total_balance' in locals(): 
+            total_balance.balance -= convert_currencies(amount=amount,
+                                                       from_currency=account.currency,
+                                                       to_currency=total_balance.currency)
+            total_balance.save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
 
 
