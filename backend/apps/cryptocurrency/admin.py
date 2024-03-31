@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cryptocurrency
+from backend.apps.cryptocurrency.models import Cryptocurrency
 
 @admin.register(Cryptocurrency)
 class CryptocurrencyAdmin(admin.ModelAdmin):

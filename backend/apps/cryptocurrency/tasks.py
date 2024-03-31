@@ -1,6 +1,6 @@
 import requests
 from celery import shared_task
-from .models import Cryptocurrency
+from backend.apps.cryptocurrency.models import Cryptocurrency
 import logging
 
 logger = logging.getLogger(__name__)

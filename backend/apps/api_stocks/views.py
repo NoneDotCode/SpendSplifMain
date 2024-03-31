@@ -1,14 +1,12 @@
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 import requests
-from apps.api_stocks.models import Stock
+from backend.apps.api_stocks.models import Stock
 
 
+class UpdateStocksAPIViewGroupFirst(APIView):
 
-
-class UpdateStocksAPIView_group1(APIView):
     api_key = '296b89a58663457d9dcd754263b549bf'
     symbols_to_check = ['AAPL', 'MSFT', 'AMZN', 'GOOGL']
 
@@ -57,21 +55,21 @@ class UpdateStocksAPIView_group1(APIView):
 
 
 
-class Update_Stocks_APIView_group1_add(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupFirstAdd(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['ORCL', 'TSLA', 'BABA', 'JNJ']
-class UpdateStocksAPIView_group2(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupSecond(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['BAC', 'XOM', 'GE', 'KO']
-class UpdateStocksAPIView_group2_add(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupSecondAdd(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['PG', 'V', 'MA', 'JPM']
-class UpdateStocksAPIView_group3(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupThird(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['PFE', 'INTC', 'CSCO', 'DIS']
-class UpdateStocksAPIView_group3_add(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupThirdAdd(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['IBM', 'BA', 'NFLX', 'JCI']
-class UpdateStocksAPIView_group4(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupFourth(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['GM', 'CVX', 'PEP', 'GS']
-class UpdateStocksAPIView_group4_add(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupFourthAdd(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['GE', 'CSCO', 'ORCL','MMM']
-class UpdateStocksAPIView_group5(UpdateStocksAPIView_group1):
+class UpdateStocksAPIViewGroupFifth(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['HON']
 
 
@@ -88,7 +86,3 @@ class StockAPIView(APIView):
                 'symbol': stock.symbol,
                 'price': str(stock.price)
             }
-
-        return Response(stock_data, status=status.HTTP_200_OK)
-
-

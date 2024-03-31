@@ -1,6 +1,6 @@
 import requests
 from celery import shared_task
-from .models import Stock
+from backend.apps.api_stocks.models import Stock
 import environ
 import time
 
