@@ -13,3 +13,4 @@ django-celery-results==2.5.1
 psycopg2==2.9.9
 django-rest-multiple-models==2.1.3
 requests~=2.31.0
+django-colorfield==0.11.0
