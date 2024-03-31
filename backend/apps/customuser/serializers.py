@@ -50,11 +50,11 @@ class VerifyEmailSerializer(serializers.ModelSerializer):
     """
     Mail verification
     """
-    code = serializers.IntegerField(required=True)
+    code = serializers.IntegerField(required=True, write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ("verify_code",)
+        fields = ("verify_code", "code")
 
     def validate(self, data: dict):
         """
@@ -75,12 +75,12 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
     """
     password reset serializer
     """
-    code = serializers.IntegerField(required=True)
-    new_password = serializers.CharField(required=True)
+    code = serializers.IntegerField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ("password_reset_code",)
+        fields = ("password_reset_code", "new_password", "code")
 
     def validate(self, data: dict) -> dict:
         code: str = data["code"]
