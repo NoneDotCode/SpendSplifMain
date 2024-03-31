@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.goal",
     "apps.spend",
     "apps.transfer",
+    "apps.cryptocurrency",
 ]
 
 # Custom user model auth

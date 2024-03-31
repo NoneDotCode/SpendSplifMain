@@ -24,11 +24,11 @@ app.conf.beat_schedule = {
         "schedule": crontab(hour="00", minute="00", day_of_month="01")
     },
     "update_rates_for_converter_every_day": {
-        "task": "apps.converter.tasks.update_rates",
+        "task": "backend.apps.converter.tasks.update_rates",
         "schedule": crontab(hour="00", minute="00")
     },
     "update_crypto_prices_every_2_minutes": {
-        "task": "apps.cryptocurrency.tasks.update_crypto_prices",
+        "task": "backend.apps.cryptocurrency.tasks.update_crypto_prices",
         "schedule": crontab(minute="*/2")
     }
 }
