@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
@@ -12,6 +14,26 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ("id", "username", "email", "password", "language", "currency", "tag")
         extra_kwargs = {"password": {"write_only": True}}
 
+    def validate(self, data):
+        
+        password = data.get ("password")
+        
+        if not 8 <= len(password) <= 24:
+            raise serializers.ValidationError("the password should be at least 8 characters long")
+
+        if password.isdecimal():
+            raise serializers.ValidationError("the password cannot be all numeric")
+
+        if len(re.findall(r'[a-zA-Z]', password)) < 4:
+            raise serializers.ValidationError("the password should have more than four letters")
+
+        if len(re.findall(r'\d', password)) < 3:
+            raise serializers.ValidationError("the password should have more than 3 numbers")
+
+        if len(re.findall(r'[!@#$%^&*()_+{}\[\]:;<>,.?/~`]', password)) < 1:
+            raise serializers.ValidationError("the password must contain at least 1 special character")
+
+        return data
 
 class CustomTokenRefreshSerializer(serializers.Serializer):
     access = serializers.CharField(read_only=True)
