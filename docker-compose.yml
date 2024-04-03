@@ -7,10 +7,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgresql
+      - database
       - redis
     environment:
-      - DB_HOST=postgresql
+      - DB_HOST=database
       - DB_PORT=5432
       - POSTGRES_DB=spendsplif
       - POSTGRES_USER=db_user
@@ -19,7 +19,7 @@ services:
       - DJANGO_REDIS_PORT=6379
     command: sh -c "python backend/manage.py migrate && python backend/manage.py runserver 0.0.0.0:8000"
 
-  postgresql:
+  database:
     image: postgres:15.5
     ports:
       - "5432:5432"
@@ -38,7 +38,7 @@ services:
       context: ./backend
     depends_on:
       - redis
-      - postgresql
+      - database
       - backend
     command: ["celery", "-A", "backend.config", "worker", "--pool=solo", "-l", "info"]
 
@@ -46,7 +46,7 @@ services:
     build:
       context: ./backend
     depends_on:
-      - postgresql
+      - database
       - redis
       - backend
       - celery-worker
