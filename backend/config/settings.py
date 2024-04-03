@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.transfer",
     "apps.cryptocurrency",
     "apps.api_stocks",
+    "apps.tink",
 ]
 
 # Custom user model auth
@@ -248,3 +249,10 @@ EMAIL_HOST_PASSWORD = env("EMAIL_SECRET_KEY")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_ADMIN = EMAIL_HOST_USER
+
+# For Tink sync
+
+TINK = {
+    "CLIENT_ID": "df402ff180c743fe988144ac9623c0dd",
+    "CLIENT_SECRET": "52e1e6441ecf4e50ba1f0fa92fe586fe"
+}
