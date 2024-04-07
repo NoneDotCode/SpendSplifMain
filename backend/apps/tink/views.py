@@ -30,7 +30,7 @@ class AuthorizeAppView(generics.GenericAPIView):
 class CreateUserView(generics.GenericAPIView):
     def post(self, request):
         access_token = request.data.get("access_token")
-        external_user_id = request.data.get("external_user_id", "user_123_abc")
+        external_user_id = request.data.get("external_user_id", request.user.username)
         market = request.data.get("market", "GB")
         locale = request.data.get("locale", "en_US")
 
@@ -194,7 +194,7 @@ class ListTransactionsView(generics.GenericAPIView):
         if page_token:
             params['pageToken'] = page_token
 
-        response = requests.get('https://api.tink.com/data/v2/transactions', headers=headers, params=params)
+        response = requests.get('https://api.tink.com/data/v2/accounts', headers=headers, params=params)
 
         if response.status_code == 200:
             transactions = response.json()
