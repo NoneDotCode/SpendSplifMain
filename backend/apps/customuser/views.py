@@ -107,6 +107,48 @@ class ConfirmRegistrationView(APIView):
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ConfirmNewEmailView(APIView):
+    def post(self, request, *args, **kwargs):
+        verify_code = request.data.get('verify_code')
+        code_from_new_email = request.data.get('code_from_new_email')
+
+        if request.user.verify_code == verify_code and request.user.code_from_new_email == code_from_new_email:
+            request.user.verify_code = "verified"
+            request.user.code_from_new_email = None
+            request.user.email = request.user.new_email
+            request.user.new_email = None
+            request.user.save()
+            return Response({'detail': 'Email verified.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+"""
+    email
+    password
+"""
+
+
+class CustomUserUpdateAPIView(generics.UpdateAPIView):
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        partial = True
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+
+        return Response(serializer.data)
+
+
 class SendResetCodeView(generics.RetrieveAPIView):
     """
     sending a code for reset password
