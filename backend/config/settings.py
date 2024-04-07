@@ -145,7 +145,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
@@ -181,7 +181,7 @@ SIMPLE_JWT = {
         'max_age': 86400,
         'httponly': True,
         'samesite': 'Lax',
-        'secure': True,
+        'secure': False,
         'path': '/',
         },
 
@@ -197,7 +197,7 @@ CORS_ALLOWED_ORIGINS=[
     ]
 CORS_ALLOW_CREDENTIALS=True
 
-CSRF_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=False
 CSRF_COOKIE_HTTP_ONLY=True
 CSRF_TRUSTED_ORIGINS=[
     "http://localhost:5173",
