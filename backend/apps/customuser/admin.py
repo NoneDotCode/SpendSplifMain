@@ -12,7 +12,6 @@ class CustomUserAdmin(UserAdmin):
         "email",
         "language",
         "tag",
-        "currency",
         "password",
         "is_staff",
         "is_active",
