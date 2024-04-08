@@ -123,12 +123,6 @@ class ConfirmNewEmailView(APIView):
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-"""
-    email
-    password
-"""
-
-
 class CustomUserUpdateAPIView(generics.UpdateAPIView):
     serializer_class = CustomUserSerializer
 
@@ -147,36 +141,3 @@ class CustomUserUpdateAPIView(generics.UpdateAPIView):
             serializer = self.get_serializer(instance)
 
         return Response(serializer.data)
-
-
-class SendResetCodeView(generics.RetrieveAPIView):
-    """
-    sending a code for reset password
-    """
-    serializer_class = CustomUserSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
-
-    def get(self, request, *args, **kwargs):
-        user = CustomUser.objects.get(email=request.user.email)
-
-        try:
-            code = get_verify_code()
-            send_code_to_new_user(user.email, code, "resetPassword")
-
-            user.password_reset_code = code
-            user.save()
-
-            return Response({"message": "successfully"})
-
-        except (Exception,):
-            return Response({"message": "sending error"})
-
-
-class ResetPasswordView(generics.UpdateAPIView):
-    """
-    Verification almost
-    """
-    serializer_class = ResetPasswordSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
