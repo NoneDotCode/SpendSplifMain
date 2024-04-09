@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     # Modules
     "drf_multiple_model",
     # Custom apps
-
     "colorfield",
     "apps.customuser",
     "apps.space",
@@ -53,6 +52,7 @@ INSTALLED_APPS = [
     "apps.spend",
     "apps.transfer",
     "apps.cryptocurrency",
+    "apps.api_stocks",
 ]
 
 # Custom user model auth
