@@ -13,6 +13,10 @@ class CustomUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {"password": {"write_only": True}}
 
 
+class CustomTokenRefreshSerializer(serializers.Serializer):
+    access = serializers.CharField(read_only=True)
+
+
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Serializer for JWT authentication with email instead of username.
@@ -25,14 +29,8 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
         return user.email
 
     def validate(self, attrs):
-        """
-        credentials = {
-            'email': attrs.get('email'),
-            'password': attrs.get('password')
-        }
-        """
-        email = attrs.get("email", )
-        password = attrs.get("password", )
+        email = attrs.get("email")
+        password = attrs.get("password")
 
         if email and password:
             user = authenticate(email=email, password=password)
