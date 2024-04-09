@@ -41,10 +41,11 @@ INSTALLED_APPS = [
     # Modules
     "drf_multiple_model",
     # Custom apps
-    "apps.customuser",
-    "apps.space",
-    "apps.account",
-    "apps.category",
+        "colorfield",
+    "backend.apps.customuser",
+    "backend.apps.space",
+    "backend.apps.account",
+    "backend.apps.category",
     "apps.history",
     "apps.converter",
 ]
@@ -145,7 +146,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
@@ -181,7 +182,7 @@ SIMPLE_JWT = {
         'max_age': 86400,
         'httponly': True,
         'samesite': 'Lax',
-        'secure': True,
+        'secure': False,
         'path': '/',
         },
 
@@ -197,7 +198,7 @@ CORS_ALLOWED_ORIGINS=[
     ]
 CORS_ALLOW_CREDENTIALS=True
 
-CSRF_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=False
 CSRF_COOKIE_HTTP_ONLY=True
 CSRF_TRUSTED_ORIGINS=[
     "http://localhost:5173",
@@ -207,6 +208,10 @@ CSRF_TRUSTED_ORIGINS=[
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:8000",
+    ]
 SESSION_COOKIE_SAMESITE = "Lax"
 
 CORS_ORIGIN_WHITELIST = [
@@ -229,7 +234,7 @@ DJANGO_CELERY_BEAT_TZ_AWARE = False
 SITE_ID = 2
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.yandex.ru"
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
