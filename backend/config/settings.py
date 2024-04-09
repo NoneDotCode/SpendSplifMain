@@ -40,20 +40,19 @@ INSTALLED_APPS = [
     # Modules
     "drf_multiple_model",
     # Custom apps
-<<<<<<<<< Temporary merge branch 1
+
+    "colorfield",
     "apps.customuser",
     "apps.space",
     "apps.account",
     "apps.category",
     "apps.history",
     "apps.converter",
-=========
-    "colorfield",
-    "backend.apps.customuser",
-    "backend.apps.space",
-    "backend.apps.account",
-    "backend.apps.category",
->>>>>>>>> Temporary merge branch 2
+    "apps.total_balance",
+    "apps.goal",
+    "apps.spend",
+    "apps.transfer",
+    "apps.cryptocurrency",
 ]
 
 # Custom user model auth
