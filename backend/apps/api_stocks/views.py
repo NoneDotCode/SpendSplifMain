@@ -3,9 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 import requests
 from backend.apps.api_stocks.models import Stock
+from rest_framework.permissions import AllowAny
 
 
 class UpdateStocksAPIViewGroupFirst(APIView):
+    permission_classes = AllowAny
 
     api_key = '296b89a58663457d9dcd754263b549bf'
     symbols_to_check = ['AAPL', 'MSFT', 'AMZN', 'GOOGL']
