@@ -37,7 +37,7 @@ def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_cu
         comment=comment,
         from_acc=account.title,
         to_cat=category.title,
-        periodic=True,
+        periodic_expense=True,
         father_space_id=space_pk
     )
     total_balance = TotalBalance.objects.filter(father_space_id=space_pk)

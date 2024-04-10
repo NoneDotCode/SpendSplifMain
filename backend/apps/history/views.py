@@ -241,7 +241,7 @@ class ExpensesStatisticView(generics.ListAPIView):
     def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, Decimal], Dict[str, str]]:
         category_expenses = sum(expense.amount for expense in expenses if expense.to_cat)
         loss_expenses = sum(expense.amount for expense in expenses if not expense.to_cat)
-        recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic)
+        recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic_expense)
         total_expenses = category_expenses + loss_expenses + recurring_expenses
         summary = {
             'Category': category_expenses,
@@ -300,7 +300,6 @@ class GoalTransferStatisticView(generics.ListAPIView):
         return HistoryTransfer.objects.exclude(to_goal__isnull=True) \
             .exclude(to_goal__exact='') \
             .filter(father_space=self.kwargs['space_pk']) \
-            .filter(periodic=False)
 
     def get_periods(self, transfers: List[HistoryTransfer]) -> Dict[str, List[HistoryTransfer]]:
         periods = self._init_periods()
@@ -513,7 +512,7 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
     serializer_class = CategoryViewSerializer
 
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
-        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'], periodic=True)
+        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'], periodic_expense=True)
         periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
         return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
@@ -644,13 +643,13 @@ class ExpenseAutoDataView(generics.ListAPIView):
     def get_queryset(self):
         father_space = self.kwargs["space_pk"]
         expense_data = [
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
              'from_acc': 'Cash', 'created': datetime(2023, 1, 30), 'comment': '', 'to_cat': 'Food'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': 'Home'},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
              'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2023, 11, 10), 'comment': '', 'to_cat': 'Home'},
@@ -664,7 +663,7 @@ class ExpenseAutoDataView(generics.ListAPIView):
              'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 11), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
              'from_acc': 'Cash', 'created': datetime(2024, 3, 21), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 25), 'comment': '', 'to_cat': 'Food'},
@@ -672,7 +671,7 @@ class ExpenseAutoDataView(generics.ListAPIView):
              'from_acc': 'Cash', 'created': datetime(2024, 3, 27), 'comment': '', 'to_cat': 'Home'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 3, 29), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
+            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
              'from_acc': 'Cash', 'created': datetime(2024, 3, 31), 'comment': ''}
         ]
 
