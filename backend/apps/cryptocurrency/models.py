@@ -1,7 +1,7 @@
 from django.db import models
 
 class Cryptocurrency(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, blank=True)
     symbol = models.CharField(max_length=10)
     price_usd = models.DecimalField(max_digits=15, decimal_places=2)
     price_eur = models.DecimalField(max_digits=15, decimal_places=2)
