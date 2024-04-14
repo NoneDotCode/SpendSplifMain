@@ -21,11 +21,11 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from backend.apps.history.serializers import HistoryIncomeSerializer
+from backend.apps.account.permissions import IsSpaceMember
 
 
 class HistoryView(ObjectMultipleModelAPIView):
-    permission_classes = ()
-
+    permission_classes = (IsSpaceMember,)
     def get_querylist(self):
         space_pk = self.kwargs["space_pk"]
         return [
@@ -37,6 +37,7 @@ class HistoryView(ObjectMultipleModelAPIView):
 
 
 class StatisticView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
     def get(self, request, *args, **kwargs):
         categories_view = CategoryStatisticView.as_view()(request._request, *args, **kwargs)
         incomes_view = IncomeStatisticView.as_view()(request._request, *args, **kwargs)
@@ -56,6 +57,7 @@ class StatisticView(generics.GenericAPIView):
 
 
 class CategoryStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = CategoryViewSerializer
 
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
@@ -121,6 +123,7 @@ class CategoryStatisticView(generics.ListAPIView):
 
 
 class IncomeStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = IncomeStatisticViewSerializer
 
     def get_queryset(self) -> List[HistoryIncome]:
@@ -208,6 +211,7 @@ class IncomeStatisticView(generics.ListAPIView):
 
 
 class ExpensesStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = ExpensesViewSerializer
 
     def get_queryset(self) -> List[HistoryExpense]:
@@ -294,6 +298,7 @@ class ExpensesStatisticView(generics.ListAPIView):
 
 
 class GoalTransferStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = GoalTransferStatisticSerializer
 
     def get_queryset(self) -> List[HistoryTransfer]:
@@ -436,6 +441,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
 
 
 class GeneralView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
     def get(self, request, space_pk, *args, **kwargs):
         data = {}
         data["Week"] = self.get_data_for_period(7, space_pk)
@@ -509,6 +515,7 @@ class GeneralView(generics.GenericAPIView):
 
 
 class RecurringPaymentsStatistic(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = CategoryViewSerializer
 
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
