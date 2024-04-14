@@ -23,6 +23,8 @@ from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user
 
 from backend.apps.space.models import Space, MemberPermissions
 
+from backend.apps.messenger.models import SpaceGroup
+
 from datetime import datetime
 
 
@@ -116,6 +118,9 @@ class ConfirmRegistrationView(APIView):
                     space=space,
                     owner=True
                 )
+
+                SpaceGroup.objects.create(father_space=space)
+
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)

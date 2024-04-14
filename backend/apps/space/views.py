@@ -86,7 +86,7 @@ class AddMemberToSpace(generics.GenericAPIView):
         space = Space.objects.get(pk=space_pk)
 
         try:
-            user = CustomUser.objects.get(email=request.user.email)
+            user = CustomUser.objects.get(pk=user_pk)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."},
                             status=status.HTTP_404_NOT_FOUND)

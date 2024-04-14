@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.transfer",
     "apps.cryptocurrency",
     "apps.api_stocks",
+    "apps.messenger",
 ]
 
 # Custom user model auth
