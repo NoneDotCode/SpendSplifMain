@@ -3,9 +3,11 @@ from rest_framework.response import Response
 from backend.apps.cryptocurrency.models import Cryptocurrency
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny 
 import requests
 
 class CryptocurrencyPriceView(generics.RetrieveAPIView):
+    permission_classes = [AllowAny]
     def get(self, request,*args, **kwargs):
         cryptocurrency = Cryptocurrency.objects.all()
 

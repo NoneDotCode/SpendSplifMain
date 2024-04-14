@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny 
 import requests
 from backend.apps.api_stocks.models import Stock
 
@@ -75,6 +76,8 @@ class UpdateStocksAPIViewGroupFifth(UpdateStocksAPIViewGroupFirst):
 
 
 class StockAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, *args, **kwargs):
         stocks = Stock.objects.all()
 
