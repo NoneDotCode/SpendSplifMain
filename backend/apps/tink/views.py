@@ -1,12 +1,16 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+from backend.apps.tink.models import TinkUser
 
 from django.conf import settings
-from django.urls import reverse
 
 import requests
+import json
 
 class AuthorizeAppView(generics.GenericAPIView):
+    permission_classes = (AllowAny,)
     def get(self, request):
         client_id = settings.TINK["CLIENT_ID"]
         client_secret = settings.TINK["CLIENT_SECRET"]
@@ -30,7 +34,7 @@ class AuthorizeAppView(generics.GenericAPIView):
 class CreateUserView(generics.GenericAPIView):
     def post(self, request):
         access_token = request.data.get("access_token")
-        external_user_id = request.data.get("external_user_id", request.user.username)
+        external_user_id = request.data.get("external_user_id", request.user.pk)
         market = request.data.get("market", "GB")
         locale = request.data.get("locale", "en_US")
 
@@ -39,15 +43,17 @@ class CreateUserView(generics.GenericAPIView):
             'market': market,
             'locale': locale
         }
-        
+
         headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-        
+
         response = requests.post('https://api.tink.com/api/v1/user/create', headers=headers, json=user_data)
-        
+
         if response.status_code == 200:
+            TinkUser.objects.create(user=request.user,
+                        user_tink_id=response.json()["user_id"])
             created_user = response.json()
             return Response(created_user, status=status.HTTP_200_OK)
         else:
@@ -55,6 +61,7 @@ class CreateUserView(generics.GenericAPIView):
 
 
 class GenerateAuthorizationCodeView(generics.GenericAPIView):
+    permission_classes = (AllowAny,)
     def get(self, request):
         client_id = settings.TINK["CLIENT_ID"]
         client_secret = settings.TINK["CLIENT_SECRET"]
@@ -78,18 +85,15 @@ class GenerateAuthorizationCodeView(generics.GenericAPIView):
 class GrantUserAccessView(generics.GenericAPIView):
     def post(self, request):
         access_token = request.data.get('access_token')
-        user_id = request.data.get('user_id')
-        external_user_id = request.data.get('external_user_id')
-        id_hint = request.data.get('id_hint', f'{request.user.username}')
+        id_hint = request.data.get('id_hint', f"{request.user.username}{request.user.tag}")
 
         data = {
             'actor_client_id': 'df05e4b379934cd09963197cc855bfe9',
-            'user_id': user_id,
-            'external_user_id': external_user_id,
+            'user_id': TinkUser.objects.get(user=request.user).user_tink_id,
             'id_hint': id_hint,
             'scope': 'authorization:read,authorization:grant,credentials:refresh,credentials:read,credentials:write,providers:read,user:read'
         }
-        
+
         headers = {
             'Authorization': f'Bearer {access_token}'
         }
@@ -194,7 +198,7 @@ class ListTransactionsView(generics.GenericAPIView):
         if page_token:
             params['pageToken'] = page_token
 
-        response = requests.get('https://api.tink.com/data/v2/accounts', headers=headers, params=params)
+        response = requests.get('https://api.tink.com/data/v2/transactions', headers=headers, params=params)
 
         if response.status_code == 200:
             transactions = response.json()
