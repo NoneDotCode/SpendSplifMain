@@ -3,6 +3,7 @@ from celery import shared_task
 from backend.apps.api_stocks.models import Stock
 import environ
 import time
+from backend.apps.converter.utils import convert_currencies
 
 env = environ.Env()
 environ.Env.read_env()
@@ -19,10 +20,12 @@ def update_group_prices(api_key, symbols):
             if values:
                 latest_data = values[-1]
                 current_price = latest_data.get('close', 'N/A')
+                current_price_eur = convert_currencies(from_currency="USD", to_currency="EUR", amount=current_price)
 
-                stock, created = Stock.objects.update_or_create(symbol=symbol, defaults={'price': current_price})
+                stock, created = Stock.objects.update_or_create(symbol=symbol, defaults={'price_usd': current_price, 'price_eur': current_price_eur})
                 if not created:
-                    stock.price = current_price
+                    stock.price_usd = current_price
+                    stock.price_eur = current_price_eur
                     stock.save()
     print('Group Stocks prices updated')
     time.sleep(65)
