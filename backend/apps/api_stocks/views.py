@@ -12,7 +12,7 @@ from backend.apps.converter.utils import convert_currencies
 class UpdateStocksAPIViewGroupFirst(APIView):
     permission_classes = AllowAny
 
-    api_key = '296b89a58663457d9dcd754263b549bf'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     symbols_to_check = ['AAPL', 'MSFT', 'AMZN', 'GOOGL']
 
     def get_stock_name(self, symbol):
