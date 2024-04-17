@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny
 import requests
 from backend.apps.api_stocks.models import Stock
 
+from backend.apps.converter.utils import convert_currencies
+
 
 class UpdateStocksAPIViewGroupFirst(APIView):
 
@@ -34,12 +36,16 @@ class UpdateStocksAPIViewGroupFirst(APIView):
                         current_price = latest_data.get('close', 'N/A')
                         symbol_name = self.get_stock_name(symbol)
 
-                        response_data[symbol] = {'symbol': symbol, 'price': current_price, 'name': symbol_name}
+                        response_data[symbol] = {'symbol': symbol,
+                                                 'price_usd': current_price,
+                                                 'price_eur': convert_currencies(from_currency="USD", to_currency="EUR", amount=current_price),
+                                                 'name': symbol_name}
 
                         stock, created = Stock.objects.get_or_create(symbol=symbol, defaults={'name': symbol_name, 'price': current_price})
 
                         if not created:
-                            stock.price = current_price
+                            stock.price_usd = current_price
+                            stock.price_eur = convert_currencies(from_currency="USD", to_currency="EUR", amount=current_price)
                             stock.name = symbol_name
                             stock.save()
                     else:
@@ -87,5 +93,6 @@ class StockAPIView(APIView):
             stock_data[stock.symbol] = {
                 'name': stock.name,
                 'symbol': stock.symbol,
-                'price': str(stock.price)
+                'price_usd': str(stock.price_usd),
+                'price_eur': str(stock.price_eur)
             }
