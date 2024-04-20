@@ -7,7 +7,7 @@ from backend.apps.space.models import Space, MemberPermissions
 class SpaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Space
-        fields = ("title", "members")
+        fields = ("title", "currency", "members")
 
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):

@@ -35,9 +35,7 @@ class TransferView(generics.GenericAPIView):
         elif from_object == "goal" and to_object == "account":
             goal = Goal.objects.get(pk=request.data.get("from_goal"))
             account = Account.objects.get(pk=request.data.get("to_account"))
-            from_currency = request.user.currency
-            if TotalBalance.objects.filter(father_space_id=space_pk):
-                from_currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
+            from_currency = account.father_space.currency
             if amount is not None and amount > 0:
                 if amount > goal.collected:
                     return Response({"error": "You have not enough money collected."})
@@ -60,9 +58,7 @@ class TransferView(generics.GenericAPIView):
         elif from_object == "account" and to_object == "goal":
             goal = Goal.objects.get(pk=request.data.get("to_goal"))
             account = Account.objects.get(pk=request.data.get("from_account"))
-            to_currency = request.user.currency
-            if TotalBalance.objects.filter(father_space_id=space_pk):
-                to_currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
+            to_currency = account.father_space.currency
             if amount is not None and amount > 0:
                 if amount > account.balance:
                     return Response({"error": "You have not enough money on the account."})
@@ -92,9 +88,7 @@ class TransferView(generics.GenericAPIView):
         elif from_object == "account" and to_object == "account":
             from_account = Account.objects.get(pk=request.data.get("from_account"))
             to_account = Account.objects.get(pk=request.data.get("to_account"))
-            currency = request.user.currency
-            if TotalBalance.objects.filter(father_space_id=space_pk):
-                currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
+            currency = from_account.father_space.currency
             if amount is not None and amount > 0:
                 if amount > from_account.balance:
                     return Response({"error": "You have not enough money on the account."})

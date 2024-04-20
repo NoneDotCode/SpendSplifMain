@@ -108,18 +108,6 @@ class ConfirmRegistrationView(APIView):
             user.is_active = True
             user.verify_code = "verified"
             user.save()
-            with transaction.atomic():
-                # Save the space instance
-                space = Space.objects.create(title="Main")
-
-                # Create a MemberPermissions instance setting the current user as the owner
-                MemberPermissions.objects.create(
-                    member=user,
-                    space=space,
-                    owner=True
-                )
-
-                SpaceGroup.objects.create(father_space=space)
 
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:

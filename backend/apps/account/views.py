@@ -29,7 +29,7 @@ class CreateAccount(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
-        request.data['father_space'] = space.pk
+        request.data['father_space'] = space_pk
         total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
         accounts_count = Account.objects.filter(father_space=space).count()
         if accounts_count >= 1 and not total_balance:
@@ -37,14 +37,13 @@ class CreateAccount(generics.CreateAPIView):
                 balance=sum([convert_currencies(
                     amount=account.balance,
                     from_currency=account.currency,
-                    to_currency=self.request.user.currency) for account in Account.objects.filter(father_space=space)]),
-                currency=self.request.user.currency,
+                    to_currency=space.currency) for account in Account.objects.filter(father_space=space)]),
                 father_space_id=space_pk
             ),)
         if total_balance:
             total_balance[0].balance += convert_currencies(amount=request.data['balance'],
                                                            from_currency=request.data['currency'],
-                                                           to_currency=total_balance[0].currency)
+                                                           to_currency=space.currency)
             total_balance[0].save()
         return super().create(request, *args, **kwargs)
 
@@ -93,7 +92,7 @@ class DeleteAccount(generics.RetrieveDestroyAPIView):
         elif accounts_count > 2 and total_balance:
             total_balance[0].balance -= convert_currencies(amount=account.balance,
                                                            from_currency=account.currency,
-                                                           to_currency=total_balance[0].currency)
+                                                           to_currency=father_space.currency)
             total_balance[0].save()
         return super().destroy(request, *args, **kwargs)
 
@@ -109,12 +108,11 @@ class IncomeView(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get('space_pk')
+        space = Space.objects.get(pk=space_pk)
         account_pk = kwargs.get('pk')
         account = Account.objects.get(pk=account_pk)
         amount = request.data.get('amount')
-        default_currency = request.user.currency
-        if TotalBalance.objects.filter(father_space_id=space_pk):
-            default_currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
+        default_currency = space.currency
         if amount is not None and int(amount) > 0:
             account.balance += int(amount)
             account.save()

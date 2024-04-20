@@ -44,9 +44,7 @@ class SpendView(generics.GenericAPIView):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
-        to_currency = request.user.currency
-        if TotalBalance.objects.filter(father_space_id=space_pk):
-            to_currency = TotalBalance.objects.filter(father_space_id=space_pk)[0].currency
+        to_currency = account.father_space.currency
         category.spent += convert_currencies(amount=amount,
                                              from_currency=account.currency,
                                              to_currency=to_currency)
@@ -69,7 +67,7 @@ class SpendView(generics.GenericAPIView):
         if total_balance:
             total_balance[0].balance -= convert_currencies(amount=amount,
                                                            from_currency=account.currency,
-                                                           to_currency=total_balance[0].currency)
+                                                           to_currency=to_currency)
             total_balance[0].save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
 
@@ -91,6 +89,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
+        account = Account.objects.get(pk=account_pk)
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
@@ -109,7 +108,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                                                          kwargs.get("space_pk"),
                                                          amount,
                                                          title,
-                                                         request.user.currency)))
+                                                         account.father_space.currency)))
         except ValidationError:
             return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
