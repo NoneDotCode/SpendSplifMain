@@ -42,3 +42,4 @@ class HistoryTransfer(models.Model):
     collected = models.DecimalField(max_digits=20, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     created = models.DateTimeField(default=datetime.now)
+    
