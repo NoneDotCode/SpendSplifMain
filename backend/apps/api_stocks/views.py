@@ -96,3 +96,4 @@ class StockAPIView(APIView):
                 'price_usd': str(stock.price_usd),
                 'price_eur': str(stock.price_eur)
             }
+        return Response(stock_data, status=status.HTTP_200_OK)
