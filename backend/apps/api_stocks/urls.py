@@ -13,5 +13,6 @@ urlpatterns = [
     path('update_stocks_4_add/', UpdateStocksAPIViewGroupFourthAdd.as_view(), name='update_stocks_4add'),
     path('update_stocks_5_add/', UpdateStocksAPIViewGroupFifth.as_view(), name='update_stocks_5add'),
 
-    path('get_stocks_all/', StockAPIView.as_view(), name='get_all_stocks')
+    path('get_stocks_all/', StockAPIView.as_view(), name='get_all_stocks'),
+    path('add_all_stocks/', GenerateRandomStockDataView.as_view(), name='add_all_stocks')
 ]
