@@ -7,7 +7,7 @@ from backend.apps.api_stocks.models import Stock
 from rest_framework import generics
 from .serializers import StockSerializer
 from backend.apps.converter.utils import convert_currencies
-import datetime
+from datetime import datetime
 
 class UpdateStocksAPIViewGroupFirst(APIView):
 
@@ -38,9 +38,9 @@ class UpdateStocksAPIViewGroupFirst(APIView):
                         symbol_name = self.get_stock_name(symbol)
 
                         response_data[symbol] = {'symbol': symbol,
-                                                 'price_usd': current_price,
-                                                 'price_eur': convert_currencies(from_currency="USD", to_currency="EUR", amount=current_price),
-                                                 'name': symbol_name}
+                                                    'price_usd': current_price,
+                                                    'price_eur': convert_currencies(from_currency="USD", to_currency="EUR", amount=current_price),
+                                                    'name': symbol_name}
 
                         stock, created = Stock.objects.get_or_create(symbol=symbol, defaults={'name': symbol_name, 'price': current_price})
 
@@ -79,7 +79,7 @@ class UpdateStocksAPIViewGroupFifth(UpdateStocksAPIViewGroupFirst):
     symbols_to_check = ['HON']
 
 class GenerateRandomStockDataView(generics.CreateAPIView):
-    permission_classes = (AllowAny)
+    permission_classes = [AllowAny]
     serializer_class = StockSerializer
 
     def get(self, request, *args, **kwargs):

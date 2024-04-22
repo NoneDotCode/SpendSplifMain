@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from rest_framework import generics
 from rest_framework.response import Response
 from backend.apps.cryptocurrency.models import Cryptocurrency
@@ -27,7 +27,7 @@ class CryptocurrencyPriceView(generics.RetrieveAPIView):
 
 class GenerateRandomCryptocurrencyDataView(generics.ListAPIView):
     serializer_class = CryptocurrencySerializer
-    permission_classes = (AllowAny)
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         cryptocurrencies = [
@@ -52,7 +52,7 @@ class GenerateRandomCryptocurrencyDataView(generics.ListAPIView):
             {'name': 'Theta Network', 'symbol': 'theta-token', 'code': 'THETA', 'price_usd': 10, 'price_eur': 9},
             {'name': 'Bitcoin SV', 'symbol': 'bitcoin-cash-sv', 'code': 'BSV', 'price_usd': 300, 'price_eur': 250},
             {'name': 'Crypto.com Coin', 'symbol': 'crypto-com-coin', 'code': 'CRO', 'price_usd': 0.1, 'price_eur': 0.09},
-            {'name': 'TRON', 'symbol': 'tron', 'code': 'TRX', 'price_usd': 0.05, 'price_eur': 0.045},
+            {'name': 'TRON', 'symbol': 'tron', 'code': 'TRX', 'price_usd': 0.05, 'price_eur': 0.04},
             {'name': 'Ethereum Classic', 'symbol': 'ethereum-classic', 'code': 'ETC', 'price_usd': 50, 'price_eur': 45},
             {'name': 'Tezos', 'symbol': 'tezos', 'code': 'XTZ', 'price_usd': 5, 'price_eur': 4.5},
             {'name': 'FTX Token', 'symbol': 'ftx-token', 'code': 'FTT', 'price_usd': 50, 'price_eur': 45},
