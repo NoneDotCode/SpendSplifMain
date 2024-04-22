@@ -11,7 +11,7 @@ from backend.apps.customuser.models import CustomUser
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ("id", "username", "email", "password", "language", "currency", "tag")
+        fields = ("id", "username", "email", "password", "language", "tag")
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):

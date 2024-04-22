@@ -102,12 +102,21 @@ class ConfirmRegistrationView(APIView):
     permission_classes = (permissions.AllowAny,)
     def post(self, request, *args, **kwargs):
         verify_code = request.data.get('verify_code')
+        currency = request.data.get("currency")
         user = CustomUser.objects.filter(verify_code=verify_code).first()
 
         if user:
             user.is_active = True
             user.verify_code = "verified"
             user.save()
+
+            space = Space.objects.create(title="Main", currency=currency)
+
+            MemberPermissions.objects.create(
+                member=user,
+                space=space,
+                owner=True
+            )
 
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
