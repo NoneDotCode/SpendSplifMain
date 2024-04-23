@@ -9,4 +9,4 @@ class Stock(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} ({self.symbol}) - {self.price}"
+        return f"{self.name} ({self.symbol}): {self.price_usd} USD, {self.price_eur} EUR"
