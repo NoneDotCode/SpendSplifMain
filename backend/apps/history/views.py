@@ -26,7 +26,6 @@ from backend.apps.history.serializers import HistoryIncomeSerializer
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.space.models import Space
 
-currency
 
 class HistoryView(ObjectMultipleModelAPIView):
     permission_classes = (IsSpaceMember,)
