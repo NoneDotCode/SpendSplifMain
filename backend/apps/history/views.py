@@ -24,7 +24,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from backend.apps.history.serializers import HistoryIncomeSerializer
 from backend.apps.account.permissions import IsSpaceMember
+from backend.apps.space.models import Space
 
+currency
 
 class HistoryView(ObjectMultipleModelAPIView):
     permission_classes = (IsSpaceMember,)
@@ -111,7 +113,7 @@ class CategoryStatisticView(generics.ListAPIView):
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"You didn't make any category expenditures this {period}"
             else:
                 summary, percentages = self.get_summary_and_percentages(period_expenses)
-                formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+                formatted_result[period.capitalize()] = self.add_currency(summary, Space)
                 formatted_result[f"{period.capitalize()}_Percent"] = percentages
                 max_spending_category = max(summary, key=summary.get)
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"This {period}, you spend most on {max_spending_category} category"
@@ -191,16 +193,17 @@ class IncomeStatisticView(generics.ListAPIView):
     def format_result(self, incomes: List[HistoryIncome], request: Request) -> Dict:
         periods = self.get_periods(incomes)
         formatted_result = {}
+        space = Space.objects.get(pk=self.kwargs.get("space_pk"))
 
         for period, period_incomes in periods.items():
             summary, percentages = self.get_summary_and_percentages(period_incomes)
-            formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+            formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
             formatted_result[f"{period.capitalize()}_Percent"] = percentages
 
             if summary:
                 max_income_date = max(summary, key=summary.get)
                 max_income_value = summary[max_income_date]
-                formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {request.user.currency} you earned on {max_income_date}"
+                formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {space.currency} you earned on {max_income_date}"
             else:
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} you did not receive any income."
 
@@ -277,7 +280,7 @@ class ExpensesStatisticView(generics.ListAPIView):
 
     def format_result(self, expenses: List[HistoryExpense], request: Request) -> Dict:
         periods = self.get_periods(expenses)
-        currency = request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         result = defaultdict(lambda: defaultdict(dict))
 
         # Add empty dicts for all periods first
@@ -446,7 +449,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         transfers = self.get_queryset()
         periods = self.get_periods(transfers)
-        currency = request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         result = {}
 
         for period, period_transfers in periods.items():
@@ -522,7 +525,7 @@ class GeneralView(generics.GenericAPIView):
     def get_analysis(self, days, space_pk, period_data):
         total_incomes = sum(float(re.sub(r'[^\d.]', '', day.get('incomes', '0'))) for day in period_data.values())
         total_expenses = sum(float(re.sub(r'[^\d.]', '', day.get('expenses', '0'))) for day in period_data.values())
-        currency = self.request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         net_change = total_incomes - total_expenses
         analysis = f"You have {self.format_amount(abs(net_change), space_pk)} {'more' if net_change > 0 else 'fewer'} {currency} this {'week' if days == 7 else 'month' if days == 30 else 'three months' if days == 90 else 'year'}."
         return analysis
@@ -550,7 +553,7 @@ class GeneralView(generics.GenericAPIView):
 
     def format_amount(self, amount, space_pk):
         rounded_amount = round(float(re.sub(r'[^\d.]', '', str(amount))))
-        currency = self.request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         return f"{rounded_amount} {currency}"
 
 
@@ -597,12 +600,13 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
 
     def format_result(self, expenses: Dict[str, List[HistoryExpense]], request: Request) -> Dict:
         formatted_result = {}
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         for period, period_expenses in expenses.items():
             summary, percentages = self.get_summary_and_percentages(period_expenses)
             period_sum = sum(summary.values())
-            formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+            formatted_result[period.capitalize()] = self.add_currency(summary, currency)
             formatted_result[f"{period.capitalize()}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
-            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, request.user.currency, period)
+            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, currency, period)
         return formatted_result
 
     def get_percentage_for_summary(self, summary: Dict[str, float], period_sum: float) -> Dict[str, str]:
@@ -766,4 +770,3 @@ class TransferAutoDataView(generics.ListAPIView):
                 serializer.save()
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
