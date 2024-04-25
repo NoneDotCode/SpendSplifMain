@@ -10,7 +10,3 @@ class Cryptocurrency(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.symbol}): {self.price_usd} USD, {self.price_eur} EUR"
-    
-
-
-    
