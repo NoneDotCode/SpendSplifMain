@@ -665,17 +665,17 @@ class IncomeAutoDataView(generics.ListAPIView):
             {'amount': 390, 'amount_in_default_currency': 390, 'father_space': father_space, 'currency': 'USD',
                 'account': 'Cash', 'created': datetime(2024, 3, 5), 'comment': ''},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-                'account': 'Cash', 'created': datetime(2024, 3, 10), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 4, 10), 'comment': ''},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
-                'account': 'Cash', 'created': datetime(2024, 3, 20), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 4, 19), 'comment': ''},
             {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
-                'account': 'Cash', 'created': datetime(2024, 3, 24), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 4, 20), 'comment': ''},
             {'amount': 900, 'amount_in_default_currency': 900, 'father_space': father_space, 'currency': 'USD',
-                'account': 'Cash', 'created': datetime(2024, 3, 26), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 4, 22), 'comment': ''},
             {'amount': 10000, 'amount_in_default_currency': 10000, 'father_space': father_space, 'currency': 'USD',
-                'account': 'Cash', 'created': datetime(2024, 3, 28), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 4, 24), 'comment': ''},
             {'amount': 1000, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-                'account': 'Cash', 'created': datetime(2024, 3, 30), 'comment': ''}
+                'account': 'Cash', 'created': datetime(2024, 4, 25), 'comment': ''}
         ]
 
         for data in income_data:
