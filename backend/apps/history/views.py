@@ -3,6 +3,8 @@ from typing import Dict, List, Tuple, Union
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.request import Request
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 from .serializers import IncomeStatisticViewSerializer, \
     CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer
@@ -21,11 +23,12 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from backend.apps.history.serializers import HistoryIncomeSerializer
+from backend.apps.account.permissions import IsSpaceMember
+from backend.apps.space.models import Space
 
 
 class HistoryView(ObjectMultipleModelAPIView):
-    permission_classes = ()
-
+    permission_classes = (IsSpaceMember,)
     def get_querylist(self):
         space_pk = self.kwargs["space_pk"]
         return [
@@ -37,6 +40,7 @@ class HistoryView(ObjectMultipleModelAPIView):
 
 
 class StatisticView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
     def get(self, request, *args, **kwargs):
         categories_view = CategoryStatisticView.as_view()(request._request, *args, **kwargs)
         incomes_view = IncomeStatisticView.as_view()(request._request, *args, **kwargs)
@@ -56,6 +60,7 @@ class StatisticView(generics.GenericAPIView):
 
 
 class CategoryStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = CategoryViewSerializer
 
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
@@ -107,7 +112,7 @@ class CategoryStatisticView(generics.ListAPIView):
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"You didn't make any category expenditures this {period}"
             else:
                 summary, percentages = self.get_summary_and_percentages(period_expenses)
-                formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+                formatted_result[period.capitalize()] = self.add_currency(summary, Space)
                 formatted_result[f"{period.capitalize()}_Percent"] = percentages
                 max_spending_category = max(summary, key=summary.get)
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"This {period}, you spend most on {max_spending_category} category"
@@ -121,6 +126,7 @@ class CategoryStatisticView(generics.ListAPIView):
 
 
 class IncomeStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = IncomeStatisticViewSerializer
 
     def get_queryset(self) -> List[HistoryIncome]:
@@ -141,7 +147,8 @@ class IncomeStatisticView(generics.ListAPIView):
 
         for income in incomes:
             days_since_creation = (now - income.created).days
-            periods['year'].append(income)
+            if days_since_creation < 365:
+                periods['year'].append(income)
             if days_since_creation < 90:
                 periods['three_month'].append(income)
             if days_since_creation < 30:
@@ -185,16 +192,17 @@ class IncomeStatisticView(generics.ListAPIView):
     def format_result(self, incomes: List[HistoryIncome], request: Request) -> Dict:
         periods = self.get_periods(incomes)
         formatted_result = {}
+        space = Space.objects.get(pk=self.kwargs.get("space_pk"))
 
         for period, period_incomes in periods.items():
             summary, percentages = self.get_summary_and_percentages(period_incomes)
-            formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+            formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
             formatted_result[f"{period.capitalize()}_Percent"] = percentages
 
             if summary:
                 max_income_date = max(summary, key=summary.get)
                 max_income_value = summary[max_income_date]
-                formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {request.user.currency} you earned on {max_income_date}"
+                formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {space.currency} you earned on {max_income_date}"
             else:
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"For this {period} you did not receive any income."
 
@@ -208,6 +216,7 @@ class IncomeStatisticView(generics.ListAPIView):
 
 
 class ExpensesStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = ExpensesViewSerializer
 
     def get_queryset(self) -> List[HistoryExpense]:
@@ -225,30 +234,28 @@ class ExpensesStatisticView(generics.ListAPIView):
             'Three_month': [],
             'Year': [],
         }
-
         for expense in expenses:
             days_since_creation = (now - expense.created).days
-            periods['Year'].append(expense)
+            if days_since_creation < 365:
+                periods['Year'].append(expense)
             if days_since_creation < 90:
                 periods['Three_month'].append(expense)
             if days_since_creation < 30:
                 periods['Month'].append(expense)
             if days_since_creation < 7:
                 periods['Week'].append(expense)
-
         return periods
 
     def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, Decimal], Dict[str, str]]:
         category_expenses = sum(expense.amount for expense in expenses if expense.to_cat)
         loss_expenses = sum(expense.amount for expense in expenses if not expense.to_cat)
-        recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic)
+        recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic_expense)
         total_expenses = category_expenses + loss_expenses + recurring_expenses
         summary = {
             'Category': category_expenses,
             'Loss': loss_expenses,
             'Recurring Spending': recurring_expenses,
         }
-
         if total_expenses == 0:
             percentages = {
                 'Category': '0 %',
@@ -261,46 +268,66 @@ class ExpensesStatisticView(generics.ListAPIView):
                 'Loss': f"{round((loss_expenses / total_expenses) * 100)} %",
                 'Recurring Spending': f"{round((recurring_expenses / total_expenses) * 100)} %",
             }
-
         return summary, percentages
 
     def analyze_expenses(self, expenses: List[HistoryExpense], period: str) -> str:
         if not expenses:
             return f"You haven't made a single spending spree this {period}"
-
         _, percentages = self.get_summary_and_percentages(expenses)
         max_category = max(percentages, key=lambda x: percentages[x].rstrip('%'))
         return f"The most you've spent this {period} on {max_category}"
 
     def format_result(self, expenses: List[HistoryExpense], request: Request) -> Dict:
         periods = self.get_periods(expenses)
-        currency = request.user.currency
-        result = {}
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
+        result = defaultdict(lambda: defaultdict(dict))
+
+        # Add empty dicts for all periods first
+        for period in ['Week', 'Month', 'Three_month', 'Year']:
+            result[period] = {}
+            result[f"{period}_Percent"] = {}
+
+        today = datetime.now().date()
+        week_start = today - timedelta(days=today.weekday())
+        month_start = today.replace(day=1)
+        three_month_start = (today - timedelta(days=90)).replace(day=1)
+        year_start = today.replace(month=1, day=1)
 
         for period, period_expenses in periods.items():
-            summary, percentages = self.get_summary_and_percentages(period_expenses)
-            summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
-            result[period] = summary_with_currency
-            result[f'{period}_Percent'] = percentages
-            result[f'Analyze_{period}'] = self.analyze_expenses(period_expenses, period)
+            if period == 'Week':
+                start_date = week_start
+            elif period == 'Month':
+                start_date = month_start
+            elif period == 'Three_month':
+                start_date = three_month_start
+            else:  # 'Year'
+                start_date = year_start
+
+            for expense in period_expenses:
+                date_str = expense.created.date().strftime("%d.%m.%Y")
+                summary, percentages = self.get_summary_and_percentages([expense])
+                summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
+                result[period][date_str] = summary_with_currency
+                result[f"{period}_Percent"][date_str] = percentages
+
+            result[f"Analyze_{period}"] = self.analyze_expenses(period_expenses, period)
 
         return result
 
     def list(self, request: Request, *args, **kwargs) -> Response:
         expenses = self.get_queryset()
         result = self.format_result(expenses, request)
-        serializer = self.get_serializer(result)
-        return Response(serializer.data)
+        return Response(result)
 
 
 class GoalTransferStatisticView(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = GoalTransferStatisticSerializer
 
     def get_queryset(self) -> List[HistoryTransfer]:
         return HistoryTransfer.objects.exclude(to_goal__isnull=True) \
             .exclude(to_goal__exact='') \
             .filter(father_space=self.kwargs['space_pk']) \
-            .filter(periodic=False)
 
     def get_periods(self, transfers: List[HistoryTransfer]) -> Dict[str, List[HistoryTransfer]]:
         periods = self._init_periods()
@@ -404,7 +431,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
             rounded_diff = int(round(smallest_diff))
             return f"You are closest to accumulating on goal {closest_goal}, you have {rounded_diff} {currency} to go."
         else:
-            return f"You did not have any recurring expenses."
+            return f"You haven't spent any money on goals."
 
     def _get_goal_diffs(self, summary: Dict[str, Dict[str, str]], currency: str) -> Dict[str, Decimal]:
         goal_diffs = {}
@@ -421,7 +448,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         transfers = self.get_queryset()
         periods = self.get_periods(transfers)
-        currency = request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         result = {}
 
         for period, period_transfers in periods.items():
@@ -437,36 +464,37 @@ class GoalTransferStatisticView(generics.ListAPIView):
 
 
 class GeneralView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
+
     def get(self, request, space_pk, *args, **kwargs):
         data = {}
-        data["Week"] = self.get_data_for_period(7, space_pk)
-        data["Analyze_Week"] = self.get_analysis(7, space_pk, data["Week"])
-        data["Month"] = self.get_data_for_period(30, space_pk)
-        data["Analyze_Month"] = self.get_analysis(30, space_pk, data["Month"])
-        data["Three_month"] = self.get_data_for_period(90, space_pk)
-        data["Analyze_Three_month"] = self.get_analysis(90, space_pk, data["Three_month"])
-        data["Year"] = self.get_data_for_period(365, space_pk)
-        data["Analyze_Year"] = self.get_analysis(365, space_pk, data["Year"])
+        data["Week"], data["Week_Percent"], data["Analyze_Week"] = self.get_data_and_analysis(7, space_pk)
+        data["Month"], data["Month_Percent"], data["Analyze_Month"] = self.get_data_and_analysis(30, space_pk)
+        data["Three_month"], data["Three_month_Percent"], data["Analyze_Three_month"] = self.get_data_and_analysis(90, space_pk)
+        data["Year"], data["Year_Percent"], data["Analyze_Year"] = self.get_data_and_analysis(365, space_pk)
         return Response(data)
+
+    def get_data_and_analysis(self, days, space_pk):
+        period_data = self.get_data_for_period(days, space_pk)
+        analysis = self.get_analysis(days, space_pk, period_data)
+        percentages = self.get_percentages(period_data)
+        return period_data, percentages, analysis
 
     def get_data_for_period(self, days, space_pk):
         start_date = datetime.now() - timedelta(days=days)
         end_date = datetime.now()
-
         expenses = HistoryExpense.objects.filter(
             created__range=[start_date, end_date],
             father_space_id=space_pk
         ).values('created').annotate(
             expenses=Sum('amount_in_default_currency')
         ).order_by('created')
-
         incomes = HistoryIncome.objects.filter(
             created__range=[start_date, end_date],
             father_space_id=space_pk
         ).values('created').annotate(
             incomes=Sum('amount_in_default_currency')
         ).order_by('created')
-
         transfers = HistoryTransfer.objects.filter(
             created__range=[start_date, end_date],
             father_space_id=space_pk,
@@ -476,44 +504,64 @@ class GeneralView(generics.GenericAPIView):
         ).order_by('created')
 
         period_data = {}
-
-        for i in range((end_date - start_date).days + 1):
-            date = start_date + timedelta(days=i)
-            date_str = date.strftime('%d.%m.%Y')
-
-            expense = next((exp for exp in expenses if exp['created'].date() == date.date()), {'expenses': 0})
-            income = next((inc for inc in incomes if inc['created'].date() == date.date()), {'incomes': 0})
-            transfer = next((tr for tr in transfers if tr['created'].date() == date.date()), {'expenses': 0})
-
-            if expense['expenses'] or income['incomes'] or transfer['expenses']:
+        for expense in expenses:
+            date_str = expense['created'].strftime('%d.%m.%Y')
+            income = next((inc for inc in incomes if inc['created'].date() == expense['created'].date()), {'incomes': 0})
+            transfer = next((tr for tr in transfers if tr['created'].date() == expense['created'].date()), {'expenses': 0})
+            period_data[date_str] = {
+                'incomes': self.format_amount(income['incomes'] or Decimal(0), space_pk),
+                'expenses': self.format_amount(expense['expenses'] + transfer['expenses'] or Decimal(0), space_pk)
+            }
+        for income in incomes:
+            date_str = income['created'].strftime('%d.%m.%Y')
+            if date_str not in period_data:
                 period_data[date_str] = {
-                    'incomes': self.format_amount(income['incomes'] or Decimal(0), space_pk),
-                    'expenses': self.format_amount(expense['expenses'] + transfer['expenses'] or Decimal(0), space_pk)
+                    'incomes': self.format_amount(income['incomes'], space_pk),
+                    'expenses': self.format_amount(Decimal(0), space_pk)
                 }
-
         return period_data
 
     def get_analysis(self, days, space_pk, period_data):
         total_incomes = sum(float(re.sub(r'[^\d.]', '', day.get('incomes', '0'))) for day in period_data.values())
         total_expenses = sum(float(re.sub(r'[^\d.]', '', day.get('expenses', '0'))) for day in period_data.values())
-
-        currency = self.request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         net_change = total_incomes - total_expenses
         analysis = f"You have {self.format_amount(abs(net_change), space_pk)} {'more' if net_change > 0 else 'fewer'} {currency} this {'week' if days == 7 else 'month' if days == 30 else 'three months' if days == 90 else 'year'}."
         return analysis
 
+    def get_percentages(self, period_data):
+        percentages = {}
+        for date, day_data in period_data.items():
+            total = sum([
+                float(re.sub(r'[^\d.]', '', str(day_data.get('incomes', '0')))),
+                float(re.sub(r'[^\d.]', '', str(day_data.get('expenses', '0'))))
+            ])
+            if total == 0:
+                percentages[date] = {}
+            else:
+                income_amount = float(re.sub(r'[^\d.]', '', str(day_data.get('incomes', '0'))))
+                expense_amount = float(re.sub(r'[^\d.]', '', str(day_data.get('expenses', '0'))))
+                income_percentage = round(income_amount / total * 100)
+                expense_percentage = 100 - income_percentage
+                percentages[date] = {
+                    'Income_Percent': f"{income_percentage}%",
+                    'Expense_Percent': f"{expense_percentage}%"
+                }
+        return percentages
+
+
     def format_amount(self, amount, space_pk):
-        # Преобразуем Decimal в строку, затем извлекаем число из строки, округляем его и добавляем валюту
         rounded_amount = round(float(re.sub(r'[^\d.]', '', str(amount))))
-        currency = self.request.user.currency
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         return f"{rounded_amount} {currency}"
 
 
 class RecurringPaymentsStatistic(generics.ListAPIView):
+    permission_classes = (IsSpaceMember,)
     serializer_class = CategoryViewSerializer
 
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
-        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'], periodic=True)
+        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'], periodic_expense=True)
         periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
         return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
@@ -551,12 +599,13 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
 
     def format_result(self, expenses: Dict[str, List[HistoryExpense]], request: Request) -> Dict:
         formatted_result = {}
+        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         for period, period_expenses in expenses.items():
             summary, percentages = self.get_summary_and_percentages(period_expenses)
             period_sum = sum(summary.values())
-            formatted_result[period.capitalize()] = self.add_currency(summary, request.user.currency)
+            formatted_result[period.capitalize()] = self.add_currency(summary, currency)
             formatted_result[f"{period.capitalize()}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
-            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, request.user.currency, period)
+            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, currency, period)
         return formatted_result
 
     def get_percentage_for_summary(self, summary: Dict[str, float], period_sum: float) -> Dict[str, str]:
@@ -598,35 +647,35 @@ class IncomeAutoDataView(generics.ListAPIView):
         father_space = self.kwargs["space_pk"]
         income_data = [
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 1, 1), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 1, 1), 'comment': ''},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 3, 1), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 3, 1), 'comment': ''},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 5, 1), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 5, 1), 'comment': ''},
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 9, 1), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 9, 1), 'comment': ''},
             {'amount': 50, 'amount_in_default_currency': 50, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 11, 1), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 11, 1), 'comment': ''},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 12, 1), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 12, 1), 'comment': ''},
             {'amount': 1900, 'amount_in_default_currency': 1900, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 12, 15), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 12, 15), 'comment': ''},
             {'amount': 500, 'amount_in_default_currency': 500, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2023, 12, 30), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2023, 12, 30), 'comment': ''},
             {'amount': 390, 'amount_in_default_currency': 390, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 5), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 3, 5), 'comment': ''},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 10), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 3, 10), 'comment': ''},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 20), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 3, 20), 'comment': ''},
             {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 24), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 3, 24), 'comment': ''},
             {'amount': 900, 'amount_in_default_currency': 900, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 26), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 3, 26), 'comment': ''},
             {'amount': 10000, 'amount_in_default_currency': 10000, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 28), 'comment': ''},
+                'account': 'Cash', 'created': datetime(2024, 3, 28), 'comment': ''},
             {'amount': 1000, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-             'account': 'Cash', 'created': datetime(2024, 3, 30), 'comment': ''}
+                'account': 'Cash', 'created': datetime(2024, 3, 30), 'comment': ''}
         ]
 
         for data in income_data:
@@ -644,36 +693,36 @@ class ExpenseAutoDataView(generics.ListAPIView):
     def get_queryset(self):
         father_space = self.kwargs["space_pk"]
         expense_data = [
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
-             'from_acc': 'Cash', 'created': datetime(2023, 1, 30), 'comment': '', 'to_cat': 'Food'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
+                'from_acc': 'Cash', 'created': datetime(2023, 1, 30), 'comment': '', 'to_cat': 'Food'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': 'Home'},
+                'from_acc': 'Cash', 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': 'Home'},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
-             'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': 'Food'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
+                'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 11, 10), 'comment': '', 'to_cat': 'Home'},
+                'from_acc': 'Cash', 'created': datetime(2023, 11, 10), 'comment': '', 'to_cat': 'Home'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 12, 2), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2023, 12, 2), 'comment': '', 'to_cat': 'Food'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 12, 16), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2023, 12, 16), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 12, 31), 'comment': '', 'to_cat': 'Home'},
+                'from_acc': 'Cash', 'created': datetime(2023, 12, 31), 'comment': '', 'to_cat': 'Home'},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 11), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 21), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 11), 'comment': '', 'to_cat': 'Home'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 21), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 25), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 25), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 27), 'comment': '', 'to_cat': 'Home'},
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 27), 'comment': '', 'to_cat': 'Home'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 29), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic': True,
-             'from_acc': 'Cash', 'created': datetime(2024, 3, 31), 'comment': ''}
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 29), 'comment': '', 'to_cat': 'Food'},
+            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
+                'from_acc': 'Cash', 'created': datetime(2024, 3, 31), 'comment': ''}
         ]
 
         for data in expense_data:
@@ -703,15 +752,15 @@ class TransferAutoDataView(generics.ListAPIView):
 
         transfer_data = [
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'to_goal': 'main'},
+                'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'to_goal': 'main'},
             {'amount': 250, 'amount_in_default_currency': 250, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 10, 18), 'to_goal': 'main'},
+                'from_acc': 'Cash', 'created': datetime(2023, 10, 18), 'to_goal': 'main'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 7, 1), 'to_goal': 'main2'},
+                'from_acc': 'Cash', 'created': datetime(2023, 7, 1), 'to_goal': 'main2'},
             {'amount': 1250, 'amount_in_default_currency': 1250, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2023, 12, 20), 'to_goal': 'main2'},
+                'from_acc': 'Cash', 'created': datetime(2023, 12, 20), 'to_goal': 'main2'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'from_acc': 'Cash', 'created': datetime(2024, 2, 15), 'to_goal': 'main2'},
+                'from_acc': 'Cash', 'created': datetime(2024, 2, 15), 'to_goal': 'main2'},
         ]
 
         for data in transfer_data:

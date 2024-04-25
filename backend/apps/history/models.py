@@ -14,7 +14,7 @@ class HistoryExpense(models.Model):
     comment = models.CharField(max_length=300, null=True, blank=True)
     from_acc = models.CharField(max_length=24)
     to_cat = models.CharField(max_length=24, blank=True)
-    periodic = models.BooleanField(default=False)
+    periodic_expense = models.BooleanField(default=False)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     created = models.DateTimeField(default=datetime.now)
 
@@ -42,3 +42,4 @@ class HistoryTransfer(models.Model):
     collected = models.DecimalField(max_digits=20, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     created = models.DateTimeField(default=datetime.now)
+    

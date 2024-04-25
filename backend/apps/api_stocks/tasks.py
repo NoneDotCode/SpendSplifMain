@@ -3,6 +3,7 @@ from celery import shared_task
 from backend.apps.api_stocks.models import Stock
 import environ
 import time
+from backend.apps.converter.utils import convert_currencies
 
 env = environ.Env()
 environ.Env.read_env()
@@ -19,42 +20,44 @@ def update_group_prices(api_key, symbols):
             if values:
                 latest_data = values[-1]
                 current_price = latest_data.get('close', 'N/A')
+                current_price_eur = convert_currencies(from_currency="USD", to_currency="EUR", amount=current_price)
 
-                stock, created = Stock.objects.update_or_create(symbol=symbol, defaults={'price': current_price})
+                stock, created = Stock.objects.update_or_create(symbol=symbol, defaults={'price_usd': current_price, 'price_eur': current_price_eur})
                 if not created:
-                    stock.price = current_price
+                    stock.price_usd = current_price
+                    stock.price_eur = current_price_eur
                     stock.save()
     print('Group Stocks prices updated')
     time.sleep(65)
 
 @shared_task
 def update_stock_prices_1():
-    api_key = '296b89a58663457d9dcd754263b549bf'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     group_1_symbols = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'ORCL', 'TSLA', 'BABA', 'JNJ']
     update_group_prices(api_key, group_1_symbols)
     
 
 @shared_task
 def update_stock_prices_2():
-    api_key = '296b89a58663457d9dcd754263b549bf'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     group_2_symbols = ['BAC', 'XOM', 'GE', 'KO', 'PG', 'V', 'MA', 'JPM']
     update_group_prices(api_key, group_2_symbols)
     
 @shared_task
 def update_stock_prices_3():
-    api_key = '296b89a58663457d9dcd754263b549bf'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     group_3_symbols = ['PFE', 'INTC', 'CSCO', 'DIS', 'IBM', 'BA', 'NFLX', 'JCI']
     update_group_prices(api_key, group_3_symbols)
 
 @shared_task
 def update_stock_prices_4():
-    api_key = '296b89a58663457d9dcd754263b549bf'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     group_4_symbols = ['GM', 'CVX', 'PEP', 'GS','GE', 'CSCO', 'ORCL','MMM']
     update_group_prices(api_key, group_4_symbols)
 
 @shared_task
 def update_stock_prices_5():
-    api_key = '296b89a58663457d9dcd754263b549bf'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     group_5_symbols = ['HON']
     update_group_prices(api_key, group_5_symbols)
 

@@ -23,6 +23,8 @@ from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user
 
 from backend.apps.space.models import Space, MemberPermissions
 
+from backend.apps.messenger.models import SpaceGroup
+
 from datetime import datetime
 
 
@@ -100,22 +102,22 @@ class ConfirmRegistrationView(APIView):
     permission_classes = (permissions.AllowAny,)
     def post(self, request, *args, **kwargs):
         verify_code = request.data.get('verify_code')
+        currency = request.data.get("currency")
         user = CustomUser.objects.filter(verify_code=verify_code).first()
 
         if user:
             user.is_active = True
             user.verify_code = "verified"
             user.save()
-            with transaction.atomic():
-                # Save the space instance
-                space = Space.objects.create(title="Main")
 
-                # Create a MemberPermissions instance setting the current user as the owner
-                MemberPermissions.objects.create(
-                    member=user,
-                    space=space,
-                    owner=True
-                )
+            space = Space.objects.create(title="Main", currency=currency)
+
+            MemberPermissions.objects.create(
+                member=user,
+                space=space,
+                owner=True
+            )
+
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)

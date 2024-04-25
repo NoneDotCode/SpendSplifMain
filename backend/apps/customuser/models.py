@@ -52,7 +52,6 @@ class CustomUser(AbstractUser):
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
     email = models.EmailField(unique=True, null=False, blank=False)
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
-    currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
 
     verify_code = models.CharField(max_length=12, blank=True, null=True)
 
