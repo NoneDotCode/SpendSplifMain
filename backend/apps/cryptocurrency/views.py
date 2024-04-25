@@ -18,6 +18,7 @@ class CryptocurrencyPriceView(generics.RetrieveAPIView):
             crypto_data[crypto.symbol] = {
                 'name': crypto.name,
                 'symbol': crypto.symbol,
+                'code': crypto.code,
                 'price_usd': str(crypto.price_usd),
                 'price_eur': str(crypto.price_eur),
                 'last_updated': crypto.last_updated,
