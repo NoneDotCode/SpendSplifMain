@@ -50,18 +50,16 @@ def update_crypto_prices():
 
     for crypto in cryptocurrencies:
         symbol = crypto['symbol']
-        code = crypto['code']
         if symbol in data:
             usd_price, eur_price = data.get(symbol, {}).get('usd', 0), data.get(symbol, {}).get('eur', 0)
-            obj, created = Cryptocurrency.objects.get_or_create(
-                symbol=code,
-                defaults={'name': crypto['name'], 'code': code, 'price_usd': usd_price, 'price_eur': eur_price}
+            symbol = crypto['code']
+            obj, created = Cryptocurrency.objects.get_or_create(symbol=symbol, defaults={'name': crypto['name'], 'price_usd': usd_price, 'price_eur': eur_price}
             )
 
             if not created:
                 obj.price_usd = usd_price
                 obj.price_eur = eur_price
-                obj.code = code
+                obj.symbol = symbol
                 obj.save()
             print(f"{'Created' if created else 'Found'} {symbol} in database")
             print(f"Updated {symbol}: USD {obj.price_usd}, EUR {obj.price_eur}")
