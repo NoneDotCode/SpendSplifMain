@@ -99,11 +99,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB"),
-        "USER": env("POSTGRES_USER"),
-        "PASSWORD": env("POSTGRES_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env.int("DB_PORT"),
+        "NAME": "spendsplif",
+        "USER": "db_user",
+        "PASSWORD": "password_default",
+        "HOST": "localhost"),
+        "PORT": 5432,
     }
 }
 
