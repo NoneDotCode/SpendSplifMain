@@ -100,8 +100,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "spendsplif",
-        "USER": "db_user",
-        "PASSWORD": "password_default",
+        "USER": "postgres",
+        "PASSWORD": "pupupu",
         "HOST": "localhost",
         "PORT": 5432,
     }
