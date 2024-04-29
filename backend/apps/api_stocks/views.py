@@ -12,7 +12,7 @@ from datetime import datetime
 class UpdateStocksAPIViewGroupFirst(APIView):
     permission_classes = AllowAny
 
-    api_key = '3b06c5648cf9409a87de1a3f09b9b0a9'
+    api_key = '5a479d490af540dc99572bd655bbe7b4'
     symbols_to_check = ['AAPL', 'MSFT', 'AMZN', 'GOOGL']
 
     def get_stock_name(self, symbol):
