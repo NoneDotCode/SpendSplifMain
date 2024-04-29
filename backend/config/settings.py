@@ -102,7 +102,7 @@ DATABASES = {
         "NAME": "spendsplif",
         "USER": "db_user",
         "PASSWORD": "password_default",
-        "HOST": "localhost"),
+        "HOST": "localhost",
         "PORT": 5432,
     }
 }
