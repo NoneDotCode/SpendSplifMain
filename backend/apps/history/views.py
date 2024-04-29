@@ -114,7 +114,10 @@ class CategoryStatisticView(generics.ListAPIView):
                 summary, percentages = self.get_summary_and_percentages(period_expenses)
                 formatted_result[period.capitalize()] = self.add_currency(summary, Space)
                 formatted_result[f"{period.capitalize()}_Percent"] = percentages
-                max_spending_category = max(summary, key=summary.get)
+                if summary:
+                    max_spending_category = max(summary, key=summary.get)
+                else:
+                    max_spending_category = "No categories"
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"This {period}, you spend most on {max_spending_category} category"
         return formatted_result
 
