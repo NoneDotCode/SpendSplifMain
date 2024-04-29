@@ -1,0 +1,214 @@
+import json
+import ast
+
+from django_celery_beat.models import PeriodicTask, CrontabSchedule
+
+from rest_framework import generics, status
+from django.core.exceptions import ValidationError
+from rest_framework.response import Response
+
+from backend.apps.account.models import Account
+from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
+
+from backend.apps.category.models import Category
+
+from backend.apps.spend.permissions import SpendPermission, CanCreatePeriodicSpends, CanDeletePeriodicSpends, \
+    CanEditPeriodicSpends
+from backend.apps.spend.serializers import PeriodicSpendCreateSerializer, PeriodicSpendEditSerializer, SpendSerializer
+
+from backend.apps.converter.utils import convert_currencies
+
+from backend.apps.history.models import HistoryExpense
+
+from backend.apps.total_balance.models import TotalBalance
+
+from backend.apps.space.models import Space
+
+
+class SpendView(generics.GenericAPIView):
+
+    serializer_class = SpendSerializer
+    permission_classes = (IsSpaceMember, SpendPermission)
+
+    @staticmethod
+    def put(request, *args, **kwargs):
+        space_pk = kwargs.get('space_pk')
+        account = Account.objects.get(pk=request.data.get("account_pk"))
+        amount = request.data.get('amount')
+        try:
+            1 / amount
+        except (TypeError, ZeroDivisionError):
+            return Response({"error": "You should put amount bigger than 0."}, status=status.HTTP_400_BAD_REQUEST)
+        category = Category.objects.get(pk=request.data.get("category_pk"))
+        if amount > int(account.balance):
+            return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
+        account.balance -= amount
+        account.save()
+        to_currency = account.father_space.currency
+        category.spent += convert_currencies(amount=amount,
+                                             from_currency=account.currency,
+                                             to_currency=to_currency)
+        category.save()
+        comment = request.data.get("comment")
+        if comment is None:
+            comment = ""
+        HistoryExpense.objects.create(
+            amount=amount,
+            currency=account.currency,
+            amount_in_default_currency=convert_currencies(from_currency=account.currency,
+                                                              amount=amount,
+                                                              to_currency=to_currency),
+            comment=comment,
+            from_acc=account.title,
+            to_cat=category.title,
+            father_space_id=space_pk
+        )
+        total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
+        if total_balance:
+            total_balance[0].balance -= convert_currencies(amount=amount,
+                                                           from_currency=account.currency,
+                                                           to_currency=to_currency)
+            total_balance[0].save()
+        return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
+
+
+class PeriodicSpendCreateView(generics.GenericAPIView):
+    serializer_class = PeriodicSpendCreateSerializer
+    permission_classes = (IsSpaceMember, CanCreatePeriodicSpends)
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        account_pk = serializer.validated_data.get('account_pk')
+        category_pk = serializer.validated_data.get('category_pk')
+        amount = serializer.validated_data.get('amount')
+        title = serializer.validated_data.get('title')
+        hour = serializer.validated_data.get("hour")
+        minute = serializer.validated_data.get("minute")
+        day_of_week = serializer.validated_data.get("day_of_week")
+        day_of_month = serializer.validated_data.get("day_of_month")
+        month_of_year = serializer.validated_data.get("month_of_year")
+        account = Account.objects.get(pk=account_pk)
+
+        schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
+                                                                  minute=minute,
+                                                                  day_of_week=day_of_week,
+                                                                  day_of_month=day_of_month,
+                                                                  month_of_year=month_of_year)
+        try:
+            1 / amount
+        except ZeroDivisionError:
+            return Response({"error": "You should put out amount much than 0."})
+        try:
+            PeriodicTask.objects.create(crontab=schedule, name=f"periodic_spend_{request.user.id}_{title}",
+                                        task="apps.spend.tasks.periodic_spend",
+                                        args=json.dumps((account_pk,
+                                                         category_pk,
+                                                         kwargs.get("space_pk"),
+                                                         amount,
+                                                         title,
+                                                         account.father_space.currency)))
+        except ValidationError:
+            return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
+
+
+class PeriodicSpendDeleteView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember, CanDeletePeriodicSpends)
+
+    @staticmethod
+    def delete(request, *args, **kwargs):
+        periodic_spend_pk = kwargs.get("pk")
+        task = PeriodicTask.objects.get(pk=periodic_spend_pk)
+        task_args = ast.literal_eval(task.args)
+        space = Space.objects.get(pk=task_args[2])
+        if kwargs.get("space_pk") == space.pk and space.owner.pk == request.user.pk:
+            task.delete()
+            return Response({"success": "Periodic spend successfully deleted."}, status=status.HTTP_200_OK)
+        return Response({"error": "You can't delete spend which you have not."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+
+class PeriodicSpendEditView(generics.GenericAPIView):
+    serializer_class = PeriodicSpendEditSerializer
+    permission_classes = (IsSpaceMember, CanEditPeriodicSpends)
+
+    def put(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        account_pk = serializer.validated_data.get('account_pk')
+        category_pk = serializer.validated_data.get('category_pk')
+        amount = serializer.validated_data.get('amount')
+        title = serializer.validated_data.get('title')
+        hour = serializer.validated_data.get("hour")
+        minute = serializer.validated_data.get("minute")
+        day_of_week = serializer.validated_data.get("day_of_week")
+        day_of_month = serializer.validated_data.get("day_of_month")
+        month_of_year = serializer.validated_data.get("month_of_year")
+
+        periodic_spend_pk = kwargs.get("pk")
+        task = PeriodicTask.objects.get(pk=periodic_spend_pk)
+        task_args = ast.literal_eval(task.args)
+        space = Space.objects.get(pk=task_args[2])
+        if kwargs.get("space_pk") == space.pk and space.owner.pk == request.user.pk:
+            new_args = [account_pk, category_pk, kwargs.get("space_pk"), amount, title, request.user.currency]
+            for i in range(len(new_args)):
+                if new_args[i] is None:
+                    new_args[i] = task_args[i]
+            task.args = f"{new_args}"
+            task.save()
+            task.name = f"periodic_spend_{request.user.id}_{new_args[4]}"
+            task_crontab = task.crontab
+            task_crontab_dict = {"hour": task_crontab.hour,
+                                 "minute": task_crontab.minute,
+                                 "day_of_week": task_crontab.day_of_week,
+                                 "day_of_month": task_crontab.day_of_month,
+                                 "month_of_year": task_crontab.month_of_year}
+            crontab_vars = {"hour": hour, "minute": minute, "day_of_week": day_of_week, "day_of_month": day_of_month,
+                            "month_of_year": month_of_year}
+            for i in crontab_vars:
+                if crontab_vars[i] is None:
+                    crontab_vars[i] = task_crontab_dict[i]
+            schedule, created = CrontabSchedule.objects.get_or_create(hour=crontab_vars["hour"],
+                                                                      minute=crontab_vars["minute"],
+                                                                      day_of_week=crontab_vars["day_of_week"],
+                                                                      day_of_month=crontab_vars["day_of_month"],
+                                                                      month_of_year=crontab_vars["month_of_year"])
+            task.crontab = schedule
+            task.save()
+            return Response({"success": "Periodic Spend successfully edited."}, status=status.HTTP_200_OK)
+        return Response({"error": "You can't edit spend which is not your."})
+
+
+class PeriodicSpendsGetView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        def key(task):
+            try:
+                check1 = f"periodic_spend_{request.user.id}" in task.name
+                check2 = ast.literal_eval(task.args)[2] == kwargs.get("space_pk")
+                return check1 and check2
+            except (ValueError, KeyError, IndexError):
+                return False
+
+        periodic_spends_list = list(filter(key, PeriodicTask.objects.all()))
+        result = []
+        for spend in periodic_spends_list:
+            spend_args = ast.literal_eval(spend.args)
+            temp = {
+                "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
+                "account_pk": spend_args[0],
+                "category_pk": spend_args[1],
+                "amount": spend_args[3],
+                "hour": spend.crontab.hour,
+                "minute": spend.crontab.minute,
+                "day_of_week": spend.crontab.day_of_week,
+                "day_of_month": spend.crontab.day_of_month,
+                "month_of_year": spend.crontab.month_of_year
+            }
+            result.append(temp)
+        return Response(result, status=status.HTTP_200_OK)
