@@ -166,3 +166,61 @@ class HistoryExpenseEdit(APIView):
         expense.delete()
 
         return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class HistoryIncomeEdit(APIView):
+    permission_classes = ()    
+    def put(self, request, pk, *args, **kwargs):
+        try:
+            income = HistoryIncome.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = HistoryIncomeSerializer(income, data=request.data)
+
+        amount_befor_changing = income.amount
+
+        if serializer.is_valid():
+            amount = request.data.get("amount")
+            account = Account.objects.filter(title=income.account).first()
+
+
+            account.balance += Decimal(amount) - Decimal(amount_befor_changing)
+            serializer.save()
+            return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk, *args, **kwargs):
+        try:
+            income = HistoryIncome.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = HistoryIncomeSerializer(income, data=request.data)
+
+        amount_befor_changing = income.amount
+
+        if serializer.is_valid():
+            amount = request.data.get("amount")
+            account = Account.objects.filter(title=income.account).first()
+
+
+            account.balance += Decimal(amount) - Decimal(amount_befor_changing)
+            serializer.save()
+            return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, *args, **kwargs):
+
+        income = HistoryIncome.objects.get(pk=pk)
+
+        amount = income.amount
+        account = Account.objects.filter(title=income.account).first()
+
+        account.balance -= amount
+
+        income.delete()
+
+        return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_204_NO_CONTENT)
