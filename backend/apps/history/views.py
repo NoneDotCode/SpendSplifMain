@@ -1,13 +1,16 @@
 from datetime import datetime
+from decimal import Decimal
 
 from drf_multiple_model.views import ObjectMultipleModelAPIView
 from rest_framework import generics
 from django.db.models import Sum
 from django.http import JsonResponse
-from rest_framework.views import APIView
 
 from backend.apps.history.models import HistoryIncome, HistoryExpense
 from backend.apps.history.serializers import HistoryExpenseSerializer, DailyIncomeSerializer, HistoryAutoDataSerializer
+from backend.apps.account.models import Account
+from backend.apps.category.models import Category
+
 
 from rest_framework import generics
 from rest_framework.views import APIView
@@ -99,3 +102,67 @@ class AutoDataView(generics.ListAPIView):
                 serializer.save()
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class HistoryExpenseEdit(APIView):
+    permission_classes = ()    
+    def put(self, request, pk, *args, **kwargs):
+        try:
+            expense = HistoryExpense.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = HistoryExpenseSerializer(expense, data=request.data)
+
+        if serializer.is_valid():
+            amount = request.data.get("amount")
+            account = Account.objects.filter(title=expense.from_acc).first()
+            category = Category.objects.filter(title=expense.to_cat).first()
+
+            account.balance += Decimal(amount)
+
+            if category:
+                category.spent -= Decimal(amount)
+
+            serializer.save()
+            return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk, *args, **kwargs):
+        try:
+            expense = HistoryExpense.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = HistoryExpenseSerializer(expense, data=request.data)
+
+        if serializer.is_valid():
+            amount = request.data.get("amount")
+            account = Account.objects.filter(title=expense.from_acc).first()
+            category = Category.objects.filter(title=expense.to_cat).first()
+
+            account.balance += Decimal(amount)
+
+            if category:
+                category.spent -= Decimal(amount)
+
+            serializer.save()
+            return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, *args, **kwargs):
+
+        expense = HistoryExpense.objects.get(pk=pk)
+
+        amount = expense.amount
+        account = Account.objects.filter(title=expense.from_acc).first()
+        category = Category.objects.filter(title=expense.to_cat).first()
+
+        account.balance += Decimal(amount)
+        category.spent -= Decimal(amount)
+
+        expense.delete()
+
+        return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_204_NO_CONTENT)
