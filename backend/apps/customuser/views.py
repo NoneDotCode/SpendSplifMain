@@ -61,6 +61,20 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 
+class LogoutView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        response = Response()
+        response.delete_cookie(
+            key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
+            path=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('path', '/'),
+            samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
+        )
+        response.data = {"message": "Logout successful."}
+        return response
+
+
 class CustomTokenRefreshView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = CustomTokenRefreshSerializer
