@@ -99,11 +99,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "spendsplif",
-        "USER": "postgres",
-        "PASSWORD": "pupupu",
-        "HOST": "localhost",
-        "PORT": 5432,
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env.int("DB_PORT"),
     }
 }
 
@@ -142,7 +142,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
@@ -182,7 +181,7 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=15),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-    
+
 
     # custom
     'REFRESH_TOKEN_COOKIE_NAME': 'refresh',
@@ -203,7 +202,6 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:8000",
-    "http://35.190.214.19:5473",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
 ]
@@ -214,7 +212,6 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:8000",
-    "http://35.190.214.19:5473",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
 ]
@@ -223,13 +220,11 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "http://35.190.214.19:5473",
     "http://127.0.0.1:8000",
     ]
 SESSION_COOKIE_SAMESITE = "Lax"
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:5173",
-    "http://35.190.214.19:5473",
     "http://127.0.0.1:8000",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
