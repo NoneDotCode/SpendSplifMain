@@ -34,6 +34,13 @@ class CustomUserRegistrationView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
 
 
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        return self.request.user
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
