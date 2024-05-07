@@ -52,7 +52,7 @@ class CreateSpace(generics.CreateAPIView):
             Account.objects.create(
                 title="Cash",
                 balance=0,
-                currency=self.request.user.currency,
+                currency=self.request.data.get("currency"),
                 father_space=space
             )
 
@@ -75,7 +75,7 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        currency=self.request.data.get("currency")
+        currency = self.request.data.get("currency")
         for category in Category.objects.filter(father_space=instance):
             category.spent = convert_currencies(amount=category.spent,
                                                 from_currency=instance.currency,
@@ -92,7 +92,6 @@ class EditSpace(generics.RetrieveUpdateAPIView):
                                                 to_currency=currency)
             goal.save()
         return Response(serializer.data)
-
 
 
 class DeleteSpace(generics.RetrieveDestroyAPIView):
