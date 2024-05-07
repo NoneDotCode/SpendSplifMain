@@ -8,7 +8,7 @@ from rest_framework.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 
-
+from backend.apps.customuser.utils import send_code_for_verify_email
 from backend.apps.customuser.constants import Language, Currency
 
 
@@ -53,7 +53,10 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True, null=False, blank=False)
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
 
+    new_email = models.EmailField(null=True, blank=True)
+
     verify_code = models.CharField(max_length=12, blank=True, null=True)
+    code_from_new_email = models.CharField(max_length=12, blank=True, null=True)
 
     password_reset_code = models.PositiveIntegerField(blank=True, null=True)
 
@@ -85,11 +88,17 @@ class CustomUser(AbstractUser):
             self.verify_code = verify_code
             self.is_active = False
 
-            subject = 'Email Verification'
-            message = f'Your verification code: {verify_code}'
-            from_email = 'spendsplif@gmail.com'
-            to_email = self.email
-            send_mail(subject, message, from_email, [to_email])
+            send_code_for_verify_email(email=self.email, code=verify_code, flag="registration")
+        
+        if self.new_email:
+            verify_code = get_random_string(length=8)
+            code_from_new_email = get_random_string(length=8)
+            self.verify_code = verify_code
+            self.code_from_new_email = code_from_new_email
+
+            send_code_for_verify_email(email=self.new_email, code=code_from_new_email, flag="change email")
+            send_code_for_verify_email(email=self.email, code=verify_code, flag="change email")
+
 
         super().save(*args, **kwargs)
 

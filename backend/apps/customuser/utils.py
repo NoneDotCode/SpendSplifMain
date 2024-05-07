@@ -34,6 +34,35 @@ def send_code_to_new_user(email: str, code: int, flag: str):
     return True
 
 
+def send_code_for_verify_email(email: str, code: int, flag: str):
+    if flag == "registration":
+        subject = 'Email Verification'
+        message = f'''
+Уважаемый пользователь!
+
+Добро пожаловать в SpendSplif - ваш надежный помощник в управлении личными финансами. Мы рады, что вы присоединились к нашему сообществу, и хотим подтвердить регистрацию вашей учетной записи.
+
+Для подтверждения адреса электронной почты, пожалуйста, введите следующий код подтверждения в соответствующее поле в приложении:
+
+{code}
+
+После успешного подтверждения вы сможете в полной мере использовать все возможности SpendSplif для отслеживания доходов, контроля расходов и достижения ваших финансовых целей.
+
+Не стесняйтесь обращаться к нам, если у вас возникнут какие-либо вопросы или понадобится помощь. Мы всегда рады помочь!
+
+Желаем вам приятного и эффективного использования SpendSplif!
+
+Искренне ваша,
+Команда SpendSplif
+        '''
+    elif flag == "change email":
+        subject = "Email Verification"
+        message = f"{code}"
+    from_email = 'spendsplif@gmail.com'
+    to_email = email
+    send_mail(subject, message, from_email, [to_email])
+
+
 def get_verify_code():
     """
     Returns verification code
