@@ -75,7 +75,7 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
-        currency = request.data.get("currency")
+        currency=self.request.data.get("currency")
         for category in Category.objects.filter(father_space=instance):
             category.spent = convert_currencies(amount=category.spent,
                                                 from_currency=instance.currency,

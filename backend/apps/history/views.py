@@ -283,12 +283,7 @@ class ExpensesStatisticView(generics.ListAPIView):
     def format_result(self, expenses: List[HistoryExpense], request: Request) -> Dict:
         periods = self.get_periods(expenses)
         currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
-        result = defaultdict(lambda: defaultdict(dict))
-
-        # Add empty dicts for all periods first
-        for period in ['Week', 'Month', 'Three_month', 'Year']:
-            result[period] = {}
-            result[f"{period}_Percent"] = {}
+        result = {}
 
         today = datetime.now().date()
         week_start = today - timedelta(days=today.weekday())
@@ -306,17 +301,24 @@ class ExpensesStatisticView(generics.ListAPIView):
             else:  # 'Year'
                 start_date = year_start
 
-            for expense in period_expenses:
-                date_str = expense.created.date().strftime("%d.%m.%Y")
-                summary, percentages = self.get_summary_and_percentages([expense])
-                summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
-                result[period][date_str] = summary_with_currency
-                result[f"{period}_Percent"][date_str] = percentages
+            result[period] = {}
+            result[f"{period}_Percent"] = {}
+
+            if not period_expenses:
+                result[period] = f"0 {currency}"
+                result[f"{period}_Percent"] = "0 %"
+            else:
+                for expense in period_expenses:
+                    date_str = expense.created.date().strftime("%d.%m.%Y")
+                    summary, percentages = self.get_summary_and_percentages([expense])
+                    summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
+                    result[period][date_str] = summary_with_currency
+                    result[f"{period}_Percent"][date_str] = percentages
 
             result[f"Analyze_{period}"] = self.analyze_expenses(period_expenses, period)
 
         return result
-
+    
     def list(self, request: Request, *args, **kwargs) -> Response:
         expenses = self.get_queryset()
         result = self.format_result(expenses, request)
