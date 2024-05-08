@@ -717,17 +717,17 @@ class ExpenseAutoDataView(generics.ListAPIView):
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
                 'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 11), 'comment': '', 'to_cat': 'Home'},
+                'from_acc': 'Cash', 'created': datetime(2024, 4, 2), 'comment': '', 'to_cat': 'Home'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 23), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2024, 5, 3), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 26), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2024, 5, 4), 'comment': '', 'to_cat': 'Food'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 27), 'comment': '', 'to_cat': 'Home'},
+                'from_acc': 'Cash', 'created': datetime(2024, 5, 5), 'comment': '', 'to_cat': 'Home'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 20), 'comment': '', 'to_cat': 'Food'},
+                'from_acc': 'Cash', 'created': datetime(2024, 5, 6), 'comment': '', 'to_cat': 'Food'},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 28), 'comment': ''}
+                'from_acc': 'Cash', 'created': datetime(2024, 5, 8), 'comment': ''}
         ]
 
         for data in expense_data:
