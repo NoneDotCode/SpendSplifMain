@@ -32,9 +32,11 @@ class MessageGroup(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     father_group = models.ForeignKey(SpaceGroup, on_delete=models.CASCADE)
 
+
 class MessengerSettings(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    can_text = models.CharField(max_length=20, choices=[('nobody','Nobody'),('people_in_space', 'People in space'),('everybody','Everybody')], default='everybody')
+    can_text = models.CharField(max_length=20, choices=[('nobody', 'Nobody'), ('people_in_space', 'People in space'),
+                                                        ('everybody', 'Everybody')], default='everybody')
     notification_enabled = models.BooleanField(default=True)
 
     def __str__(self):

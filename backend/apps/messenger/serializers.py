@@ -34,6 +34,7 @@ class MessageGroupSerializer(serializers.ModelSerializer):
         self.validated_data['sender'] = kwargs.get('sender', None)
         return super().save(**kwargs)
 
+
 class MessengerSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = MessengerSettings

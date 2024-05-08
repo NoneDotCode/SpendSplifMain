@@ -9,9 +9,8 @@ from backend.apps.messenger.permissions import IsMemberOfDmChat
 from backend.apps.messenger.serializers import DmMessageSerializer, MessageGroupSerializer, MessengerSettingsSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from backend.apps.messenger.serializers import DmChatSerializer
 from backend.apps.space.models import Space
-from backend.apps.customuser.serializers import CustomUserSerializer
+
 
 class CreateChatView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -29,7 +28,7 @@ class CreateChatView(generics.CreateAPIView):
             return Response({"error": "Chat already exists"},
                             status=status.HTTP_403_FORBIDDEN)
 
-        new_chat = DmChat.objects.create(owner_1=owner_1, owner_2=owner_2)
+        DmChat.objects.create(owner_1=owner_1, owner_2=owner_2)
         return Response({
             "success": f"New DmChat with {owner_1.username}#{owner_1.tag}-{owner_2.username}#{owner_2.tag} created"
         },
@@ -39,7 +38,8 @@ class CreateChatView(generics.CreateAPIView):
 class DmChatView(generics.GenericAPIView):
     permission_classes = [IsMemberOfDmChat, IsAuthenticated]
 
-    def get(self, request, owner_1_id, owner_2_id):
+    @staticmethod
+    def get(request, owner_1_id, owner_2_id):
         chat = DmChat.objects.filter(owner_1_id=owner_1_id, owner_2_id=owner_2_id).first()
         if not chat:
             return JsonResponse({'error': 'Chat not found'}, status=404)
@@ -49,15 +49,17 @@ class DmChatView(generics.GenericAPIView):
         }
         return JsonResponse(response)
 
-    def post(self, request, owner_1_id, owner_2_id):
+    @staticmethod
+    def post(request, owner_1_id, owner_2_id):
         chat = DmChat.objects.filter(owner_1_id=owner_1_id, owner_2_id=owner_2_id).first()
         sender = request.user
+        receiver = CustomUser.objects.get(id=owner_2_id)
 
-        sender_messenger_settings = MessengerSettings.objects.get_or_create(user=sender)[0]
-        if sender_messenger_settings.can_text == 'nobody':
+        receiver_messenger_settings = MessengerSettings.objects.get_or_create(user=receiver)[0]
+        if receiver_messenger_settings.can_text == 'nobody':
             return JsonResponse({'error': 'Sending messages is not allowed for this user'}, status=403)
-        elif sender_messenger_settings.can_text == 'people_in_space':
-            if not Space.objects.filter(members=sender).exists():
+        elif receiver_messenger_settings.can_text == 'people_in_space':
+            if not Space.objects.filter(members=sender).filter(members=receiver).exists():
                 return JsonResponse({'error': 'User is not a member of any space'}, status=403)
 
         serializer = DmMessageSerializer(data=request.data)
@@ -66,15 +68,18 @@ class DmChatView(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class SpaceChatView(generics.GenericAPIView):
 
-    def get(self, request, group_id):
+    @staticmethod
+    def get(request, group_id):
         group = get_object_or_404(SpaceGroup, id=group_id)
         messages = MessageGroup.objects.filter(father_group=group)
         serializer = MessageGroupSerializer(messages, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request, group_id):
+    @staticmethod
+    def post(request, group_id):
         group = get_object_or_404(SpaceGroup, id=group_id)
         if request.user not in group.father_space.members.all():
             return Response("User not found in the space", status=status.HTTP_400_BAD_REQUEST)
@@ -87,30 +92,33 @@ class SpaceChatView(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class MessengerSetSettingsWhoCanText(generics.GenericAPIView):
-    def get(self, request, user_id):
-        user = get_object_or_404(CustomUser, pk=user_id)
+    @staticmethod
+    def get(request, **kwargs):
+        user = request.user
         messenger_settings, created = MessengerSettings.objects.get_or_create(user=user)
         serializer = MessengerSettingsSerializer(messenger_settings)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    def put(self, request, user_id, settings, notification):
-        user = get_object_or_404(CustomUser, pk=user_id)
+
+    @staticmethod
+    def put(request, **kwargs):
+        user = request.user
         
         messenger_settings, created = MessengerSettings.objects.get_or_create(user=user)
         
-        if settings == 1:
+        if request.data.get("can_text") == "nobody":
             messenger_settings.can_text = 'nobody'
-        elif settings == 2:
+        elif request.data.get("can_text") == 'people_in_space':
             messenger_settings.can_text = 'people_in_space'
-        elif settings == 3:
+        elif request.data.get("can_text") == 'everybody':
             messenger_settings.can_text = 'everybody'
         else:
             return Response({"message": "Invalid settings value"}, status=status.HTTP_400_BAD_REQUEST)
         
-        if notification == 1:
+        if request.data.get("notification") is True:
             messenger_settings.notification_enabled = True
-        elif notification == 2:
+        elif request.data.get("notification") is False:
             messenger_settings.notification_enabled = False
         else:
             return Response({"message": "Invalid notification value"}, status=status.HTTP_400_BAD_REQUEST)
