@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import CustomUser, DmChat, DmMessage, MessageGroup, SpaceGroup
 
 from rest_framework import serializers
-from apps.messenger.models import DmChat, CustomUser
+from apps.messenger.models import DmChat, CustomUser, MessengerSettings
 
 
 class DmChatSerializer(serializers.ModelSerializer):
@@ -33,3 +33,9 @@ class MessageGroupSerializer(serializers.ModelSerializer):
     def save(self, **kwargs):
         self.validated_data['sender'] = kwargs.get('sender', None)
         return super().save(**kwargs)
+
+class MessengerSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MessengerSettings
+        fields = ['id', 'can_text', 'notification_enabled']
+
