@@ -1,5 +1,5 @@
 from django.urls import path
-from apps.messenger.views import CreateChatView, DmChatView, SpaceChatView, MessengerSetSettingsWhoCanText
+from backend.apps.messenger.views import CreateChatView, DmChatView, SpaceChatView, MessengerSetSettingsWhoCanText
 
 urlpatterns = [
     path('chat/<int:owner_1_id>/<int:owner_2_id>/', DmChatView.as_view(), name='chat'),

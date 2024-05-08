@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import CustomUser, DmChat, DmMessage, MessageGroup, SpaceGroup
 
 from rest_framework import serializers
-from apps.messenger.models import DmChat, CustomUser, MessengerSettings
+from backend.apps.messenger.models import DmChat, CustomUser, MessengerSettings
 
 
 class DmChatSerializer(serializers.ModelSerializer):

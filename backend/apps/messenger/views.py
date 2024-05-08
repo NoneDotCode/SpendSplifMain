@@ -3,15 +3,15 @@ from rest_framework import generics
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 
-from apps.customuser.models import CustomUser
-from apps.messenger.models import DmMessage, DmChat, SpaceGroup, MessageGroup, MessengerSettings
-from apps.messenger.permissions import IsMemberOfSpace, IsMemberOfDmChat
-from apps.messenger.serializers import DmMessageSerializer, MessageGroupSerializer, MessengerSettingsSerializer
+from backend.apps.customuser.models import CustomUser
+from backend.apps.messenger.models import DmMessage, DmChat, SpaceGroup, MessageGroup, MessengerSettings
+from backend.apps.messenger.permissions import IsMemberOfDmChat
+from backend.apps.messenger.serializers import DmMessageSerializer, MessageGroupSerializer, MessengerSettingsSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from apps.messenger.serializers import DmChatSerializer
-from apps.space.models import Space
-from apps.customuser.serializers import CustomUserSerializer
+from backend.apps.messenger.serializers import DmChatSerializer
+from backend.apps.space.models import Space
+from backend.apps.customuser.serializers import CustomUserSerializer
 
 class CreateChatView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
