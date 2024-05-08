@@ -53,12 +53,10 @@ class DmChatView(generics.GenericAPIView):
         chat = DmChat.objects.filter(owner_1_id=owner_1_id, owner_2_id=owner_2_id).first()
         sender = request.user
 
-        # Перевірка налаштувань месенджера для користувача, який надсилає повідомлення
         sender_messenger_settings = MessengerSettings.objects.get_or_create(user=sender)[0]
         if sender_messenger_settings.can_text == 'nobody':
             return JsonResponse({'error': 'Sending messages is not allowed for this user'}, status=403)
         elif sender_messenger_settings.can_text == 'people_in_space':
-            # Перевірка, чи користувач є членом хоча б одного простору
             if not Space.objects.filter(members=sender).exists():
                 return JsonResponse({'error': 'User is not a member of any space'}, status=403)
 
