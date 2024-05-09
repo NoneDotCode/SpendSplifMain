@@ -9,6 +9,11 @@ class SpaceSerializer(serializers.ModelSerializer):
         model = Space
         fields = ("title", "currency", "members")
 
+class SpaceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Space
+        fields = ("id", "title", "currency", "members")
+
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):
     user_pk = serializers.IntegerField(write_only=True)
