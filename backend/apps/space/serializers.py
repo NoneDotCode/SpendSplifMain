@@ -5,6 +5,13 @@ from backend.apps.space.models import Space, MemberPermissions
 
 
 class SpaceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Space
+        fields = ("title", "currency", "members")
+
+
+class SpaceListSerializer(serializers.ModelSerializer):
     members_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -14,11 +21,6 @@ class SpaceSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_members_count(obj):
         return obj.members.count()
-
-class SpaceListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Space
-        fields = ("id", "title", "currency", "members")
 
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):
