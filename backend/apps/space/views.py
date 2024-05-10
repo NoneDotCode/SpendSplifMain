@@ -6,7 +6,7 @@ from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.space.models import Space, MemberPermissions
-from backend.apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
+from backend.apps.space.serializers import SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
                                             CanEditMembers)
 from backend.apps.account import permissions
@@ -60,7 +60,7 @@ class CreateSpace(generics.CreateAPIView):
 
 
 class ListOfSpaces(generics.ListAPIView):
-    serializer_class = SpaceSerializer
+    serializer_class = SpaceListSerializer
 
     def get_queryset(self):
         return Space.objects.filter(members=self.request.user)

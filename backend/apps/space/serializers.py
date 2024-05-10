@@ -15,6 +15,11 @@ class SpaceSerializer(serializers.ModelSerializer):
     def get_members_count(obj):
         return obj.members.count()
 
+class SpaceListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Space
+        fields = ("id", "title", "currency", "members")
+
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):
     user_pk = serializers.IntegerField(write_only=True)
