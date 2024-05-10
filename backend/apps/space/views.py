@@ -4,10 +4,12 @@ from rest_framework import generics
 from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
+from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.space.models import Space, MemberPermissions
 from backend.apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
                                             CanEditMembers)
+from backend.apps.account import permissions
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -62,6 +64,15 @@ class ListOfSpaces(generics.ListAPIView):
 
     def get_queryset(self):
         return Space.objects.filter(members=self.request.user)
+
+
+class ListOfUsersInSpace(generics.ListAPIView):
+    permission_classes = (permissions.IsSpaceMember,)
+    serializer_class = CustomUserSerializer
+
+    def get_queryset(self):
+        space = Space.objects.get(pk=self.kwargs.get("space_pk"))
+        return space.members
 
 
 class EditSpace(generics.RetrieveUpdateAPIView):
