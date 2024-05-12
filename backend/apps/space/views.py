@@ -97,8 +97,8 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         total_balance = TotalBalance.objects.get(father_space=instance)
         if total_balance:
             total_balance.save(balance=convert_currencies(amount=instance.balance,
-                                                        from_currency=instance.currency,
-                                                        to_currency=currency))
+                                                          from_currency=instance.currency,
+                                                          to_currency=currency))
         for goal in Goal.objects.filter(father_space=instance):
             goal.collected = convert_currencies(amount=goal.collected,
                                                 from_currency=instance.currency,

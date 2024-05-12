@@ -27,6 +27,8 @@ from backend.apps.messenger.models import SpaceGroup
 
 from datetime import datetime
 
+from backend.apps.total_balance.models import TotalBalance
+
 
 class CustomUserRegistrationView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
@@ -138,6 +140,8 @@ class ConfirmRegistrationView(APIView):
                 space=space,
                 owner=True
             )
+
+            TotalBalance.objects.create(father_space=space, balance=0)
 
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
