@@ -58,6 +58,8 @@ class CreateSpace(generics.CreateAPIView):
                 father_space=space
             )
 
+            TotalBalance.objects.create(balance=0, father_space=space)
+
 
 class ListOfSpaces(generics.ListAPIView):
     serializer_class = SpaceListSerializer
