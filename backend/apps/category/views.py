@@ -7,7 +7,11 @@ from backend.apps.category.models import Category
 from backend.apps.category.permissions import (CanCreateCategories, CanEditCategories,
                                                CanDeleteCategories)
 from backend.apps.category.serializers import CategorySerializer
+from backend.apps.category.utils import get_next_order
 from backend.apps.space.models import Space
+
+from rest_framework.response import Response
+from rest_framework import status
 
 
 class CreateCategory(generics.CreateAPIView):
@@ -19,6 +23,10 @@ class CreateCategory(generics.CreateAPIView):
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space.pk
         request.data['spent'] = 0
+        try:
+            request.data["order"] = get_next_order(space_pk)
+        except (Exception,):
+            return Response({'error': "You have too many categories"}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
 
 
