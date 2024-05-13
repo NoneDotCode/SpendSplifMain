@@ -23,10 +23,11 @@ class CreateCategory(generics.CreateAPIView):
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space.pk
         request.data['spent'] = 0
-        try:
-            request.data["order"] = get_next_order(space_pk)
-        except (Exception,):
-            return Response({'error': "You have too many categories"}, status=status.HTTP_400_BAD_REQUEST)
+        if request.data.get('order') is None:
+            try:
+                request.data["order"] = get_next_order(space_pk)
+            except (Exception,):
+                return Response({'error': "You have too many categories"}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
 
 
