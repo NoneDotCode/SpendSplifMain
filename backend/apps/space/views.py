@@ -105,6 +105,9 @@ class EditSpace(generics.RetrieveUpdateAPIView):
                                                 from_currency=instance.currency,
                                                 to_currency=currency)
             goal.save()
+        instance.currency = currency
+        instance.title = request.data.get("title")
+        instance.save()
         return Response(serializer.data)
 
 
