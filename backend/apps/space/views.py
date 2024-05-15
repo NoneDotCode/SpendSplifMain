@@ -105,6 +105,9 @@ class EditSpace(generics.RetrieveUpdateAPIView):
                                                 from_currency=instance.currency,
                                                 to_currency=currency)
             goal.save()
+        instance.currency = currency
+        instance.title = request.data.get("title")
+        instance.save()
         return Response(serializer.data)
 
 
@@ -123,11 +126,11 @@ class AddMemberToSpace(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
-        user_pk = request.data.get("user_pk", )
+        user_email = request.data.get("user_email", )
         space = Space.objects.get(pk=space_pk)
 
         try:
-            user = CustomUser.objects.get(pk=user_pk)
+            user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."},
                             status=status.HTTP_404_NOT_FOUND)
@@ -151,11 +154,11 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
-        user_pk = request.data.get("user_pk", )
+        user_email = request.data.get("user_email", )
         space = Space.objects.get(pk=space_pk)
 
         try:
-            user = CustomUser.objects.get(email=request.user.email)
+            user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -184,7 +187,7 @@ class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
         space = Space.objects.get(pk=space_id)
 
         try:
-            user = CustomUser.objects.get(email=request.user.email)
+            user = CustomUser.objects.get(pk=member_id)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
