@@ -25,7 +25,7 @@ class SpaceListSerializer(serializers.ModelSerializer):
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):
     user_pk = serializers.IntegerField(write_only=True)
-    fields = ("user_pk",)
+    fields = ("user_email",)
 
 
 class MemberPermissionsSerializer(serializers.ModelSerializer):
