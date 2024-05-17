@@ -86,7 +86,7 @@ class HistoryExpenseAutoDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryExpense
         fields = ("amount", "currency", "amount_in_default_currency", "comment",
-                  "from_acc", "to_cat", "periodic_expense", "father_space", "created")
+                  "from_acc", "to_cat", "periodic_expense", "cat_icon", "father_space", "created")
 
 
 class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):

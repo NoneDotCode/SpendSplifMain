@@ -6,6 +6,8 @@ from backend.apps.space.models import Space
 
 from backend.apps.customuser.constants import Currency
 
+from backend.apps.category.constants import Icons
+
 
 class HistoryExpense(models.Model):
     amount = models.DecimalField(max_digits=20, decimal_places=2)
@@ -15,6 +17,7 @@ class HistoryExpense(models.Model):
     from_acc = models.CharField(max_length=24)
     to_cat = models.CharField(max_length=24, blank=True)
     periodic_expense = models.BooleanField(default=False)
+    cat_icon = models.CharField(choices=Icons.choices)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     created = models.DateTimeField(default=datetime.now)
 
