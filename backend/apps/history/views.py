@@ -751,10 +751,32 @@ class ExpenseAutoDataView(generics.ListAPIView):
              'from_acc': 'Cash', 'created': datetime(2024, 5, 6), 'comment': '', 'to_cat': 'Food',
              'cat_icon': 'Donut'},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
-             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 8),
-             'comment': ''}
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 8), 'comment': ''},
+            {'amount': 50, 'amount_in_default_currency': 50, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 15), 'comment': '', 'to_cat': 'Entertainment',
+             'cat_icon': 'Camera'},
+            {'amount': 75, 'amount_in_default_currency': 75, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 16), 'comment': '', 'to_cat': 'Transportation',
+             'cat_icon': 'Cart'},
+            {'amount': 120, 'amount_in_default_currency': 120, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 17), 'comment': '', 'to_cat': 'Health',
+             'cat_icon': 'Pill'},
+            {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 18), 'comment': '', 'to_cat': 'Gifts',
+             'cat_icon': 'Gift'},
+            {'amount': 80, 'amount_in_default_currency': 80, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 19), 'comment': '', 'to_cat': 'Education',
+             'cat_icon': 'Book'},
+            {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 20), 'comment': '',
+             'to_cat': 'Entertainment', 'cat_icon': 'Camera'},
+            {'amount': 120, 'amount_in_default_currency': 120, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 21), 'comment': '', 'to_cat': 'Gifts',
+             'cat_icon': 'Gift'},
+            {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 22), 'comment': '', 'to_cat': 'Transportation',
+             'cat_icon': 'Cart'}
         ]
-
         expenses = [HistoryExpense(**data) for data in expense_data]
         HistoryExpense.objects.bulk_create(expenses)
         return HistoryExpense.objects.filter(father_space=father_space)
