@@ -590,16 +590,20 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
         return summary, percentages
 
     def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, float]:
-        return {
-            expense.to_cat: sum(expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
+        summary = {
+            expense.to_cat: sum(
+                expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
             for expense in expenses for category in {expense.to_cat}
         }
+        return dict(sorted(summary.items(), key=lambda x: x[1], reverse=True)[:5])
 
     def get_percentages(self, summary: Dict[str, float], total: float) -> Dict[str, int]:
         percentages = {category: round(value / total * 100) for category, value in summary.items()}
         remaining_percentage = 100 - sum(percentages.values())
         if remaining_percentage != 0:
             sorted_percentages = sorted(percentages.items(), key=lambda x: x[1], reverse=True)
+            for category, _ in sorted_percentages[5:]:
+                del percentages[category]
             if sorted_percentages:
                 largest_category, _ = sorted_percentages[0]
                 percentages[largest_category] += remaining_percentage
@@ -742,6 +746,18 @@ class ExpenseAutoDataView(generics.ListAPIView):
              'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
              'comment': '', 'to_cat': 'Food', 'cat_icon': 'Donut'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Utilities', 'cat_icon': 'Bolt'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Subscription', 'cat_icon': 'Film'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Insurance', 'cat_icon': 'Shield'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Transportation', 'cat_icon': 'Cart'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 5, 4), 'comment': '', 'to_cat': 'Food',
              'cat_icon': 'Donut'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
@@ -775,8 +791,38 @@ class ExpenseAutoDataView(generics.ListAPIView):
              'cat_icon': 'Gift'},
             {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
              'from_acc': 'Cash', 'created': datetime(2024, 5, 22), 'comment': '', 'to_cat': 'Transportation',
-             'cat_icon': 'Cart'}
-        ]
+             'cat_icon': 'Cart'},
+            {'amount': 25, 'amount_in_default_currency': 25, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 13),
+             'comment': 'Еженедельная подписка', 'to_cat': 'Subscription', 'cat_icon': 'Camera'},
+            {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2023, 10, 1),
+             'comment': 'Годовая страховка авто', 'to_cat': 'Insurance', 'cat_icon': 'Shield'},
+            {'amount': 80, 'amount_in_default_currency': 80, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 3, 15),
+             'comment': 'Квартальная арендная плата', 'to_cat': 'Rent', 'cat_icon': 'Home'},
+            {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 1),
+             'comment': 'Полугодовая плата за обучение', 'to_cat': 'Education', 'cat_icon': 'Book'},
+            {'amount': 40, 'amount_in_default_currency': 40, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 11),
+             'comment': 'Еженедельные расходы на транспорт', 'to_cat': 'Transportation', 'cat_icon': 'Cart'},
+            {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 3, 15),
+             'comment': 'Годовая плата за обслуживание', 'to_cat': 'Maintenance', 'cat_icon': 'Wrench'},
+            {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 15),
+             'comment': 'Ежемесячная плата за фитнес', 'to_cat': 'Sports', 'cat_icon': 'Running'},
+            {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 4, 1),
+             'comment': 'Квартальная оплата интернета', 'to_cat': 'Utilities', 'cat_icon': 'Bolt'},
+            {'amount': 125, 'amount_in_default_currency': 125, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 24),
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Parking', 'cat_icon': 'Car'},
+            {'amount': 3464, 'amount_in_default_currency': 3464, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 24),
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Park', 'cat_icon': 'Park'}
+            ]
         expenses = [HistoryExpense(**data) for data in expense_data]
         HistoryExpense.objects.bulk_create(expenses)
         return HistoryExpense.objects.filter(father_space=father_space)
