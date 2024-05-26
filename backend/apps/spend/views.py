@@ -61,7 +61,8 @@ class SpendView(generics.GenericAPIView):
             comment=comment,
             from_acc=account.title,
             to_cat=category.title,
-            father_space_id=space_pk
+            father_space_id=space_pk,
+            cat_icon=category.icon
         )
         total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
         if total_balance:

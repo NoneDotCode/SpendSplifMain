@@ -29,6 +29,7 @@ from backend.apps.space.models import Space
 
 class HistoryView(ObjectMultipleModelAPIView):
     permission_classes = (IsSpaceMember,)
+
     def get_querylist(self):
         space_pk = self.kwargs["space_pk"]
         return [
@@ -41,6 +42,7 @@ class HistoryView(ObjectMultipleModelAPIView):
 
 class StatisticView(generics.GenericAPIView):
     permission_classes = (IsSpaceMember,)
+
     def get(self, request, *args, **kwargs):
         categories_view = CategoryStatisticView.as_view()(request._request, *args, **kwargs)
         incomes_view = IncomeStatisticView.as_view()(request._request, *args, **kwargs)
@@ -78,11 +80,17 @@ class CategoryStatisticView(generics.ListAPIView):
         percentages = self.get_percentages(summary, total)
         return summary, percentages
 
-    def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, float]:
-        return {
-            expense.to_cat: sum(expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
-            for expense in expenses for category in {expense.to_cat}
-        }
+    def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, Decimal]:
+        summary = {}
+        for expense in expenses:
+            if expense.to_cat:
+                icon_name = expense.cat_icon
+                amount = expense.amount_in_default_currency
+                if icon_name in summary:
+                    summary[icon_name] += amount
+                else:
+                    summary[icon_name] = amount
+        return summary
 
     def get_percentages(self, summary: Dict[str, float], total: float) -> Dict[str, int]:
         percentages = {category: round(value / total * 100) for category, value in summary.items()}
@@ -111,8 +119,9 @@ class CategoryStatisticView(generics.ListAPIView):
                 formatted_result[f"{period.capitalize()}_Percent"] = {}
                 formatted_result[f"Analyze_{period.capitalize()}"] = f"You didn't make any category expenditures this {period}"
             else:
+                space = Space.objects.get(pk=self.kwargs.get("space_pk"))
                 summary, percentages = self.get_summary_and_percentages(period_expenses)
-                formatted_result[period.capitalize()] = self.add_currency(summary, Space)
+                formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
                 formatted_result[f"{period.capitalize()}_Percent"] = percentages
                 if summary:
                     max_spending_category = max(summary, key=summary.get)
@@ -318,7 +327,7 @@ class ExpensesStatisticView(generics.ListAPIView):
             result[f"Analyze_{period}"] = self.analyze_expenses(period_expenses, period)
 
         return result
-    
+
     def list(self, request: Request, *args, **kwargs) -> Response:
         expenses = self.get_queryset()
         result = self.format_result(expenses, request)
@@ -581,16 +590,20 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
         return summary, percentages
 
     def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, float]:
-        return {
-            expense.to_cat: sum(expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
+        summary = {
+            expense.to_cat: sum(
+                expense.amount_in_default_currency for expense in expenses if expense.to_cat == category)
             for expense in expenses for category in {expense.to_cat}
         }
+        return dict(sorted(summary.items(), key=lambda x: x[1], reverse=True)[:5])
 
     def get_percentages(self, summary: Dict[str, float], total: float) -> Dict[str, int]:
         percentages = {category: round(value / total * 100) for category, value in summary.items()}
         remaining_percentage = 100 - sum(percentages.values())
         if remaining_percentage != 0:
             sorted_percentages = sorted(percentages.items(), key=lambda x: x[1], reverse=True)
+            for category, _ in sorted_percentages[5:]:
+                del percentages[category]
             if sorted_percentages:
                 largest_category, _ = sorted_percentages[0]
                 percentages[largest_category] += remaining_percentage
@@ -696,46 +709,123 @@ class ExpenseAutoDataView(generics.ListAPIView):
     serializer_class = HistoryExpenseAutoDataSerializer
 
     def get_queryset(self):
-        father_space = self.kwargs["space_pk"]
+        father_space_id = self.kwargs["space_pk"]
+        father_space = Space.objects.get(id=father_space_id)
         expense_data = [
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
-                'from_acc': 'Cash', 'created': datetime(2023, 1, 30), 'comment': '', 'to_cat': 'Food'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2023, 1, 30),
+             'comment': '', 'to_cat': 'Food', 'cat_icon': 'Donut'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': 'Home'},
+             'from_acc': 'Cash', 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': 'Home',
+             'cat_icon': 'Home'},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
-                'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'comment': '', 'to_cat': 'Food'},
+             'from_acc': 'Cash', 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': 'Food',
+             'cat_icon': 'Donut'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 3, 10), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 2, 2), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 2, 16), 'comment': '', 'to_cat': 'Food'},
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2023, 9, 11),
+             'comment': '', 'to_cat': 'Food', 'cat_icon': 'Donut'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 1, 31), 'comment': '', 'to_cat': 'Home'},
+             'from_acc': 'Cash', 'created': datetime(2024, 3, 10), 'comment': '', 'to_cat': 'Home',
+             'cat_icon': 'Home'},
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 2, 2), 'comment': '', 'to_cat': 'Food',
+             'cat_icon': 'Donut'},
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 2, 16), 'comment': '', 'to_cat': 'Food',
+             'cat_icon': 'Donut'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 1, 31), 'comment': '', 'to_cat': 'Home',
+             'cat_icon': 'Home'},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food'},
+             'from_acc': 'Cash', 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': 'Food',
+             'cat_icon': 'Donut'},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 4, 2), 'comment': '', 'to_cat': 'Home'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
-                'from_acc': 'Cash', 'created': datetime(2024, 5, 3), 'comment': '', 'to_cat': 'Food'},
+             'from_acc': 'Cash', 'created': datetime(2024, 4, 2), 'comment': '', 'to_cat': 'Home',
+             'cat_icon': 'Home'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 5, 4), 'comment': '', 'to_cat': 'Food'},
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Food', 'cat_icon': 'Donut'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 5, 5), 'comment': '', 'to_cat': 'Home'},
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Utilities', 'cat_icon': 'Bolt'},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 5, 6), 'comment': '', 'to_cat': 'Food'},
-            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD', 'periodic_expense': True,
-                'from_acc': 'Cash', 'created': datetime(2024, 5, 8), 'comment': ''}
-        ]
-
-        for data in expense_data:
-            serializer = HistoryExpenseAutoDataSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save()
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Subscription', 'cat_icon': 'Film'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Insurance', 'cat_icon': 'Shield'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 3),
+             'comment': '', 'to_cat': 'Transportation', 'cat_icon': 'Cart'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 4), 'comment': '', 'to_cat': 'Food',
+             'cat_icon': 'Donut'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 5), 'comment': '', 'to_cat': 'Home',
+             'cat_icon': 'Home'},
+            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 6), 'comment': '', 'to_cat': 'Food',
+             'cat_icon': 'Donut'},
+            {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 8), 'comment': ''},
+            {'amount': 50, 'amount_in_default_currency': 50, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 15), 'comment': '', 'to_cat': 'Entertainment',
+             'cat_icon': 'Camera'},
+            {'amount': 75, 'amount_in_default_currency': 75, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 16), 'comment': '', 'to_cat': 'Transportation',
+             'cat_icon': 'Cart'},
+            {'amount': 120, 'amount_in_default_currency': 120, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 17), 'comment': '', 'to_cat': 'Health',
+             'cat_icon': 'Pill'},
+            {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 18), 'comment': '', 'to_cat': 'Gifts',
+             'cat_icon': 'Gift'},
+            {'amount': 80, 'amount_in_default_currency': 80, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 19), 'comment': '', 'to_cat': 'Education',
+             'cat_icon': 'Book'},
+            {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 20), 'comment': '',
+             'to_cat': 'Entertainment', 'cat_icon': 'Camera'},
+            {'amount': 120, 'amount_in_default_currency': 120, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 21), 'comment': '', 'to_cat': 'Gifts',
+             'cat_icon': 'Gift'},
+            {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 22), 'comment': '', 'to_cat': 'Transportation',
+             'cat_icon': 'Cart'},
+            {'amount': 25, 'amount_in_default_currency': 25, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 13),
+             'comment': 'Еженедельная подписка', 'to_cat': 'Subscription', 'cat_icon': 'Camera'},
+            {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2023, 10, 1),
+             'comment': 'Годовая страховка авто', 'to_cat': 'Insurance', 'cat_icon': 'Shield'},
+            {'amount': 80, 'amount_in_default_currency': 80, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 3, 15),
+             'comment': 'Квартальная арендная плата', 'to_cat': 'Rent', 'cat_icon': 'Home'},
+            {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 1),
+             'comment': 'Полугодовая плата за обучение', 'to_cat': 'Education', 'cat_icon': 'Book'},
+            {'amount': 40, 'amount_in_default_currency': 40, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 11),
+             'comment': 'Еженедельные расходы на транспорт', 'to_cat': 'Transportation', 'cat_icon': 'Cart'},
+            {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 3, 15),
+             'comment': 'Годовая плата за обслуживание', 'to_cat': 'Maintenance', 'cat_icon': 'Wrench'},
+            {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 15),
+             'comment': 'Ежемесячная плата за фитнес', 'to_cat': 'Sports', 'cat_icon': 'Running'},
+            {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 4, 1),
+             'comment': 'Квартальная оплата интернета', 'to_cat': 'Utilities', 'cat_icon': 'Bolt'},
+            {'amount': 125, 'amount_in_default_currency': 125, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 24),
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Parking', 'cat_icon': 'Car'},
+            {'amount': 3464, 'amount_in_default_currency': 3464, 'father_space': father_space, 'currency': 'USD',
+             'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 24),
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Park', 'cat_icon': 'Park'}
+            ]
+        expenses = [HistoryExpense(**data) for data in expense_data]
+        HistoryExpense.objects.bulk_create(expenses)
+        return HistoryExpense.objects.filter(father_space=father_space)
 
 
 class TransferAutoDataView(generics.ListAPIView):
