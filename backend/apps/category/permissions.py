@@ -25,7 +25,7 @@ class CanEditCategories(permissions.BasePermission):
         space = Space.objects.get(pk=space_pk)
 
         try:
-            category = Account.objects.get(pk=category_pk)
+            category = Category.objects.get(pk=category_pk)
         except Category.DoesNotExist:
             return False
 

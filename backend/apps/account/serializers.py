@@ -7,10 +7,11 @@ from backend.apps.space.models import Space
 
 class AccountSerializer(serializers.ModelSerializer):
     father_space = serializers.PrimaryKeyRelatedField(queryset=Space.objects.all(), required=False)
+    id = serializers.IntegerField(required=False)
 
     class Meta:
         model = Account
-        fields = ('title', 'balance', 'currency', 'included_in_total_balance', 'father_space')
+        fields = ('id', 'title', 'balance', 'currency', 'included_in_total_balance', 'father_space')
 
 
 class IncomeSerializer(serializers.Serializer):
