@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 
 from backend.apps.account.models import Account
-from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
+from backend.apps.account.permissions import IsSpaceMember
 
 from backend.apps.category.models import Category
 
@@ -70,7 +70,7 @@ class SpendView(generics.GenericAPIView):
                                                            from_currency=account.currency,
                                                            to_currency=to_currency)
             total_balance[0].save()
-        return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
+        return Response({"spent": category.spent}, status=status.HTTP_200_OK)
 
 
 class PeriodicSpendCreateView(generics.GenericAPIView):

@@ -8,4 +8,4 @@ class TotalBalanceSerializer (serializers.ModelSerializer):
 
     class Meta:
         model = TotalBalance
-        fields = ('balance')
+        fields = ('balance',)

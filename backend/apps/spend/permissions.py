@@ -27,7 +27,7 @@ class SpendPermission(permissions.BasePermission):
             return False
 
         if account.father_space != space or category.father_space != space:
-            return False
+            return print(space, account.father_space, category.father_space)
 
         return (IsSpaceOwner().has_permission(request, view) or
                 space.members.filter(id=user.id, memberpermissions__spend=True).exists())
