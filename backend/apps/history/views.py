@@ -388,7 +388,9 @@ class GoalTransferStatisticView(generics.ListAPIView):
         summary = {}
         for transfer in transfers:
             self._update_summary(summary, transfer, currency)
-        return summary
+        sorted_summary = dict(
+            sorted(summary.items(), key=lambda x: Decimal(x[1]['Collected'].split()[0]), reverse=True)[:5])
+        return sorted_summary
 
     def _update_summary(self, summary: Dict[str, Dict[str, str]], transfer: HistoryTransfer, currency: str) -> None:
         goal = transfer.to_goal
@@ -846,16 +848,46 @@ class TransferAutoDataView(generics.ListAPIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         transfer_data = [
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2023, 9, 11), 'to_goal': 'main'},
+            {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 22), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 150, 'amount_in_default_currency': 150, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 23), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 24), 'to_goal': 'main2', 'goal_amount': 3000},
             {'amount': 250, 'amount_in_default_currency': 250, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2023, 10, 18), 'to_goal': 'main'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2023, 7, 1), 'to_goal': 'main2'},
-            {'amount': 1250, 'amount_in_default_currency': 1250, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2023, 12, 20), 'to_goal': 'main2'},
-            {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-                'from_acc': 'Cash', 'created': datetime(2024, 2, 15), 'to_goal': 'main2'},
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 25), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 26), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 400, 'amount_in_default_currency': 400, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 1), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 500, 'amount_in_default_currency': 500, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 8), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 600, 'amount_in_default_currency': 600, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 15), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 700, 'amount_in_default_currency': 700, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 22), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 800, 'amount_in_default_currency': 800, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 29), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 900, 'amount_in_default_currency': 900, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 4, 1), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 4, 15), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 1100, 'amount_in_default_currency': 1100, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 4, 22), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 1200, 'amount_in_default_currency': 1200, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 1), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 1300, 'amount_in_default_currency': 1300, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2024, 5, 15), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 1400, 'amount_in_default_currency': 1400, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2023, 6, 1), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2023, 7, 1), 'to_goal': 'main', 'goal_amount': 4000},
+            {'amount': 1600, 'amount_in_default_currency': 1600, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2023, 8, 1), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 1700, 'amount_in_default_currency': 1700, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2023, 9, 1), 'to_goal': 'main2', 'goal_amount': 3000},
+            {'amount': 1800, 'amount_in_default_currency': 1800, 'father_space': father_space, 'currency': 'USD',
+             'from_acc': 'Cash', 'created': datetime(2023, 10, 1), 'to_goal': 'main2', 'goal_amount': 3000},
         ]
 
         for data in transfer_data:
