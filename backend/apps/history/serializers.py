@@ -98,3 +98,8 @@ class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):
 class ExpenseSummarySerializer(serializers.Serializer):
     categories = serializers.DictField()
     total_amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+
+class HistoryTransferSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoryTransfer
+        fields = ('from_acc', 'to_acc', 'to_goal', 'from_goal', 'amount', 'currency')
