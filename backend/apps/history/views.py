@@ -2,12 +2,13 @@ from typing import Dict, List, Tuple, Union
 
 from django.db.models import Sum
 from django.utils import timezone
+
 from rest_framework.request import Request
 from collections import defaultdict
 from datetime import datetime, timedelta
 
 from .serializers import IncomeStatisticViewSerializer, \
-    CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer
+    CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer, HistoryTransferSerializer
 from datetime import datetime, timedelta
 from decimal import Decimal
 import re
@@ -15,17 +16,22 @@ import re
 from drf_multiple_model.views import ObjectMultipleModelAPIView
 
 from backend.apps.goal.serializers import GoalSerializer
+from backend.apps.goal.models import Goal
 from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTransfer
 from backend.apps.history.serializers import HistoryExpenseSerializer, \
     HistoryExpenseAutoDataSerializer, HistoryIncomeAutoDataSerializer, HistoryTransferAutoDataSerializer
+from backend.apps.account.models import Account
 
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+
 from backend.apps.history.serializers import HistoryIncomeSerializer
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.space.models import Space
 
+from backend.apps.converter.utils import convert_currencies
 
 class HistoryView(ObjectMultipleModelAPIView):
     permission_classes = (IsSpaceMember,)
@@ -896,3 +902,124 @@ class TransferAutoDataView(generics.ListAPIView):
                 serializer.save()
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+class HistoryTransferEdit(APIView):
+
+    permission_classes = ()    
+
+    def put(self, request, pk, *args, **kwargs):
+        try:
+            transfer = HistoryTransfer.objects.get(pk=pk)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = HistoryTransferSerializer(transfer, data=request.data)
+
+        amount_befor_changing = transfer.amount
+
+        if serializer.is_valid():
+            amount = request.data.get("amount")
+
+            from_acc_title = request.data.get("from_acc")
+            from_acc_default = Account.objects.filter(title=transfer.from_acc).first()
+            from_acc = Account.objects.filter(title=from_acc_title).first() or from_acc_default
+
+            to_acc_default = Account.objects.filter(title=transfer.to_acc).first()
+            to_acc = Account.objects.filter(title=request.data.get("to_acc")).first() or to_acc_default
+
+            #changing accounts balance
+            if from_acc is not None:
+
+                if from_acc.currency == transfer.currency:
+                    from_acc.balance += Decimal(amount) - Decimal(amount_befor_changing)
+
+                else:
+                    from_acc_amount = convert_currencies(from_currency=transfer.currency, to_currency=from_acc.currency, amount=amount)
+                    from_acc.balance += Decimal(from_acc_amount) - Decimal(amount_befor_changing)
+
+            if to_acc is not None:
+
+                if to_acc.currency == transfer.currency: 
+                    to_acc.balance += Decimal(amount) - Decimal(amount_befor_changing)
+
+                else:
+
+                    to_acc_amount = convert_currencies(from_currency=transfer.currency, to_currency=to_acc.currency, amount=amount)
+                    to_acc.balance -= Decimal(to_acc_amount) - Decimal(amount_befor_changing)
+
+
+            from_goal_default = Goal.objects.filter(title=transfer.from_goal).first()
+            from_goal = Goal.objects.filter(title=request.data.get("from_goal")).first() or from_goal_default 
+            
+            to_goal_default = Goal.objects.filter(title=transfer.to_goal).first()
+            to_goal = Goal.objects.filter(title=request.data.get("to_goal")).first() or to_goal_default
+
+
+            #changing goals balance
+            if from_goal is not None:
+                
+                if from_goal.father_space.currency == transfer.currency:
+                    from_goal.collected += Decimal(amount) - Decimal(amount_befor_changing)
+                else:
+                    from_goal_amount = convert_currencies(from_currency=transfer.currency, to_currency=from_goal.father_space.currency, amount=amount)
+                    from_goal.collected += Decimal(from_goal_amount) - Decimal(amount_befor_changing)
+            
+            if to_goal is not None:
+                if to_goal.father_space.currency == transfer.currency:
+                    to_goal.collected -= Decimal(amount) - Decimal(amount_befor_changing)        
+
+                else:
+                
+                    to_goal_amount = convert_currencies(from_currency=transfer.currency, to_currency=to_goal.father_space.currency, amount=amount)
+                    to_goal.collected -= Decimal(to_goal_amount) - Decimal(amount_befor_changing)
+                    
+
+                serializer.save()
+
+            return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, *args, **kwargs):
+
+        transfer = HistoryIncome.objects.get(pk=pk)
+
+        amount = transfer.amount
+
+        #get all accounts and goals(from and to)
+        from_acc = Account.objects.filter(title=transfer.from_acc).first()
+        to_acc = Account.objects.filter(title=transfer.to_acc).first()
+        from_goal = Goal.objects.filter(title=transfer.from_goal).first()
+        to_goal = Goal.objects.filter(title=transfer.to_goal).first()
+
+        #changing accounts balance
+        if from_acc.currency == transfer.currency and to_acc.currency == transfer.currency:
+            
+            to_acc.balance -= Decimal(amount)
+            from_acc.balance += Decimal(amount)
+
+        else:
+
+            from_acc_amount = convert_currencies(from_currency=transfer.currency, to_currency=from_acc.currency, amount=amount)
+            to_acc_amount = convert_currencies(from_currency=transfer.currency, to_currency=to_acc.currency, amount=amount)
+
+            to_acc.balance -= Decimal(to_acc_amount)
+            from_acc.balance += Decimal(from_acc_amount)
+
+        #changing goals balance
+        if from_goal.father_space.currency == transfer.currency and to_goal.father_space.currency == transfer.currency:
+            
+            to_goal.balance -= Decimal(amount)
+            from_goal += Decimal(amount)
+
+        else:
+            
+            from_goal_amount = convert_currencies(from_currency=transfer.currency, to_currency=from_goal.father_space.currency, amount=amount)
+            to_goal_amount = convert_currencies(from_currency=transfer.currency, to_currency=to_goal.father_space.currency, amount=amount)
+
+            to_goal.balance -= Decimal(to_goal_amount)
+            from_goal.balance += Decimal(from_goal_amount)
+
+        transfer.delete()
+        return Response({"massage":"Expense has been updated successfully"}, status=status.HTTP_204_NO_CONTENT)
+
