@@ -1,10 +1,9 @@
 from rest_framework import serializers
 
 from backend.apps.category.models import Category
-
 from backend.apps.space.models import Space
+from backend.apps.converter.utils import convert_number_to_letter
 
-from backend.apps.converter.utils import convert_number_to_letter  
 
 class CategorySerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
@@ -14,10 +13,12 @@ class CategorySerializer(serializers.ModelSerializer):
     limit = serializers.IntegerField(required=False)
     icon = serializers.CharField(required=False)
     spent_percentage = serializers.SerializerMethodField()
+    icon_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ('id', 'title', 'spent', 'limit', 'color', 'icon', 'order', 'father_space', 'spent_percentage')
+        fields = ('id', 'title', 'spent', 'limit', 'color', 'icon', 'order', 'father_space', 'spent_percentage',
+                  'icon_url')
 
     @staticmethod
     def get_spent_percentage(obj):
@@ -25,13 +26,19 @@ class CategorySerializer(serializers.ModelSerializer):
             return f"{round((obj.spent / obj.limit) * 100)}%"
         return None
 
+    @staticmethod
+    def get_icon_url(obj):
+        if obj.icon:
+            return f"../../../assets/ico/Category/Bold/{obj.icon}.svg"
+        return None
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['spent_percentage'] = self.get_spent_percentage(instance)
-        
+
         if representation['spent']:
             representation['spent'] = convert_number_to_letter(representation['spent'])
         if representation['limit']:
             representation['limit'] = convert_number_to_letter(representation['limit'])
-        
+
         return representation

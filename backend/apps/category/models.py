@@ -8,8 +8,8 @@ from backend.apps.space.models import Space
 
 class Category(models.Model):
     title = models.CharField(max_length=24)
-    spent = models.DecimalField(max_digits=20, decimal_places=2)
-    limit = models.DecimalField(max_digits=20, decimal_places=2, null=True)
+    spent = models.DecimalField(max_digits=12, decimal_places=2)
+    limit = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     color = ColorField(format="hex")
     icon = models.CharField(choices=Icons.choices)
     order = models.PositiveSmallIntegerField(blank=False, null=False, default=0)

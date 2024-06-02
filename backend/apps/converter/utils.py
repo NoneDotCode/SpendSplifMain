@@ -8,6 +8,7 @@ def convert_currencies(*, from_currency, to_currency, amount: float):
     converted_amount = round(euro_amount * Currency.objects.get(iso_code=to_currency).euro, 2)
     return converted_amount
 
+
 def convert_number_to_letter(number: float) -> str:
     """Convert a number to string with multiplier 
     for example from 1700 to 1.7k"""
