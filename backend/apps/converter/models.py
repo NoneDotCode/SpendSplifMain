@@ -1,6 +1,6 @@
 from django.db import models
 
-from apps.customuser.constants import Currency as CurrencyConstants
+from backend.apps.customuser.constants import Currency as CurrencyConstants
 
 
 class Currency(models.Model):
