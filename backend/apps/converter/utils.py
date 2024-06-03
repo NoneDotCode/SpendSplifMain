@@ -15,7 +15,7 @@ def convert_number_to_letter(number: float) -> str:
 
     suffixes = {1000000000: 'b', 1000000: 'm', 1000: 'k'}
     if number:
-        if number > 100000:
+        if number >= 100000:
             for key in sorted(suffixes.keys(), reverse=True):
 
                 if number >= key:
