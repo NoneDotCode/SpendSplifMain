@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple, Union
 
+from _decimal import Decimal
 from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.request import Request
@@ -25,6 +26,7 @@ from rest_framework import status
 from backend.apps.history.serializers import HistoryIncomeSerializer
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.space.models import Space
+from rest_framework import serializers
 
 
 class HistoryView(ObjectMultipleModelAPIView):
@@ -40,25 +42,38 @@ class HistoryView(ObjectMultipleModelAPIView):
         ]
 
 
+class CombinedStatisticSerializer(serializers.Serializer):
+    Expenses = serializers.DictField()
+    Balance = serializers.DictField()
+    Incomes = serializers.DictField()
+    Goals = serializers.DictField()
+    Recurring_Payments = serializers.DictField()
+    Categories = serializers.DictField()
+
+
 class StatisticView(generics.GenericAPIView):
     permission_classes = (IsSpaceMember,)
 
-    def get(self, request, *args, **kwargs):
+    @staticmethod
+    def get(request, *args, **kwargs):
         categories_view = CategoryStatisticView.as_view()(request._request, *args, **kwargs)
         incomes_view = IncomeStatisticView.as_view()(request._request, *args, **kwargs)
         expenses_view = ExpensesStatisticView.as_view()(request._request, *args, **kwargs)
         goal_view = GoalTransferStatisticView.as_view()(request._request, *args, **kwargs)
         balance_view = GeneralView.as_view()(request._request, *args, **kwargs)
         recurring_payments = RecurringPaymentsStatistic.as_view()(request._request, *args, **kwargs)
+
         combined_data = {
             "Expenses": expenses_view.data,
             "Balance": balance_view.data,
             "Incomes": incomes_view.data,
             "Goals": goal_view.data,
-            "Recurring Payments": recurring_payments.data,
+            "Recurring_Payments": recurring_payments.data,
             "Categories": categories_view.data,
         }
-        return Response(combined_data)
+
+        serializer = CombinedStatisticSerializer(combined_data)
+        return Response(serializer.data)
 
 
 class CategoryStatisticView(generics.ListAPIView):
@@ -71,16 +86,17 @@ class CategoryStatisticView(generics.ListAPIView):
         return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
     def get_expenses_for_period(self, queryset, days: int) -> List[HistoryExpense]:
-        return queryset.filter(created__gte=timezone.now() - timedelta(days=days))
+        return queryset.filter(created__gte=datetime.now() - timedelta(days=days))
 
-    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, float], Dict[str, int]]:
+    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> tuple[dict[str, Decimal], dict[str, int]]:
         expenses = [expense for expense in expenses if expense.to_cat]
         total = sum(expense.amount_in_default_currency for expense in expenses)
         summary = self.get_summary(expenses)
         percentages = self.get_percentages(summary, total)
         return summary, percentages
 
-    def get_summary(self, expenses: List[HistoryExpense]) -> Dict[str, Decimal]:
+    @staticmethod
+    def get_summary(expenses: List[HistoryExpense]) -> Dict[str, Decimal]:
         summary = {}
         for expense in expenses:
             if expense.to_cat:
@@ -92,7 +108,8 @@ class CategoryStatisticView(generics.ListAPIView):
                     summary[icon_name] = amount
         return summary
 
-    def get_percentages(self, summary: Dict[str, float], total: float) -> Dict[str, int]:
+    @staticmethod
+    def get_percentages(summary: Dict[str, float], total: float) -> dict[str, str]:
         percentages = {category: round(value / total * 100) for category, value in summary.items()}
         remaining_percentage = 100 - sum(percentages.values())
         if remaining_percentage != 0:
@@ -223,8 +240,7 @@ class IncomeStatisticView(generics.ListAPIView):
     def list(self, request: Request, *args, **kwargs) -> Response:
         incomes = self.get_queryset()
         formatted_result = self.format_result(incomes, request)
-        serializer = self.get_serializer(formatted_result, many=False)
-        return Response(serializer.data)
+        return Response(formatted_result)
 
 
 class ExpensesStatisticView(generics.ListAPIView):
@@ -234,7 +250,8 @@ class ExpensesStatisticView(generics.ListAPIView):
     def get_queryset(self) -> List[HistoryExpense]:
         return HistoryExpense.objects.filter(father_space=self.kwargs['space_pk'])
 
-    def get_periods(self, expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
+    @staticmethod
+    def get_periods(expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
         now = timezone.now()
         week_ago = now - timezone.timedelta(days=7)
         month_ago = now - timezone.timedelta(days=30)
@@ -258,7 +275,9 @@ class ExpensesStatisticView(generics.ListAPIView):
                 periods['Week'].append(expense)
         return periods
 
-    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, Decimal], Dict[str, str]]:
+    @staticmethod
+    def get_summary_and_percentages(expenses: List[HistoryExpense]) -> tuple[
+        dict[str, int], dict[str, str] | dict[str, str]]:
         category_expenses = sum(expense.amount for expense in expenses if expense.to_cat)
         loss_expenses = sum(expense.amount for expense in expenses if not expense.to_cat)
         recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic_expense)
@@ -318,7 +337,7 @@ class ExpensesStatisticView(generics.ListAPIView):
                 result[f"{period}_Percent"] = "0 %"
             else:
                 for expense in period_expenses:
-                    date_str = expense.created.date().strftime("%d.%m.%Y")
+                    date_str = expense.created.date().strftime("%Y-%m-%d")  # Changed to YYYY-MM-DD format
                     summary, percentages = self.get_summary_and_percentages([expense])
                     summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
                     result[period][date_str] = summary_with_currency
@@ -521,7 +540,7 @@ class GeneralView(generics.GenericAPIView):
 
         period_data = {}
         for expense in expenses:
-            date_str = expense['created'].strftime('%d.%m.%Y')
+            date_str = expense['created'].strftime('%Y-%m-%d')  # Changed to YYYY-MM-DD format
             income = next((inc for inc in incomes if inc['created'].date() == expense['created'].date()), {'incomes': 0})
             transfer = next((tr for tr in transfers if tr['created'].date() == expense['created'].date()), {'expenses': 0})
             period_data[date_str] = {
@@ -529,7 +548,7 @@ class GeneralView(generics.GenericAPIView):
                 'expenses': self.format_amount(expense['expenses'] + transfer['expenses'] or Decimal(0), space_pk)
             }
         for income in incomes:
-            date_str = income['created'].strftime('%d.%m.%Y')
+            date_str = income['created'].strftime('%Y-%m-%d')  # Changed to YYYY-MM-DD format
             if date_str not in period_data:
                 period_data[date_str] = {
                     'incomes': self.format_amount(income['incomes'], space_pk),
@@ -565,10 +584,9 @@ class GeneralView(generics.GenericAPIView):
                 }
         return percentages
 
-
     def format_amount(self, amount, space_pk):
         rounded_amount = round(float(re.sub(r'[^\d.]', '', str(amount))))
-        currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
+        currency = Space.objects.get(pk=space_pk).currency
         return f"{rounded_amount} {currency}"
 
 

@@ -13,23 +13,15 @@ class CategorySerializer(serializers.ModelSerializer):
     limit = serializers.IntegerField(required=False)
     icon = serializers.CharField(required=False)
     spent_percentage = serializers.SerializerMethodField()
-    icon_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ('id', 'title', 'spent', 'limit', 'color', 'icon', 'order', 'father_space', 'spent_percentage',
-                  'icon_url')
+        fields = ('id', 'title', 'spent', 'limit', 'color', 'icon', 'order', 'father_space', 'spent_percentage')
 
     @staticmethod
     def get_spent_percentage(obj):
         if obj.limit and obj.spent is not None:
             return f"{round((obj.spent / obj.limit) * 100)}%"
-        return None
-
-    @staticmethod
-    def get_icon_url(obj):
-        if obj.icon:
-            return f"../../../assets/ico/Category/Bold/{obj.icon}.svg"
         return None
 
     def to_representation(self, instance):
