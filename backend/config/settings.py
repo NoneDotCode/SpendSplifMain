@@ -134,7 +134,9 @@ TIME_ZONE = "UTC"
 
 USE_I18N = True
 
-USE_L10N = True
+DATE_FORMAT = 'Y-m-d'  # ISO 8601 format
+
+USE_L10N = False
 
 USE_TZ = True
 
