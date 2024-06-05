@@ -12,7 +12,6 @@ class Category(models.Model):
     limit = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     color = ColorField(format="hex")
     icon = models.CharField(choices=Icons.choices)
-    order = models.PositiveSmallIntegerField(blank=False, null=False, default=0)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
 
     def __str__(self):
