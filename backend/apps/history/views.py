@@ -81,7 +81,8 @@ class CategoryStatisticView(generics.ListAPIView):
     serializer_class = CategoryViewSerializer
 
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
-        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'])
+        queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'],
+                                                                              periodic_expense=False)
         periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
         return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
@@ -829,19 +830,19 @@ class ExpenseAutoDataView(generics.ListAPIView):
              'comment': 'Еженедельные расходы на транспорт', 'to_cat': 'Transportation', 'cat_icon': 'Cart'},
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 3, 15),
-             'comment': 'Годовая плата за обслуживание', 'to_cat': 'Maintenance', 'cat_icon': 'Wrench'},
+             'comment': 'Годовая плата за обслуживание', 'to_cat': 'Maintenance', 'cat_icon': 'Waterdrop'},
             {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 15),
              'comment': 'Ежемесячная плата за фитнес', 'to_cat': 'Sports', 'cat_icon': 'Running'},
             {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 4, 1),
-             'comment': 'Квартальная оплата интернета', 'to_cat': 'Utilities', 'cat_icon': 'Bolt'},
+             'comment': 'Квартальная оплата интернета', 'to_cat': 'Utilities', 'cat_icon': 'Home_WiFi'},
             {'amount': 125, 'amount_in_default_currency': 125, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 24),
-             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Parking', 'cat_icon': 'Car'},
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Parking', 'cat_icon': 'Stop'},
             {'amount': 3464, 'amount_in_default_currency': 3464, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': 'Cash', 'created': datetime(2024, 5, 24),
-             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Park', 'cat_icon': 'Park'}
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': 'Park', 'cat_icon': 'Stop'}
             ]
         expenses = [HistoryExpense(**data) for data in expense_data]
         HistoryExpense.objects.bulk_create(expenses)
