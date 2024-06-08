@@ -69,7 +69,10 @@ class SpendView(generics.GenericAPIView):
             comment=comment,
             from_acc=account.title,
             to_cat=category.title if category else None,
-            father_space_id=space_pk
+            father_space_id=space_pk,
+            amount_in_default_currency=convert_currencies(amount=amount,
+                                                          from_currency=account.currency,
+                                                          to_currency=space.currency)
         )
         if 'total_balance' in locals(): 
             total_balance.balance -= convert_currencies(amount=amount,
