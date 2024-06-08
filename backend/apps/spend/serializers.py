@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 class SpendSerializer(serializers.Serializer):
     account_pk = serializers.IntegerField(required=True)
-    category_pk = serializers.IntegerField(required=True)
+    category_pk = serializers.IntegerField(required=False)
     amount = serializers.IntegerField(required=True)
     comment = serializers.CharField(required=False)
 
