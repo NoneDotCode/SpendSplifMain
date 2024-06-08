@@ -155,7 +155,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=365),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
@@ -188,7 +188,7 @@ SIMPLE_JWT = {
     # custom
     'REFRESH_TOKEN_COOKIE_NAME': 'refresh',
     'REFRESH_TOKEN_COOKIE_OPTIONS': {
-        'max_age': 86400,
+        'max_age': 604800,
         'httponly': True,
         'samesite': 'Lax',
         'secure': False,
