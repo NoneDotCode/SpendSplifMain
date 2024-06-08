@@ -19,10 +19,11 @@ def convert_number_to_letter(number: float) -> str:
             for key in sorted(suffixes.keys(), reverse=True):
 
                 if number >= key:
-                    if int(number) == number:
-                        return f"{int(number / key)}{suffixes[key]}"
+                    cuted_number = number / key
+                    if int(cuted_number) == cuted_number and isinstance(cuted_number, float):
+                        return f"{int(cuted_number)}{suffixes[key]}"
                     
-                    return f"{number / key:.2f}{suffixes[key]}"
+                    return f"{float(cuted_number)}{suffixes[key]}"
         else: 
             return number
     else:
