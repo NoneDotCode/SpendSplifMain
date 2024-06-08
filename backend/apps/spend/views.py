@@ -33,6 +33,7 @@ class SpendView(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get('space_pk')
+        space = Space.objects.get(pk=space_pk)
         account = Account.objects.get(pk=request.data.get("account_pk"))
         amount = request.data.get('amount')
         try:
@@ -44,7 +45,7 @@ class SpendView(generics.GenericAPIView):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
-        to_currency = request.user.currency
+        to_currency = space.currency
 
         category = None
         
@@ -52,10 +53,10 @@ class SpendView(generics.GenericAPIView):
             category = Category.objects.filter(pk=category_pk).first()
             if TotalBalance.objects.filter(father_space_id=space_pk).exists():  # Перевірка існування TotalBalance
                 total_balance = TotalBalance.objects.get(father_space_id=space_pk)
-                to_currency = total_balance.currency
+                to_currency = space.currency
                 category.spent += convert_currencies(amount=amount,
-                                                    from_currency=account.currency,
-                                                    to_currency=to_currency)
+                                                     from_currency=account.currency,
+                                                     to_currency=to_currency)
                 category.save()
         else:
             account.balance -= amount
@@ -72,8 +73,8 @@ class SpendView(generics.GenericAPIView):
         )
         if 'total_balance' in locals(): 
             total_balance.balance -= convert_currencies(amount=amount,
-                                                       from_currency=account.currency,
-                                                       to_currency=total_balance.currency)
+                                                        from_currency=account.currency,
+                                                        to_currency=space.currency)
             total_balance.save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
 
