@@ -55,7 +55,7 @@ class ViewAccounts(ObjectMultipleModelAPIView):
         space_pk = self.kwargs.get("space_pk")
         return [
             {
-                "queryset": Account.objects.filter(father_space_id=space_pk),
+                "queryset": Account.objects.filter(father_space_id=space_pk).order_by("id"),
                 "serializer_class": AccountSerializer
             },
             {
