@@ -18,34 +18,3 @@ class ViewTotalBalance(generics.ListAPIView):
 
     def get_queryset(self):
         return TotalBalance.objects.filter(father_space_id=self.kwargs["space_pk"])
-
-
-class EditTotalBalance(generics.RetrieveUpdateAPIView):
-    serializer_class = TotalBalanceSerializer
-    permission_classes = (IsSpaceOwner,)
-
-    def get_object(self):
-        return TotalBalance.objects.get(father_space_id=self.kwargs.get("space_pk"))
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        currency = request.data.get("currency")
-        if currency == instance.currency:
-            return Response({"error": "You didn't change anything"}, status=status.HTTP_400_BAD_REQUEST)
-        for category in Category.objects.filter(father_space_id=instance.father_space_id):
-            category.spent = convert_currencies(amount=category.spent,
-                                                from_currency=instance.currency,
-                                                to_currency=currency)
-            category.save()
-        serializer.save(balance=convert_currencies(amount=instance.balance,
-                                                   from_currency=instance.currency,
-                                                   to_currency=currency),
-                        currency=currency)
-        for goal in Goal.objects.filter(father_space_id=instance.father_space_id):
-            goal.collected = convert_currencies(amount=goal.collected,
-                                                from_currency=instance.currency,
-                                                to_currency=currency)
-            goal.save()
-        return Response(serializer.data)

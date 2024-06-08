@@ -21,6 +21,7 @@ DEBUG = env.bool("DEBUG")
 
 ALLOWED_HOSTS = ["*"]
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     "apps.transfer",
     "apps.cryptocurrency",
     "apps.api_stocks",
+    "apps.messenger",
 ]
 
 # Custom user model auth
@@ -132,7 +134,9 @@ TIME_ZONE = "UTC"
 
 USE_I18N = True
 
-USE_L10N = True
+DATE_FORMAT = 'Y-m-d'  # ISO 8601 format
+
+USE_L10N = False
 
 USE_TZ = True
 
@@ -151,7 +155,7 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=365),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
@@ -179,12 +183,12 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=15),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-    
+
 
     # custom
     'REFRESH_TOKEN_COOKIE_NAME': 'refresh',
     'REFRESH_TOKEN_COOKIE_OPTIONS': {
-        'max_age': 86400,
+        'max_age': 604800,
         'httponly': True,
         'samesite': 'Lax',
         'secure': False,
@@ -199,6 +203,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5473",
     "http://127.0.0.1:8000",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
@@ -208,6 +213,7 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5473",
     "http://localhost:3000",
     "http://127.0.0.1:8000",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
@@ -218,11 +224,13 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5473",
     "http://127.0.0.1:8000",
     ]
 SESSION_COOKIE_SAMESITE = "Lax"
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:5173",
+    "http://localhost:5473",
     "http://127.0.0.1:8000",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
@@ -242,7 +250,7 @@ CELERY_RESULT_BACKEND = "django-db"
 SITE_ID = 2
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.google.com"
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 

@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Icons(models.TextChoices):
     """
     Enumeration class defining various icons' names and their display names.

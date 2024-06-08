@@ -23,13 +23,24 @@ from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user
 
 from backend.apps.space.models import Space, MemberPermissions
 
+from backend.apps.messenger.models import SpaceGroup
+
 from datetime import datetime
+
+from backend.apps.total_balance.models import TotalBalance
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = (permissions.AllowAny,)
+
+
+class UserProfileView(generics.RetrieveAPIView):
+    serializer_class = CustomUserSerializer
+
+    def get_object(self):
+        return self.request.user
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -56,6 +67,20 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
                 secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
             )
+        return response
+
+
+class LogoutView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        response = Response()
+        response.delete_cookie(
+            key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
+            path=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('path', '/'),
+            samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
+        )
+        response.data = {"message": "Logout successful."}
         return response
 
 
@@ -100,55 +125,60 @@ class ConfirmRegistrationView(APIView):
     permission_classes = (permissions.AllowAny,)
     def post(self, request, *args, **kwargs):
         verify_code = request.data.get('verify_code')
+        currency = request.data.get("currency")
         user = CustomUser.objects.filter(verify_code=verify_code).first()
 
         if user:
             user.is_active = True
             user.verify_code = "verified"
             user.save()
-            with transaction.atomic():
-                # Save the space instance
-                space = Space.objects.create(title="Main")
 
-                # Create a MemberPermissions instance setting the current user as the owner
-                MemberPermissions.objects.create(
-                    member=user,
-                    space=space,
-                    owner=True
-                )
+            space = Space.objects.create(title="Main", currency=currency)
+
+            MemberPermissions.objects.create(
+                member=user,
+                space=space,
+                owner=True
+            )
+
+            TotalBalance.objects.create(father_space=space, balance=0)
+
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SendResetCodeView(generics.RetrieveAPIView):
-    """
-    sending a code for reset password
-    """
+class ConfirmNewEmailView(APIView):
+    def post(self, request, *args, **kwargs):
+        verify_code = request.data.get('verify_code')
+        code_from_new_email = request.data.get('code_from_new_email')
+
+        if request.user.verify_code == verify_code and request.user.code_from_new_email == code_from_new_email:
+            request.user.verify_code = "verified"
+            request.user.code_from_new_email = None
+            request.user.email = request.user.new_email
+            request.user.new_email = None
+            request.user.save()
+            return Response({'detail': 'Email verified.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomUserUpdateAPIView(generics.UpdateAPIView):
     serializer_class = CustomUserSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
 
-    def get(self, request, *args, **kwargs):
-        user = CustomUser.objects.get(email=request.user.email)
+    def get_object(self):
+        return self.request.user
 
-        try:
-            code = get_verify_code()
-            send_code_to_new_user(user.email, code, "resetPassword")
+    def update(self, request, *args, **kwargs):
+        partial = True
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-            user.password_reset_code = code
-            user.save()
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
 
-            return Response({"message": "successfully"})
-
-        except (Exception,):
-            return Response({"message": "sending error"})
-
-
-class ResetPasswordView(generics.UpdateAPIView):
-    """
-    Verification almost
-    """
-    serializer_class = ResetPasswordSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (authentication.TokenAuthentication, authentication.SessionAuthentication)
+        return Response(serializer.data)

@@ -1,7 +1,7 @@
 from django.urls import path
 
-from backend.apps.space.views import ListOfSpaces, CreateSpace, EditSpace, DeleteSpace, AddMemberToSpace, RemoveMemberFromSpace, \
-    MemberPermissionsEdit
+from backend.apps.space.views import (ListOfSpaces, CreateSpace, EditSpace, DeleteSpace, AddMemberToSpace,
+                                      RemoveMemberFromSpace, MemberPermissionsEdit, ListOfUsersInSpace)
 
 urlpatterns = [
     path("create_space/", CreateSpace.as_view(), name="create_space"),
@@ -12,4 +12,5 @@ urlpatterns = [
     path("my_spaces/<int:pk>/remove_member/", RemoveMemberFromSpace.as_view(), name="remove_member"),
     path('my_spaces/<int:pk>/edit_member/<int:member_id>/', MemberPermissionsEdit.as_view(),
          name='member-permissions-edit'),
+    path("my_spaces/<int:space_pk>/members/", ListOfUsersInSpace.as_view(), name="info-about-space-users")
 ]

@@ -9,6 +9,9 @@ from backend.apps.category.permissions import (CanCreateCategories, CanEditCateg
 from backend.apps.category.serializers import CategorySerializer
 from backend.apps.space.models import Space
 
+from rest_framework.response import Response
+from rest_framework import status
+
 
 class CreateCategory(generics.CreateAPIView):
     serializer_class = CategorySerializer
@@ -17,9 +20,17 @@ class CreateCategory(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
-        request.data['father_space'] = space.pk
-        request.data['spent'] = 0
-        return super().create(request, *args, **kwargs)
+
+        data = request.data.copy()
+        data['father_space'] = space.pk
+        data['spent'] = 0
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ViewCategory(generics.ListAPIView):
@@ -27,7 +38,7 @@ class ViewCategory(generics.ListAPIView):
     permission_classes = (IsSpaceMember,)
 
     def get_queryset(self):
-        return Category.objects.filter(father_space_id=self.kwargs.get("space_pk"))
+        return Category.objects.filter(father_space_id=self.kwargs.get("space_pk")).order_by('pk')
 
 
 class EditCategory(generics.RetrieveUpdateAPIView):

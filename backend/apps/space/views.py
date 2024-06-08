@@ -4,13 +4,20 @@ from rest_framework import generics
 from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
+from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.space.models import Space, MemberPermissions
-from backend.apps.space.serializers import SpaceSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
+from backend.apps.space.serializers import SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
                                             CanEditMembers)
+from backend.apps.account import permissions
 from rest_framework.response import Response
 from rest_framework import status
 
+from backend.apps.converter.utils import convert_currencies
+
+from backend.apps.goal.models import Goal
+
+from backend.apps.total_balance.models import TotalBalance
 
 from django.db import transaction
 
@@ -47,16 +54,27 @@ class CreateSpace(generics.CreateAPIView):
             Account.objects.create(
                 title="Cash",
                 balance=0,
-                currency=self.request.user.currency,
+                currency=self.request.data.get("currency"),
                 father_space=space
             )
 
+            TotalBalance.objects.create(balance=0, father_space=space)
+
 
 class ListOfSpaces(generics.ListAPIView):
-    serializer_class = SpaceSerializer
+    serializer_class = SpaceListSerializer
 
     def get_queryset(self):
         return Space.objects.filter(members=self.request.user)
+
+
+class ListOfUsersInSpace(generics.ListAPIView):
+    permission_classes = (permissions.IsSpaceMember,)
+    serializer_class = CustomUserSerializer
+
+    def get_queryset(self):
+        space = Space.objects.get(pk=self.kwargs.get("space_pk"))
+        return space.members
 
 
 class EditSpace(generics.RetrieveUpdateAPIView):
@@ -65,6 +83,32 @@ class EditSpace(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        currency = self.request.data.get("currency")
+        for category in Category.objects.filter(father_space=instance):
+            category.spent = convert_currencies(amount=category.spent,
+                                                from_currency=instance.currency,
+                                                to_currency=currency)
+            category.save()
+        total_balance = TotalBalance.objects.get(father_space=instance)
+        if total_balance:
+            total_balance.balance=convert_currencies(amount=total_balance.balance,
+                                                     from_currency=instance.currency,
+                                                     to_currency=currency)
+            total_balance.save()
+        for goal in Goal.objects.filter(father_space=instance):
+            goal.collected = convert_currencies(amount=goal.collected,
+                                                from_currency=instance.currency,
+                                                to_currency=currency)
+            goal.save()
+        instance.currency = currency
+        instance.title = request.data.get("title")
+        instance.save()
+        return Response(serializer.data)
 
 
 class DeleteSpace(generics.RetrieveDestroyAPIView):
@@ -82,11 +126,11 @@ class AddMemberToSpace(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
-        user_pk = request.data.get("user_pk", )
+        user_email = request.data.get("user_email", )
         space = Space.objects.get(pk=space_pk)
 
         try:
-            user = CustomUser.objects.get(email=request.user.email)
+            user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."},
                             status=status.HTTP_404_NOT_FOUND)
@@ -110,11 +154,11 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
-        user_pk = request.data.get("user_pk", )
+        user_email = request.data.get("user_email", )
         space = Space.objects.get(pk=space_pk)
 
         try:
-            user = CustomUser.objects.get(email=request.user.email)
+            user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -143,7 +187,7 @@ class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
         space = Space.objects.get(pk=space_id)
 
         try:
-            user = CustomUser.objects.get(email=request.user.email)
+            user = CustomUser.objects.get(pk=member_id)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 

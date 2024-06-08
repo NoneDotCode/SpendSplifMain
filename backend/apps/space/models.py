@@ -1,6 +1,7 @@
 from django.db import models
 
 from backend.apps.customuser.models import CustomUser
+from backend.apps.customuser.constants import Currency
 
 
 class Space(models.Model):
@@ -9,6 +10,7 @@ class Space(models.Model):
     """
 
     title = models.CharField(max_length=24)
+    currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     members = models.ManyToManyField(CustomUser, verbose_name="members", through="MemberPermissions")
 
     def __str__(self):
