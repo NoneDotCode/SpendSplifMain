@@ -68,7 +68,7 @@ class SpendView(generics.GenericAPIView):
             currency=account.currency,
             comment=comment,
             from_acc=account.title,
-            to_cat=category.title if category else None,
+            to_cat=category.title if category else "",
             father_space_id=space_pk,
             amount_in_default_currency=convert_currencies(amount=amount,
                                                           from_currency=account.currency,
