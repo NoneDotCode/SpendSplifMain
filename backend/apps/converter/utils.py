@@ -14,18 +14,15 @@ def convert_number_to_letter(number: float) -> str:
     for example from 1700 to 1.7k"""
 
     suffixes = {1000000000: 'b', 1000000: 'm', 1000: 'k'}
-    if number:
-        if number >= 100000:
-            for key in sorted(suffixes.keys(), reverse=True):
 
-                if number >= key:
-                    cuted_number = number / key
-                    if int(cuted_number) == cuted_number and isinstance(cuted_number, float):
-                        return f"{int(cuted_number)}{suffixes[key]}"
-                    
-                    return f"{float(cuted_number)}{suffixes[key]}"
-        else: 
-            return number
+    if number:
+        for key in sorted(suffixes.keys(), reverse=True):
+            if number >= key:
+                cuted_number = number / key
+                if int(cuted_number) == cuted_number:
+                    return f"{int(cuted_number)}{suffixes[key]}"
+                else:
+                    return f"{cuted_number:.1f}{suffixes[key]}"
+        return str(int(number))  # If the number is less than 1000
     else:
-        return str(number)
-    return '0'
+        return '0'
