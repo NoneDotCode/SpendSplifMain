@@ -36,10 +36,10 @@ class HistoryIncome(models.Model):
 
 
 class HistoryTransfer(models.Model):
-    from_acc =  models.ForeignKey(Account, verbose_name='from_acc', on_delete=models.CASCADE)
-    to_acc =  models.ForeignKey(Account, verbose_name='to_acc', on_delete=models.CASCADE)
-    to_goal =  models.ForeignKey(Goal, verbose_name='to_goal', on_delete=models.CASCADE)
-    from_goal = models.ForeignKey(Goal, verbose_name='from_goal', on_delete=models.CASCADE)
+    from_acc = models.ForeignKey(Account, related_name='transfers_from', verbose_name='from_acc', on_delete=models.CASCADE)
+    to_acc = models.ForeignKey(Account, related_name='transfers_to', verbose_name='to_acc', on_delete=models.CASCADE)
+    from_goal = models.ForeignKey(Goal, related_name='transfers_from_goal', verbose_name='from_goal', on_delete=models.CASCADE)
+    to_goal = models.ForeignKey(Goal, related_name='transfers_to_goal', verbose_name='to_goal', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=12, decimal_places=2)
