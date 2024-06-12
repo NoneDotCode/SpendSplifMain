@@ -42,13 +42,15 @@ class CreateSpace(generics.CreateAPIView):
                 title="Food",
                 limit=1000,
                 spent=0,
-                father_space=space
+                father_space=space,
+                icon="Donut"
             )
 
             Category.objects.create(
                 title="Home",
                 spent=0,
-                father_space=space
+                father_space=space,
+                icon="Home"
             )
 
             Account.objects.create(

@@ -98,3 +98,11 @@ class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):
 class ExpenseSummarySerializer(serializers.Serializer):
     categories = serializers.DictField()
     total_amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+
+class CombinedStatisticSerializer(serializers.Serializer):
+    Expenses = serializers.DictField()
+    Balance = serializers.DictField()
+    Incomes = serializers.DictField()
+    Goals = serializers.DictField()
+    Recurring_Payments = serializers.DictField()
+    Categories = serializers.DictField()
