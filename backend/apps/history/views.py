@@ -23,7 +23,7 @@ from backend.apps.history.serializers import HistoryExpenseSerializer, \
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
-from backend.apps.history.serializers import HistoryIncomeSerializer
+from backend.apps.history.serializers import HistoryIncomeSerializer, CombinedStatisticSerializer
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.space.models import Space
 from rest_framework import serializers
@@ -41,14 +41,6 @@ class HistoryView(ObjectMultipleModelAPIView):
                 HistoryExpenseSerializer}
         ]
 
-
-class CombinedStatisticSerializer(serializers.Serializer):
-    Expenses = serializers.DictField()
-    Balance = serializers.DictField()
-    Incomes = serializers.DictField()
-    Goals = serializers.DictField()
-    Recurring_Payments = serializers.DictField()
-    Categories = serializers.DictField()
 
 
 class StatisticView(generics.GenericAPIView):
