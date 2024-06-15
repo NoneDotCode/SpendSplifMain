@@ -69,6 +69,11 @@ class ListOfSpaces(generics.ListAPIView):
     def get_queryset(self):
         return Space.objects.filter(members=self.request.user)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
 
 class ListOfUsersInSpace(generics.ListAPIView):
     permission_classes = (permissions.IsSpaceMember,)

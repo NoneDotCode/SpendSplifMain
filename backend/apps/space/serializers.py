@@ -17,14 +17,18 @@ class SpaceListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Space
-        fields = ("id", "title", "currency", "members_count")
+        fields = ("id", "title", "currency", "members_count", "can_edit_permissions")
 
     @staticmethod
     def get_members_count(obj):
         return obj.members.count()
 
     def get_can_edit_permissions(self, obj):
-        return obj.memberpermissions_set.filter(member=self.request.user, add_members=True).exists()
+        request = self.context.get('request')
+        if not request or not request.user:
+            return False
+        return (obj.memberpermissions_set.filter(member=request.user, edit_members=True).exists() or
+                obj.memberpermissions_set.filter(member=request.user, owner=True).exists())
 
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):
