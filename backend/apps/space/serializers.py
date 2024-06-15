@@ -13,6 +13,7 @@ class SpaceSerializer(serializers.ModelSerializer):
 
 class SpaceListSerializer(serializers.ModelSerializer):
     members_count = serializers.SerializerMethodField()
+    can_edit_permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = Space
@@ -21,6 +22,9 @@ class SpaceListSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_members_count(obj):
         return obj.members.count()
+
+    def get_can_edit_permissions(self, obj):
+        return obj.memberpermissions_set.filter(member=self.request.user, add_members=True).exists()
 
 
 class AddAndRemoveMemberSerializer(serializers.Serializer):

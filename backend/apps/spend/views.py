@@ -48,18 +48,25 @@ class SpendView(generics.GenericAPIView):
         to_currency = space.currency
 
         category = None
-        
+
+
         if category_pk:
             category = Category.objects.filter(pk=category_pk).first()
-            if TotalBalance.objects.filter(father_space_id=space_pk).exists():  # Перевірка існування TotalBalance
-                total_balance = TotalBalance.objects.get(father_space_id=space_pk)
-                to_currency = space.currency
-                category.spent += convert_currencies(amount=amount,
-                                                     from_currency=account.currency,
-                                                     to_currency=to_currency)
-                category.save()
+            to_currency = space.currency
+            category.spent += convert_currencies(amount=amount,
+                                                 from_currency=account.currency,
+                                                 to_currency=to_currency)
+            category.save()
         else:
             account.balance -= amount
+
+        total_balance = TotalBalance.objects.get(father_space_id=space_pk)
+
+        total_balance.balance -= convert_currencies(amount=amount,
+                                                    from_currency=account.currency,
+                                                    to_currency=space.currency)
+        total_balance.save()
+
         comment = request.data.get("comment")
         if comment is None:
             comment = ""
@@ -72,13 +79,9 @@ class SpendView(generics.GenericAPIView):
             father_space_id=space_pk,
             amount_in_default_currency=convert_currencies(amount=amount,
                                                           from_currency=account.currency,
-                                                          to_currency=space.currency)
+                                                          to_currency=space.currency),
+            new_balance=total_balance.balance
         )
-        if 'total_balance' in locals(): 
-            total_balance.balance -= convert_currencies(amount=amount,
-                                                        from_currency=account.currency,
-                                                        to_currency=space.currency)
-            total_balance.save()
         return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
 
 

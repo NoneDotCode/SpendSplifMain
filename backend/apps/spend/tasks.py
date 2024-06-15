@@ -21,10 +21,16 @@ def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_cu
         return f"It is not enough money on the balance for {title} spend."
     account.balance -= Decimal(amount)
     account.save()
-    category.spent += convert_currencies(amount=Decimal(amount),
+    category.spent += convert_currencies(amount=amount,
                                          from_currency=account.currency,
                                          to_currency=to_currency)
     category.save()
+    total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
+    if total_balance:
+        total_balance[0].balance -= convert_currencies(amount=amount,
+                                                       from_currency=account.currency,
+                                                       to_currency=to_currency)
+        total_balance[0].save()
     comment = title
     HistoryExpense.objects.create(
         amount=amount,
@@ -37,12 +43,7 @@ def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_cu
         to_cat=category,
         periodic_expense=True,
         father_space_id=space_pk,
-        cat_icon=category.icon
+        new_balance=total_balance.balance
     )
-    total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
-    if total_balance:
-        total_balance[0].balance -= convert_currencies(amount=Decimal(amount),
-                                                       from_currency=account.currency,
-                                                       to_currency=to_currency)
-        total_balance[0].save()
+
     return "Expense successfully completed."
