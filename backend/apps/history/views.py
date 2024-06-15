@@ -27,6 +27,9 @@ from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.goal.models import Goal
 
+from django.utils.timezone import make_aware, is_naive
+import pytz
+
 
 class HistoryView(ObjectMultipleModelAPIView):
     permission_classes = (IsSpaceMember,)
@@ -158,7 +161,8 @@ class IncomeStatisticView(generics.ListAPIView):
 
     @staticmethod
     def get_periods(incomes: List[HistoryIncome]) -> Dict[str, List[HistoryIncome]]:
-        now = timezone.now()
+        tz = pytz.timezone(zone="UTC")
+        now = datetime.now(tz)
         week_ago = now - timezone.timedelta(days=7)
         month_ago = now - timezone.timedelta(days=30)
         three_month_ago = now - timezone.timedelta(days=90)
@@ -509,98 +513,83 @@ class GeneralView(generics.GenericAPIView):
     permission_classes = (IsSpaceMember,)
 
     def get(self, request, space_pk, *args, **kwargs):
-        data = {}
-        data["Week"], data["Week_Percent"], data["Analyze_Week"] = self.get_data_and_analysis(7, space_pk)
-        data["Month"], data["Month_Percent"], data["Analyze_Month"] = self.get_data_and_analysis(30, space_pk)
-        data["Three_month"], data["Three_month_Percent"], data["Analyze_Three_month"] = self.get_data_and_analysis(90,
-                                                                                                                   space_pk)
-        data["Year"], data["Year_Percent"], data["Analyze_Year"] = self.get_data_and_analysis(365, space_pk)
+        data = {
+            "Week": self.get_data_and_percentages(7, space_pk),
+            "Month": self.get_data_and_percentages(30, space_pk),
+            "Three_month": self.get_data_and_percentages(90, space_pk),
+            "Year": self.get_data_and_percentages(365, space_pk)
+        }
         return Response(data)
 
-    def get_data_and_analysis(self, days, space_pk):
-        period_data = self.get_data_for_period(days, space_pk)
-        analysis = self.get_analysis(days, space_pk, period_data)
-        percentages = self.get_percentages(period_data)
-        period_data = {i: period_data[i]["balance"] for i in period_data.keys()}
-        return period_data, percentages, analysis
+    def get_data_and_percentages(self, days, space_pk):
+        period_data, initial_balance, start_date = self.get_data_for_period(days, space_pk)
+        percentages = self.calculate_percentages(period_data, initial_balance)
+        return {
+            "balance": period_data,
+            "percentages": percentages,
+        }
 
     def get_data_for_period(self, days, space_pk):
-        start_date = datetime.now() - timedelta(days=days)
-        end_date = datetime.now()
-        expenses = HistoryExpense.objects.filter(
+        tz = pytz.timezone('UTC')
+        start_date = make_aware(datetime.now() - timedelta(days=days), tz) if is_naive(datetime.now()) else datetime.now() - timedelta(days=days)
+        end_date = make_aware(datetime.now(), tz) if is_naive(datetime.now()) else datetime.now()
+
+        expenses = list(HistoryExpense.objects.filter(
             created__range=[start_date, end_date],
             father_space_id=space_pk
-        ).values('created').annotate(
-            expenses=Sum('amount_in_default_currency')
-        ).order_by('created')
-        incomes = HistoryIncome.objects.filter(
+        ).values('created', 'new_balance').order_by('created'))
+
+        incomes = list(HistoryIncome.objects.filter(
             created__range=[start_date, end_date],
             father_space_id=space_pk
-        ).values('created').annotate(
-            incomes=Sum('amount_in_default_currency')
-        ).order_by('created')
-        transfers = HistoryTransfer.objects.filter(
-            created__range=[start_date, end_date],
-            father_space_id=space_pk,
-            goal_is_done=True
-        ).values('created').annotate(
-            expenses=Sum('amount_in_default_currency')
-        ).order_by('created')
+        ).values('created', 'new_balance').order_by('created'))
+
+        combined_records = sorted(expenses + incomes, key=lambda x: x['created'])
 
         period_data = {}
+        for record in combined_records:
+            date_str = record['created'].strftime('%Y-%m-%d')
+            period_data[date_str] = record['new_balance']
+
         initial_balance = self.get_initial_balance(start_date, space_pk)
 
-        for expense in expenses:
-            date_str = expense['created'].strftime('%Y-%m-%d')
-            income = next((inc for inc in incomes if inc['created'].date() == expense['created'].date()),
-                          {'incomes': 0})
-            transfer = next((tr for tr in transfers if tr['created'].date() == expense['created'].date()),
-                            {'expenses': 0})
-            balance = initial_balance + income['incomes'] - (expense['expenses'] + transfer['expenses'])
-            period_data[date_str] = self.format_balance(balance, initial_balance, space_pk)
+        extend_dict = {start_date.strftime('%Y-%m-%d'): initial_balance}
 
-        for income in incomes:
-            date_str = income['created'].strftime('%Y-%m-%d')
-            if date_str not in period_data:
-                balance = initial_balance + income['incomes']
-                period_data[date_str] = self.format_balance(balance, initial_balance, space_pk)
+        period_data, extend_dict = extend_dict, period_data
 
-        return period_data
+        period_data.update(extend_dict)
+
+        return period_data, initial_balance, start_date
 
     @staticmethod
     def get_initial_balance(start_date, space_pk):
-        expenses = HistoryExpense.objects.filter(created__lt=start_date, father_space_id=space_pk).aggregate(
-            Sum('amount_in_default_currency'))['amount_in_default_currency__sum'] or Decimal(0)
-        incomes = HistoryIncome.objects.filter(created__lt=start_date, father_space_id=space_pk).aggregate(
-            Sum('amount_in_default_currency'))['amount_in_default_currency__sum'] or Decimal(0)
-        transfers = \
-        HistoryTransfer.objects.filter(created__lt=start_date, father_space_id=space_pk, goal_is_done=True).aggregate(
-            Sum('amount_in_default_currency'))['amount_in_default_currency__sum'] or Decimal(0)
-        return incomes - (expenses + transfers)
+        earliest_expense = HistoryExpense.objects.filter(
+            created__lt=start_date,
+            father_space_id=space_pk
+        ).order_by('created').first()
 
-    def format_balance(self, balance, initial_balance, space_pk):
-        percentage = round((balance / initial_balance) * 100, 2) if initial_balance != 0 else 0
-        return {'balance': f"{balance} {self.get_currency(space_pk)}", 'percentage': f"{int(percentage)}%"}
+        earliest_income = HistoryIncome.objects.filter(
+            created__lt=start_date,
+            father_space_id=space_pk
+        ).order_by('created').first()
 
-    def get_analysis(self, days, space_pk, period_data):
-        if not period_data:
-            return "No data available for this period."
+        earliest_record = None
+        if earliest_expense and earliest_income:
+            earliest_record = earliest_expense if earliest_expense.created < earliest_income.created else earliest_income
+        elif earliest_expense:
+            earliest_record = earliest_expense
+        elif earliest_income:
+            earliest_record = earliest_income
 
-        start_percentage = float(next(iter(period_data.values()))['percentage'].strip('%'))
-        end_percentage = float(next(reversed(period_data.values()))['percentage'].strip('%'))
-        change = int(end_percentage - start_percentage)
-        return f"Your balance changed by {change}% over the last {days} days."
+        return earliest_record.new_balance if earliest_record else Decimal(0)
 
-    def get_percentages(self, period_data):
-        return {date: data['percentage'] for date, data in period_data.items()}
+    def calculate_percentages(self, period_data, initial_balance):
+        percentages = {}
+        for date, balance in period_data.items():
+            percentage = (balance / initial_balance) * 100 if initial_balance != 0 else 0
+            percentages[date] = f"{round(percentage, 2)}%"
+        return percentages
 
-    def get_currency(self, space_pk):
-        return Space.objects.get(pk=space_pk).currency
-
-    def format_amount(self, amount, space_pk):
-        rounded_amount = round(float(re.sub(r'[^\d.]', '', str(amount))))
-        currency = self.get_currency(space_pk)
-        return f"{rounded_amount} {currency}"
 
 
 class RecurringPaymentsStatistic(generics.ListAPIView):
@@ -706,53 +695,53 @@ class IncomeAutoDataView(generics.ListAPIView):
         account = Account.objects.create(title='Cash', balance=1000, currency='USD', father_space=father_space)
         income_data = [
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 1), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 1), 'comment': '', 'new_balance': 1034},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 4), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 4), 'comment': '', 'new_balance': 10245},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 5), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 5), 'comment': '', 'new_balance': 14},
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 15), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 15), 'comment': '', 'new_balance': 1034},
             {'amount': 50, 'amount_in_default_currency': 50, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 13), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 13), 'comment': '', 'new_balance': 901},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 11), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 11), 'comment': '', 'new_balance': 700},
             {'amount': 1900, 'amount_in_default_currency': 1900, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 6, 9), 'comment': ''},
+             'account': account, 'created': datetime(2024, 6, 9), 'comment': '', 'new_balance': 1039},
             {'amount': 500, 'amount_in_default_currency': 500, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 12, 30), 'comment': ''},
+             'account': account, 'created': datetime(2023, 12, 30), 'comment': '', 'new_balance': 2000},
             {'amount': 390, 'amount_in_default_currency': 390, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 3, 5), 'comment': ''},
+             'account': account, 'created': datetime(2024, 3, 5), 'comment': '', 'new_balance': 3256},
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 1, 1), 'comment': ''},
+             'account': account, 'created': datetime(2023, 1, 1), 'comment': '', 'new_balance': 901},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 3, 1), 'comment': ''},
+             'account': account, 'created': datetime(2023, 3, 1), 'comment': '', 'new_balance': 941},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 5, 1), 'comment': ''},
+             'account': account, 'created': datetime(2023, 5, 1), 'comment': '', 'new_balance': 23456},
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 9, 1), 'comment': ''},
+             'account': account, 'created': datetime(2023, 9, 1), 'comment': '', 'new_balance': 9344},
             {'amount': 50, 'amount_in_default_currency': 50, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 11, 1), 'comment': ''},
+             'account': account, 'created': datetime(2023, 11, 1), 'comment': '', 'new_balance': 901},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 12, 1), 'comment': ''},
+             'account': account, 'created': datetime(2023, 12, 1), 'comment': '', 'new_balance': 601},
             {'amount': 1900, 'amount_in_default_currency': 1900, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 12, 15), 'comment': ''},
+             'account': account, 'created': datetime(2023, 12, 15), 'comment': '', 'new_balance': 941},
             {'amount': 500, 'amount_in_default_currency': 500, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2023, 12, 30), 'comment': ''},
+             'account': account, 'created': datetime(2023, 12, 30), 'comment': '', 'new_balance': 546},
             {'amount': 390, 'amount_in_default_currency': 390, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 3, 5), 'comment': ''},
+             'account': account, 'created': datetime(2024, 3, 5), 'comment': '', 'new_balance': 9023},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 4, 10), 'comment': ''},
+             'account': account, 'created': datetime(2024, 4, 10), 'comment': '', 'new_balance': 901},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 4, 19), 'comment': ''},
+             'account': account, 'created': datetime(2024, 4, 19), 'comment': '', 'new_balance': 101},
             {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 4, 20), 'comment': ''},
+             'account': account, 'created': datetime(2024, 4, 20), 'comment': '', 'new_balance': 9781},
             {'amount': 900, 'amount_in_default_currency': 900, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 4, 22), 'comment': ''},
+             'account': account, 'created': datetime(2024, 4, 22), 'comment': '', 'new_balance': 9011},
             {'amount': 10000, 'amount_in_default_currency': 10000, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 4, 24), 'comment': ''},
+             'account': account, 'created': datetime(2024, 4, 24), 'comment': '', 'new_balance': 2301},
             {'amount': 1000, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
-             'account': account, 'created': datetime(2024, 4, 25), 'comment': ''}
+             'account': account, 'created': datetime(2024, 4, 25), 'comment': '', 'new_balance': 911}
         ]
 
         incomes = [HistoryIncome(**data) for data in income_data]
@@ -792,149 +781,145 @@ class ExpenseAutoDataView(generics.ListAPIView):
         expense_data = [
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 6, 15),
-             'comment': '', 'to_cat': categories['Food'], 'cat_icon': 'Donut'},
+             'comment': '', 'to_cat': categories['Food'], 'new_balance': 10000},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 14), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 901},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 9), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 9011},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 11),
-             'comment': '', 'to_cat': categories['Food'], 'cat_icon': 'Donut'},
+             'comment': '', 'to_cat': categories['Food'], 'new_balance': 1111},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 10), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 981},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 2), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 829},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 13), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 283},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 30), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 9056},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 6), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 9012},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 6, 2), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 901},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2023, 1, 30),
-             'comment': '', 'to_cat': categories['Food'], 'cat_icon': 'Donut'},
+             'comment': '', 'to_cat': categories['Food'], 'new_balance': 9349},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2023, 3, 20), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 2300},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2023, 5, 11), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 1234},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2023, 9, 11),
-             'comment': '', 'to_cat': categories['Food'], 'cat_icon': 'Donut'},
+             'comment': '', 'to_cat': categories['Food'], 'new_balance': 10325},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 3, 10), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 23456},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 2, 2), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 43289},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 2, 16), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 1454},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 1, 31), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 10},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 3, 6), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 100},
             {'amount': 1000, 'amount_in_default_currency': 1000, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 4, 2), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 100000},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 3),
-             'comment': '', 'to_cat': categories['Food'], 'cat_icon': 'Donut'},
+             'comment': '', 'to_cat': categories['Food'], 'new_balance': 10000},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 3),
-             'comment': '', 'to_cat': categories['Utilities'], 'cat_icon': 'Bolt'},
+             'comment': '', 'to_cat': categories['Utilities'], 'new_balance': 1000},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 3),
-             'comment': '', 'to_cat': categories['Subscription'], 'cat_icon': 'Film'},
+             'comment': '', 'to_cat': categories['Subscription'], 'new_balance': 100},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 3),
-             'comment': '', 'to_cat': categories['Insurance'], 'cat_icon': 'Shield'},
+             'comment': '', 'to_cat': categories['Insurance'], 'new_balance': 10},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 3),
-             'comment': '', 'to_cat': categories['Transportation'], 'cat_icon': 'Cart'},
+             'comment': '', 'to_cat': categories['Transportation'], 'new_balance': 10000},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 4), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 4615},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 5), 'comment': '', 'to_cat': categories['Home'],
-             'cat_icon': 'Home'},
+             'new_balance': 859},
             {'amount': 750, 'amount_in_default_currency': 750, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 6), 'comment': '', 'to_cat': categories['Food'],
-             'cat_icon': 'Donut'},
+             'new_balance': 498},
             {'amount': 2000, 'amount_in_default_currency': 2000, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 8), 'comment': '',
-             'to_cat': categories['Home']},
+             'to_cat': categories['Home'], 'new_balance': 8622},
             {'amount': 50, 'amount_in_default_currency': 50, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 15), 'comment': '',
-             'to_cat': categories['Entertainment'],
-             'cat_icon': 'Camera'},
+             'to_cat': categories['Entertainment'], 'new_balance': 555},
             {'amount': 75, 'amount_in_default_currency': 75, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 16), 'comment': '',
-             'to_cat': categories['Transportation'],
-             'cat_icon': 'Cart'},
+             'to_cat': categories['Transportation'], 'new_balance': 10085},
             {'amount': 120, 'amount_in_default_currency': 120, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 17), 'comment': '', 'to_cat': categories['Health'],
-             'cat_icon': 'Pill'},
+             'new_balance': 6565},
             {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 18), 'comment': '', 'to_cat': categories['Gifts'],
-             'cat_icon': 'Gift'},
+             'new_balance': 19896},
             {'amount': 80, 'amount_in_default_currency': 80, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 19), 'comment': '', 'to_cat': categories['Education'],
-             'cat_icon': 'Book'},
+             'new_balance': 854},
             {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 20), 'comment': '',
-             'to_cat': categories['Entertainment'], 'cat_icon': 'Camera'},
+             'to_cat': categories['Entertainment'], 'new_balance': 858},
             {'amount': 120, 'amount_in_default_currency': 120, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 21), 'comment': '', 'to_cat': categories['Gifts'],
-             'cat_icon': 'Gift'},
+             'new_balance': 11},
             {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
              'from_acc': account, 'created': datetime(2024, 5, 22), 'comment': '',
-             'to_cat': categories['Transportation'],
-             'cat_icon': 'Cart'},
+             'to_cat': categories['Transportation'], 'new_balance': 188},
             {'amount': 25, 'amount_in_default_currency': 25, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 13),
-             'comment': 'Еженедельная подписка', 'to_cat': categories['Subscription'], 'cat_icon': 'Camera'},
+             'comment': 'Еженедельная подписка', 'to_cat': categories['Subscription'], 'new_balance': 555},
             {'amount': 100, 'amount_in_default_currency': 100, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2023, 10, 1),
-             'comment': 'Годовая страховка авто', 'to_cat': categories['Insurance'], 'cat_icon': 'Shield'},
+             'comment': 'Годовая страховка авто', 'to_cat': categories['Insurance'], 'new_balance': 135},
             {'amount': 80, 'amount_in_default_currency': 80, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 3, 15),
-             'comment': 'Квартальная арендная плата', 'to_cat': categories['Rent'], 'cat_icon': 'Home'},
+             'comment': 'Квартальная арендная плата', 'to_cat': categories['Rent'], 'new_balance': 4685},
             {'amount': 300, 'amount_in_default_currency': 300, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 1),
-             'comment': 'Полугодовая плата за обучение', 'to_cat': categories['Education'], 'cat_icon': 'Book'},
+             'comment': 'Полугодовая плата за обучение', 'to_cat': categories['Education'], 'new_balance': 88},
             {'amount': 40, 'amount_in_default_currency': 40, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 11),
-             'comment': 'Еженедельные расходы на транспорт', 'to_cat': categories['Transportation'],
-             'cat_icon': 'Cart'},
+             'comment': 'Еженедельные расходы на транспорт', 'to_cat': categories['Transportation'], 'new_balance': 444},
             {'amount': 1500, 'amount_in_default_currency': 1500, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 3, 15),
-             'comment': 'Годовая плата за обслуживание', 'to_cat': categories['Maintenance'], 'cat_icon': 'Waterdrop'},
+             'comment': 'Годовая плата за обслуживание', 'to_cat': categories['Maintenance'], 'new_balance': 55},
             {'amount': 60, 'amount_in_default_currency': 60, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 15),
-             'comment': 'Ежемесячная плата за фитнес', 'to_cat': categories['Sports'], 'cat_icon': 'Running'},
+             'comment': 'Ежемесячная плата за фитнес', 'to_cat': categories['Sports'], 'new_balance': 65456},
             {'amount': 200, 'amount_in_default_currency': 200, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 4, 1),
-             'comment': 'Квартальная оплата интернета', 'to_cat': categories['Utilities'], 'cat_icon': 'Home_WiFi'},
+             'comment': 'Квартальная оплата интернета', 'to_cat': categories['Utilities'], 'new_balance': 1465},
             {'amount': 125, 'amount_in_default_currency': 125, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 24),
-             'comment': 'Ежегодный платеж за парковку', 'to_cat': categories['Parking'], 'cat_icon': 'Stop'},
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': categories['Parking'], 'new_balance': 546},
             {'amount': 3464, 'amount_in_default_currency': 3464, 'father_space': father_space, 'currency': 'USD',
              'periodic_expense': True, 'from_acc': account, 'created': datetime(2024, 5, 24),
-             'comment': 'Ежегодный платеж за парковку', 'to_cat': categories['Park'], 'cat_icon': 'Stop'}
+             'comment': 'Ежегодный платеж за парковку', 'to_cat': categories['Park'], 'new_balance': 55}
         ]
         expenses = [HistoryExpense(**data) for data in expense_data]
         HistoryExpense.objects.bulk_create(expenses)
