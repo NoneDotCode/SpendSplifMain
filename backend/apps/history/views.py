@@ -521,6 +521,7 @@ class GeneralView(generics.GenericAPIView):
         period_data = self.get_data_for_period(days, space_pk)
         analysis = self.get_analysis(days, space_pk, period_data)
         percentages = self.get_percentages(period_data)
+        period_data = {i: period_data[i]["balance"] for i in period_data.keys()}
         return period_data, percentages, analysis
 
     def get_data_for_period(self, days, space_pk):
@@ -579,7 +580,7 @@ class GeneralView(generics.GenericAPIView):
 
     def format_balance(self, balance, initial_balance, space_pk):
         percentage = round((balance / initial_balance) * 100, 2) if initial_balance != 0 else 0
-        return {'balance': f"{balance} {self.get_currency(space_pk)}", 'percentage': f"{percentage}%"}
+        return {'balance': f"{balance} {self.get_currency(space_pk)}", 'percentage': f"{int(percentage)}%"}
 
     def get_analysis(self, days, space_pk, period_data):
         if not period_data:
@@ -587,7 +588,7 @@ class GeneralView(generics.GenericAPIView):
 
         start_percentage = float(next(iter(period_data.values()))['percentage'].strip('%'))
         end_percentage = float(next(reversed(period_data.values()))['percentage'].strip('%'))
-        change = end_percentage - start_percentage
+        change = int(end_percentage - start_percentage)
         return f"Your balance changed by {change}% over the last {days} days."
 
     def get_percentages(self, period_data):
