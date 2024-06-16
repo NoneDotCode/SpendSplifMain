@@ -18,7 +18,7 @@ class HistoryExpense(models.Model):
     amount_in_default_currency = models.DecimalField(max_digits=12, decimal_places=2)
     comment = models.CharField(max_length=300, null=True, blank=True)
     from_acc = models.ForeignKey(Account, verbose_name='from_acc', on_delete=models.DO_NOTHING)
-    to_cat = models.ForeignKey(Category, verbose_name='to_cat', on_delete=models.DO_NOTHING)
+    to_cat = models.ForeignKey(Category, verbose_name='to_cat', on_delete=models.DO_NOTHING, null=True)
     periodic_expense = models.BooleanField(default=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
