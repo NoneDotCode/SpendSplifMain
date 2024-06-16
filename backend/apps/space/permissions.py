@@ -54,7 +54,7 @@ class CanRemoveMembers(BasePermission):
 class CanEditMembers(BasePermission):
 
     def has_permission(self, request, view):
-        space = Space.objects.get(pk=view.kwargs.get("pk", ))
+        space = Space.objects.get(pk=view.kwargs.get("pk"))
 
         if not space.memberpermissions_set.filter(member=request.user, edit_members=True).exists():
             return False
