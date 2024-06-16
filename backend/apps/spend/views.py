@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 
 from backend.apps.account.models import Account
-from backend.apps.account.permissions import IsSpaceMember
+from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 
 from backend.apps.category.models import Category
 
@@ -33,44 +33,56 @@ class SpendView(generics.GenericAPIView):
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get('space_pk')
+        space = Space.objects.get(pk=space_pk)
         account = Account.objects.get(pk=request.data.get("account_pk"))
         amount = request.data.get('amount')
         try:
             1 / amount
         except (TypeError, ZeroDivisionError):
             return Response({"error": "You should put amount bigger than 0."}, status=status.HTTP_400_BAD_REQUEST)
-        category = Category.objects.get(pk=request.data.get("category_pk"))
+        category_pk = request.data.get("category_pk")
         if amount > int(account.balance):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
-        to_currency = account.father_space.currency
-        category.spent += convert_currencies(amount=amount,
-                                             from_currency=account.currency,
-                                             to_currency=to_currency)
-        category.save()
+        to_currency = space.currency
+
+        category = None
+
+
+        if category_pk:
+            category = Category.objects.filter(pk=category_pk).first()
+            to_currency = space.currency
+            category.spent += convert_currencies(amount=amount,
+                                                 from_currency=account.currency,
+                                                 to_currency=to_currency)
+            category.save()
+        else:
+            account.balance -= amount
+
+        total_balance = TotalBalance.objects.get(father_space_id=space_pk)
+
+        total_balance.balance -= convert_currencies(amount=amount,
+                                                    from_currency=account.currency,
+                                                    to_currency=space.currency)
+        total_balance.save()
+
         comment = request.data.get("comment")
         if comment is None:
             comment = ""
         HistoryExpense.objects.create(
             amount=amount,
             currency=account.currency,
-            amount_in_default_currency=convert_currencies(from_currency=account.currency,
-                                                              amount=amount,
-                                                              to_currency=to_currency),
             comment=comment,
-            from_acc=account.title,
-            to_cat=category.title,
+            from_acc=account,
+            to_cat=category,
             father_space_id=space_pk,
-            cat_icon=category.icon
+            amount_in_default_currency=convert_currencies(amount=amount,
+                                                          from_currency=account.currency,
+                                                          to_currency=space.currency),
+            new_balance=total_balance.balance
         )
-        total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
-        if total_balance:
-            total_balance[0].balance -= convert_currencies(amount=amount,
-                                                           from_currency=account.currency,
-                                                           to_currency=to_currency)
-            total_balance[0].save()
-        return Response({"spent": category.spent}, status=status.HTTP_200_OK)
+        return Response({"success": "Expense successfully completed."}, status=status.HTTP_200_OK)
 
 
 class PeriodicSpendCreateView(generics.GenericAPIView):
@@ -90,7 +102,6 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
-        account = Account.objects.get(pk=account_pk)
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
@@ -109,7 +120,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                                                          kwargs.get("space_pk"),
                                                          amount,
                                                          title,
-                                                         account.father_space.currency)))
+                                                         request.user.currency)))
         except ValidationError:
             return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
@@ -199,7 +210,7 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
         periodic_spends_list = list(filter(key, PeriodicTask.objects.all()))
         result = []
         for spend in periodic_spends_list:
-            spend_args = ast.literal_eval(spend.args)
+            spend_args = ast.literal_eval(i.args)
             temp = {
                 "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
                 "account_pk": spend_args[0],

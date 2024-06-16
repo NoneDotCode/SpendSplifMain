@@ -86,7 +86,7 @@ class HistoryExpenseAutoDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryExpense
         fields = ("amount", "currency", "amount_in_default_currency", "comment",
-                  "from_acc", "to_cat", "periodic_expense", "cat_icon", "father_space", "created")
+                  "from_acc", "to_cat", "periodic_expense", "new_balance", "father_space", "created")
 
 
 class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):
@@ -98,3 +98,11 @@ class HistoryTransferAutoDataSerializer(serializers.ModelSerializer):
 class ExpenseSummarySerializer(serializers.Serializer):
     categories = serializers.DictField()
     total_amount = serializers.DecimalField(max_digits=20, decimal_places=2)
+
+class CombinedStatisticSerializer(serializers.Serializer):
+    Expenses = serializers.DictField()
+    Balance = serializers.DictField()
+    Incomes = serializers.DictField()
+    Goals = serializers.DictField()
+    Recurring_Payments = serializers.DictField()
+    Categories = serializers.DictField()

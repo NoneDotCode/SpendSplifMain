@@ -5,10 +5,18 @@ from backend.apps.space.models import Space, MemberPermissions
 
 
 class SpaceSerializer(serializers.ModelSerializer):
+    can_edit_permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = Space
-        fields = ("title", "currency", "members")
+        fields = ("title", "currency", "members", "can_edit_permissions")
+
+    def get_can_edit_permissions(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user:
+            return False
+        return (obj.memberpermissions_set.filter(member=request.user, edit_members=True).exists() or
+                obj.memberpermissions_set.filter(member=request.user, owner=True).exists())
 
 
 class SpaceListSerializer(serializers.ModelSerializer):

@@ -55,7 +55,7 @@ class ViewAccounts(ObjectMultipleModelAPIView):
         space_pk = self.kwargs.get("space_pk")
         return [
             {
-                "queryset": Account.objects.filter(father_space_id=space_pk),
+                "queryset": Account.objects.filter(father_space_id=space_pk).order_by("id"),
                 "serializer_class": AccountSerializer
             },
             {
@@ -85,15 +85,11 @@ class DeleteAccount(generics.RetrieveDestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         account = self.get_object()
         father_space = account.father_space
-        accounts_count = Account.objects.filter(father_space=father_space).count()
         total_balance = TotalBalance.objects.filter(father_space=father_space)
-        if accounts_count <= 2 and total_balance:
-            total_balance.delete()
-        elif accounts_count > 2 and total_balance:
-            total_balance[0].balance -= convert_currencies(amount=account.balance,
-                                                           from_currency=account.currency,
-                                                           to_currency=father_space.currency)
-            total_balance[0].save()
+        total_balance[0].balance -= convert_currencies(amount=account.balance,
+                                                       from_currency=account.currency,
+                                                       to_currency=father_space.currency)
+        total_balance[0].save()
         return super().destroy(request, *args, **kwargs)
 
 
@@ -127,7 +123,8 @@ class IncomeView(generics.GenericAPIView):
                                                               to_currency=default_currency),
                 comment=comment,
                 account=account,
-                father_space_id=space_pk
+                father_space_id=space_pk,
+                new_balance=account.balance
             )
             total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
             if total_balance:

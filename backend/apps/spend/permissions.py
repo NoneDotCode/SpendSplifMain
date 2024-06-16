@@ -14,24 +14,30 @@ from backend.apps.space.models import Space
 class SpendPermission(permissions.BasePermission):
 
     def has_permission(self, request, view):
-        user = request.user
+        
         space_pk = view.kwargs.get("space_pk")
         account_pk = request.data.get("account_pk")
         category_pk = request.data.get("category_pk")
 
         try:
             account = Account.objects.get(pk=account_pk)
-            category = Category.objects.get(pk=category_pk)
             space = Space.objects.get(pk=space_pk)
-        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist):
+        except (Account.DoesNotExist, Space.DoesNotExist):
             return False
 
-        if account.father_space != space or category.father_space != space:
-            return print(space, account.father_space, category.father_space)
+        if category_pk:
+            try:
+                category = Category.objects.get(pk=category_pk)
+            except Category.DoesNotExist:
+                return False
+            if category.father_space != space:
+                return False
+
+        if account.father_space != space:
+            return False
 
         return (IsSpaceOwner().has_permission(request, view) or
-                space.members.filter(id=user.id, memberpermissions__spend=True).exists())
-
+                space.members.filter(id=request.user.id, memberpermissions__spend=True).exists())
 
 class CanCreatePeriodicSpends(permissions.BasePermission):
 

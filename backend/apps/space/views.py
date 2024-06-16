@@ -42,13 +42,15 @@ class CreateSpace(generics.CreateAPIView):
                 title="Food",
                 limit=1000,
                 spent=0,
-                father_space=space
+                father_space=space,
+                icon="Donut"
             )
 
             Category.objects.create(
                 title="Home",
                 spent=0,
-                father_space=space
+                father_space=space,
+                icon="Home"
             )
 
             Account.objects.create(
@@ -67,6 +69,11 @@ class ListOfSpaces(generics.ListAPIView):
     def get_queryset(self):
         return Space.objects.filter(members=self.request.user)
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
 
 class ListOfUsersInSpace(generics.ListAPIView):
     permission_classes = (permissions.IsSpaceMember,)
@@ -74,7 +81,16 @@ class ListOfUsersInSpace(generics.ListAPIView):
 
     def get_queryset(self):
         space = Space.objects.get(pk=self.kwargs.get("space_pk"))
-        return space.members
+        request_user = self.request.user
+
+        members = list(space.members.all())
+
+        if request_user in members:
+            members.remove(request_user)
+
+        members.insert(0, request_user)
+
+        return members
 
 
 class EditSpace(generics.RetrieveUpdateAPIView):
@@ -83,6 +99,11 @@ class EditSpace(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
     
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -177,9 +198,11 @@ class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
     serializer_class = MemberPermissionsSerializer
     permission_classes = (IsSpaceMember & (IsSpaceOwner | CanEditMembers),)
 
-    def get_queryset(self):
-        return MemberPermissions.objects.filter(space_id=self.kwargs.get("pk"),
-                                                member_id=self.kwargs.get("member_id"))
+    def get_object(self):
+        space_id = self.kwargs.get("pk")
+        member_id = self.kwargs.get("member_id")
+        result_object = MemberPermissions.objects.get(space_id=space_id, member_id=member_id)
+        return result_object
 
     def update(self, request, *args, **kwargs):
         space_id = kwargs.get("pk")
