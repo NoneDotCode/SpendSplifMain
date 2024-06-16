@@ -123,7 +123,8 @@ class IncomeView(generics.GenericAPIView):
                                                               to_currency=default_currency),
                 comment=comment,
                 account=account,
-                father_space_id=space_pk
+                father_space_id=space_pk,
+                new_balance=account.balance
             )
             total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
             if total_balance:
