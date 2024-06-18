@@ -1,7 +1,6 @@
 from typing import Dict, List, Tuple, Union
 
 from _decimal import Decimal
-from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.request import Request
 
@@ -9,7 +8,6 @@ from .serializers import IncomeStatisticViewSerializer, \
     CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer
 from datetime import datetime, timedelta
 from decimal import Decimal
-import re
 
 from drf_multiple_model.views import ObjectMultipleModelAPIView
 
@@ -163,10 +161,10 @@ class IncomeStatisticView(generics.ListAPIView):
     def get_periods(incomes: List[HistoryIncome]) -> Dict[str, List[HistoryIncome]]:
         tz = pytz.timezone(zone="UTC")
         now = datetime.now(tz)
-        week_ago = now - timezone.timedelta(days=7)
-        month_ago = now - timezone.timedelta(days=30)
-        three_month_ago = now - timezone.timedelta(days=90)
-        year_ago = now - timezone.timedelta(days=365)
+        week_ago = now - timezone.timedelta(days=6)
+        month_ago = now - timezone.timedelta(days=29)
+        three_month_ago = now - timezone.timedelta(days=89)
+        year_ago = now - timezone.timedelta(days=364)
         periods = {
             'week': [],
             'month': [],
@@ -257,10 +255,10 @@ class ExpensesStatisticView(generics.ListAPIView):
     @staticmethod
     def get_periods(expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
         now = timezone.now()
-        week_ago = now - timezone.timedelta(days=7)
-        month_ago = now - timezone.timedelta(days=30)
-        three_month_ago = now - timezone.timedelta(days=90)
-        year_ago = now - timezone.timedelta(days=365)
+        week_ago = now - timezone.timedelta(days=6)
+        month_ago = now - timezone.timedelta(days=29)
+        three_month_ago = now - timezone.timedelta(days=89)
+        year_ago = now - timezone.timedelta(days=364)
         periods = {
             'Week': [],
             'Month': [],
@@ -514,10 +512,10 @@ class GeneralView(generics.GenericAPIView):
 
     def get(self, request, space_pk, *args, **kwargs):
         data = {
-            "Week": self.get_data_and_percentages(7, space_pk),
-            "Month": self.get_data_and_percentages(30, space_pk),
-            "Three_month": self.get_data_and_percentages(90, space_pk),
-            "Year": self.get_data_and_percentages(365, space_pk)
+            "Week": self.get_data_and_percentages(6, space_pk),
+            "Month": self.get_data_and_percentages(29, space_pk),
+            "Three_month": self.get_data_and_percentages(89, space_pk),
+            "Year": self.get_data_and_percentages(364, space_pk)
         }
         return Response(data)
 
@@ -553,11 +551,14 @@ class GeneralView(generics.GenericAPIView):
 
         initial_balance = self.get_initial_balance(start_date, space_pk)
 
-        extend_dict = {start_date.strftime('%Y-%m-%d'): initial_balance}
+        # Гарантируем, что данные за первый день периода присутствуют
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        if start_date_str not in period_data:
+            last_record_before_start = self.get_last_record_before_date(start_date, space_pk)
+            period_data[start_date_str] = last_record_before_start
 
-        period_data, extend_dict = extend_dict, period_data
-
-        period_data.update(extend_dict)
+        # Сортируем данные по дате
+        period_data = dict(sorted(period_data.items()))
 
         return period_data, initial_balance, start_date
 
@@ -566,16 +567,16 @@ class GeneralView(generics.GenericAPIView):
         earliest_expense = HistoryExpense.objects.filter(
             created__lt=start_date,
             father_space_id=space_pk
-        ).order_by('created').first()
+        ).order_by('-created').first()
 
         earliest_income = HistoryIncome.objects.filter(
             created__lt=start_date,
             father_space_id=space_pk
-        ).order_by('created').first()
+        ).order_by('-created').first()
 
         earliest_record = None
         if earliest_expense and earliest_income:
-            earliest_record = earliest_expense if earliest_expense.created < earliest_income.created else earliest_income
+            earliest_record = earliest_expense if earliest_expense.created > earliest_income.created else earliest_income
         elif earliest_expense:
             earliest_record = earliest_expense
         elif earliest_income:
@@ -583,13 +584,33 @@ class GeneralView(generics.GenericAPIView):
 
         return earliest_record.new_balance if earliest_record else Decimal(0)
 
+    def get_last_record_before_date(self, date, space_pk):
+        last_expense_before_start = HistoryExpense.objects.filter(
+            created__lt=date,
+            father_space_id=space_pk
+        ).order_by('-created').first()
+
+        last_income_before_start = HistoryIncome.objects.filter(
+            created__lt=date,
+            father_space_id=space_pk
+        ).order_by('-created').first()
+
+        last_record_before_start = None
+        if last_expense_before_start and last_income_before_start:
+            last_record_before_start = last_expense_before_start if last_expense_before_start.created > last_income_before_start.created else last_income_before_start
+        elif last_expense_before_start:
+            last_record_before_start = last_expense_before_start
+        elif last_income_before_start:
+            last_record_before_start = last_income_before_start
+
+        return last_record_before_start.new_balance if last_record_before_start else Decimal(0)
+
     def calculate_percentages(self, period_data, initial_balance):
         percentages = {}
         for date, balance in period_data.items():
             percentage = (balance / initial_balance) * 100 if initial_balance != 0 else 0
             percentages[date] = f"{round(percentage, 2)}%"
         return percentages
-
 
 
 class RecurringPaymentsStatistic(generics.ListAPIView):

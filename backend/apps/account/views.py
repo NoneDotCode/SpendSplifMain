@@ -115,6 +115,12 @@ class IncomeView(generics.GenericAPIView):
             comment = request.data.get("comment")
             if comment is None:
                 comment = ""
+            total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
+            if total_balance:
+                total_balance[0].balance += convert_currencies(amount=amount,
+                                                               from_currency=account.currency,
+                                                               to_currency=default_currency)
+                total_balance[0].save()
             HistoryIncome.objects.create(
                 amount=amount,
                 currency=account.currency,
@@ -124,14 +130,8 @@ class IncomeView(generics.GenericAPIView):
                 comment=comment,
                 account=account,
                 father_space_id=space_pk,
-                new_balance=account.balance
+                new_balance=total_balance.balance
             )
-            total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
-            if total_balance:
-                total_balance[0].balance += convert_currencies(amount=amount,
-                                                               from_currency=account.currency,
-                                                               to_currency=default_currency)
-                total_balance[0].save()
         else:
             return Response({"error": "Please, fill out row amount, numbers bigger than 0."})
         return Response({"success": "Income successfully completed."}, status=status.HTTP_200_OK)
