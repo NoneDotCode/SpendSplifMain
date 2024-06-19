@@ -1,23 +1,16 @@
-from rest_framework import generics, status
-from rest_framework.response import Response
+from drf_multiple_model.views import ObjectMultipleModelAPIView
+from rest_framework import generics
+from rest_framework import status
 from rest_framework.generics import get_object_or_404
-
-from backend.apps.space.models import Space
+from rest_framework.response import Response
 
 from backend.apps.account.models import Account
-from backend.apps.account.serializers import AccountSerializer, IncomeSerializer
 from backend.apps.account.permissions import (IsSpaceMember, IsSpaceOwner, CanCreateAccounts, CanEditAccounts,
                                               CanDeleteAccounts, IncomePermission)
-
-from backend.apps.history.models import HistoryIncome
-from rest_framework import generics
-
-from backend.apps.total_balance.models import TotalBalance
-
+from backend.apps.account.serializers import AccountSerializer, IncomeSerializer
 from backend.apps.converter.utils import convert_currencies
-
-from drf_multiple_model.views import ObjectMultipleModelAPIView
-
+from backend.apps.history.models import HistoryIncome
+from backend.apps.space.models import Space
 from backend.apps.total_balance.models import TotalBalance
 from backend.apps.total_balance.serializers import TotalBalanceSerializer
 
@@ -94,7 +87,6 @@ class DeleteAccount(generics.RetrieveDestroyAPIView):
 
 
 class IncomeView(generics.GenericAPIView):
-
     def get_queryset(self):
         return Account.objects.filter(pk=self.kwargs['pk'])
 
@@ -121,6 +113,16 @@ class IncomeView(generics.GenericAPIView):
                                                                from_currency=account.currency,
                                                                to_currency=default_currency)
                 total_balance[0].save()
+
+            account_data = {
+                'id': account.id,
+                'title': account.title,
+                'balance': float(account.balance),
+                'currency': account.currency,
+                'included_in_total_balance': account.included_in_total_balance,
+                'father_space': account.father_space.id
+            }
+
             HistoryIncome.objects.create(
                 amount=amount,
                 currency=account.currency,
@@ -128,9 +130,9 @@ class IncomeView(generics.GenericAPIView):
                                                               amount=amount,
                                                               to_currency=default_currency),
                 comment=comment,
-                account=account,
+                account=account_data,
                 father_space_id=space_pk,
-                new_balance=total_balance.balance
+                new_balance=total_balance[0].balance if total_balance else 0
             )
         else:
             return Response({"error": "Please, fill out row amount, numbers bigger than 0."})
