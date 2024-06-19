@@ -24,9 +24,10 @@ from backend.apps.total_balance.models import TotalBalance
 
 from backend.apps.space.models import Space
 
+import json
+
 
 class SpendView(generics.GenericAPIView):
-
     serializer_class = SpendSerializer
     permission_classes = (IsSpaceMember, SpendPermission)
 
@@ -48,8 +49,6 @@ class SpendView(generics.GenericAPIView):
         to_currency = space.currency
 
         category = None
-
-
         if category_pk:
             category = Category.objects.filter(pk=category_pk).first()
             to_currency = space.currency
@@ -57,8 +56,6 @@ class SpendView(generics.GenericAPIView):
                                                  from_currency=account.currency,
                                                  to_currency=to_currency)
             category.save()
-        else:
-            account.balance -= amount
 
         total_balance = TotalBalance.objects.get(father_space_id=space_pk)
 
@@ -70,12 +67,34 @@ class SpendView(generics.GenericAPIView):
         comment = request.data.get("comment")
         if comment is None:
             comment = ""
+
+        from_acc_data = {
+            'id': account.id,
+            'title': account.title,
+            'balance': float(account.balance),
+            'currency': account.currency,
+            'included_in_total_balance': account.included_in_total_balance,
+            'father_space': account.father_space.id
+        }
+
+        to_cat_data = None
+        if category:
+            to_cat_data = {
+                'id': category.id,
+                'title': category.title,
+                'spent': float(category.spent),
+                'limit': float(category.limit) if category.limit else None,
+                'color': category.color,
+                'icon': category.icon,
+                'father_space': category.father_space.id
+            }
+
         HistoryExpense.objects.create(
             amount=amount,
             currency=account.currency,
             comment=comment,
-            from_acc=account,
-            to_cat=category,
+            from_acc=from_acc_data,
+            to_cat=to_cat_data if to_cat_data else None,
             father_space_id=space_pk,
             amount_in_default_currency=convert_currencies(amount=amount,
                                                           from_currency=account.currency,
