@@ -50,20 +50,12 @@ class AccountSerializer(serializers.ModelSerializer):
         # Получение расходов и доходов за текущий месяц
         expenses_obj = HistoryExpense.objects.filter(
             created__range=[first_day_of_month, today],
-            from_acc__id=instance.id,
-            from_acc__title=instance.title,
-            from_acc__currency=instance.currency,
-            from_acc__included_in_total_balance=instance.included_in_total_balance,
-            from_acc__father_space=instance.father_space.id
+            from_acc__id=instance.id
         )
 
         income_obj = HistoryIncome.objects.filter(
             created__range=[first_day_of_month, today],
-            account__id=instance.id,
-            account__title=instance.title,
-            account__currency=instance.currency,
-            account__included_in_total_balance=instance.included_in_total_balance,
-            account__father_space=instance.father_space.id
+            account__id=instance.id
         )
 
         spend_amount = sum(

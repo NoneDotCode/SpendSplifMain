@@ -256,10 +256,6 @@ class ExpensesStatisticView(generics.ListAPIView):
     @staticmethod
     def get_periods(expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
         now = timezone.now()
-        week_ago = now - timezone.timedelta(days=6)
-        month_ago = now - timezone.timedelta(days=29)
-        three_month_ago = now - timezone.timedelta(days=89)
-        year_ago = now - timezone.timedelta(days=364)
         periods = {
             'Week': [],
             'Month': [],
@@ -279,36 +275,40 @@ class ExpensesStatisticView(generics.ListAPIView):
         return periods
 
     @staticmethod
-    def get_summary_and_percentages(expenses: List[HistoryExpense]) -> tuple[
-        dict[str, int], dict[str, str] | dict[str, str]]:
+    def get_summary(expenses: List[HistoryExpense]) -> dict[str, int]:
         category_expenses = sum(expense.amount for expense in expenses if expense.to_cat)
-        loss_expenses = sum(expense.amount for expense in expenses if not expense.to_cat)
+        loss_expenses = sum(expense.amount for expense in expenses if expense.to_cat is None)
         recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic_expense)
-        total_expenses = category_expenses + loss_expenses + recurring_expenses
-        summary = {
+        return {
             'Category': category_expenses,
             'Loss': loss_expenses,
             'Recurring Spending': recurring_expenses,
         }
+
+    @staticmethod
+    def get_total_expenses(summary: dict[str, int]) -> int:
+        return sum(summary.values())
+
+    def get_daily_percentages(self, daily_expenses: dict[str, List[HistoryExpense]], total_expenses: int) -> dict[str, dict[str, str]]:
+        daily_percentages = {}
+        for date_str, expenses in daily_expenses.items():
+            day_summary = self.get_summary(expenses)
+            percentages = self.get_percentages(day_summary, total_expenses)
+            daily_percentages[date_str] = percentages
+        return daily_percentages
+
+    def get_percentages(self, summary: dict[str, int], total_expenses: int) -> dict[str, str]:
         if total_expenses == 0:
-            percentages = {
-                'Category': '0 %',
-                'Loss': '0 %',
-                'Recurring Spending': '0 %',
-            }
-        else:
-            percentages = {
-                'Category': f"{round((category_expenses / total_expenses) * 100)} %",
-                'Loss': f"{round((loss_expenses / total_expenses) * 100)} %",
-                'Recurring Spending': f"{round((recurring_expenses / total_expenses) * 100)} %",
-            }
-        return summary, percentages
+            return {key: '0 %' for key in summary}
+        return {key: f"{round((val / total_expenses) * 100)} %" for key, val in summary.items()}
 
     def analyze_expenses(self, expenses: List[HistoryExpense], period: str) -> str:
         if not expenses:
             return f"You haven't made a single spending spree this {period}"
-        _, percentages = self.get_summary_and_percentages(expenses)
-        max_category = max(percentages, key=lambda x: percentages[x].rstrip('%'))
+        summary = self.get_summary(expenses)
+        total_expenses = self.get_total_expenses(summary)
+        percentages = self.get_percentages(summary, total_expenses)
+        max_category = max(percentages, key=lambda x: int(percentages[x].rstrip('%')))
         return f"The most you've spent this {period} on {max_category}"
 
     def format_result(self, expenses: List[HistoryExpense], request: Request) -> Dict:
@@ -316,22 +316,7 @@ class ExpensesStatisticView(generics.ListAPIView):
         currency = Space.objects.get(pk=self.kwargs.get("space_pk")).currency
         result = {}
 
-        today = datetime.now().date()
-        week_start = today - timedelta(days=today.weekday())
-        month_start = today.replace(day=1)
-        three_month_start = (today - timedelta(days=90)).replace(day=1)
-        year_start = today.replace(month=1, day=1)
-
         for period, period_expenses in periods.items():
-            if period == 'Week':
-                start_date = week_start
-            elif period == 'Month':
-                start_date = month_start
-            elif period == 'Three_month':
-                start_date = three_month_start
-            else:  # 'Year'
-                start_date = year_start
-
             result[period] = {}
             result[f"{period}_Percent"] = {}
 
@@ -339,12 +324,22 @@ class ExpensesStatisticView(generics.ListAPIView):
                 result[period] = f"0 {currency}"
                 result[f"{period}_Percent"] = "0 %"
             else:
+                period_summary = self.get_summary(period_expenses)
+                total_expenses = self.get_total_expenses(period_summary)
+                daily_expenses = {}
                 for expense in period_expenses:
-                    date_str = expense.created.date().strftime("%Y-%m-%d")  # Changed to YYYY-MM-DD format
-                    summary, percentages = self.get_summary_and_percentages([expense])
-                    summary_with_currency = {key: f"{val} {currency}" for key, val in summary.items()}
+                    date_str = expense.created.date().strftime("%Y-%m-%d")
+                    if date_str not in daily_expenses:
+                        daily_expenses[date_str] = []
+                    daily_expenses[date_str].append(expense)
+
+                for date_str, day_expenses in daily_expenses.items():
+                    day_summary = self.get_summary(day_expenses)
+                    summary_with_currency = {key: f"{val} {currency}" for key, val in day_summary.items()}
                     result[period][date_str] = summary_with_currency
-                    result[f"{period}_Percent"][date_str] = percentages
+
+                daily_percentages = self.get_daily_percentages(daily_expenses, total_expenses)
+                result[f"{period}_Percent"] = daily_percentages
 
             result[f"Analyze_{period}"] = self.analyze_expenses(period_expenses, period)
 
