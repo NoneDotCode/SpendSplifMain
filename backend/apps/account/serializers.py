@@ -39,16 +39,41 @@ class AccountSerializer(serializers.ModelSerializer):
         today = timezone.make_aware(datetime.combine(today, time.max))
         first_day_of_month = timezone.make_aware(datetime.combine(today.replace(day=1), time.min))
 
+        account_data = {
+            'id': instance.id,
+            'title': instance.title,
+            'currency': instance.currency,
+            'included_in_total_balance': instance.included_in_total_balance,
+            'father_space': instance.father_space.id
+        }
+
         # Получение расходов и доходов за текущий месяц
-        expenses_obj = HistoryExpense.objects.filter(created__range=[first_day_of_month, today]).filter(
-            from_acc=data['id'])
-        income_obj = HistoryIncome.objects.filter(created__range=[first_day_of_month, today]).filter(account=data['id'])
+        expenses_obj = HistoryExpense.objects.filter(
+            created__range=[first_day_of_month, today],
+            from_acc__id=instance.id,
+            from_acc__title=instance.title,
+            from_acc__currency=instance.currency,
+            from_acc__included_in_total_balance=instance.included_in_total_balance,
+            from_acc__father_space=instance.father_space.id
+        )
+
+        income_obj = HistoryIncome.objects.filter(
+            created__range=[first_day_of_month, today],
+            account__id=instance.id,
+            account__title=instance.title,
+            account__currency=instance.currency,
+            account__included_in_total_balance=instance.included_in_total_balance,
+            account__father_space=instance.father_space.id
+        )
 
         spend_amount = sum(
-            [convert_currencies(amount=exp.amount, from_currency=exp.currency,
-                                to_currency=data['currency']) for exp in expenses_obj])
-        income_amount = sum([convert_currencies(amount=inc.amount, from_currency=inc.currency,
-                                                to_currency=data['currency']) for inc in income_obj])
+            [convert_currencies(amount=exp.amount, from_currency=exp.currency, to_currency=data['currency']) for exp in
+             expenses_obj]
+        )
+        income_amount = sum(
+            [convert_currencies(amount=inc.amount, from_currency=inc.currency, to_currency=data['currency']) for inc in
+             income_obj]
+        )
 
         # Добавление данных о расходах и доходах в представление
         data['spend'] = spend_amount
@@ -58,6 +83,17 @@ class AccountSerializer(serializers.ModelSerializer):
         data['balance_converted'] = self.get_balance_converted(instance)
 
         return data
+
+    def to_representation_without_balance(self, instance):
+        data = self.to_representation(instance)
+        if 'balance' in data:
+            del data['balance']
+        return data
+
+    def equals_without_balance(self, instance1, instance2):
+        data1 = self.to_representation_without_balance(instance1)
+        data2 = self.to_representation_without_balance(instance2)
+        return data1 == data2
 
 
 class IncomeSerializer(serializers.Serializer):
