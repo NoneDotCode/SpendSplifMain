@@ -517,12 +517,26 @@ class GeneralView(generics.GenericAPIView):
         # Удаление пустых записей
         data = {period: values for period, values in data.items() if values}
 
+        # Добавление текстового анализа
+        for period in data:
+            data[period]["analysis"] = self.get_analysis_message(data[period], period)
+
         return Response(data)
 
     def get_data_and_percentages(self, days, space_pk):
         period_data, initial_balance = self.get_data_for_period(days, space_pk)
 
-        # Если период пуст, возвращаем пустые словари
+        # Если период пуст, пытаемся получить последние данные до начала периода
+        if not period_data:
+            last_data_before_period = self.get_last_record_before_date(
+                datetime.now() - timedelta(days=days), space_pk
+            )
+            if last_data_before_period is not None:
+                period_data = {
+                    (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'): last_data_before_period
+                }
+                initial_balance = last_data_before_period
+
         if not period_data:
             return {}
 
@@ -551,7 +565,7 @@ class GeneralView(generics.GenericAPIView):
         combined_records = sorted(expenses + incomes, key=lambda x: x['created'])
 
         if not combined_records:
-            return {}, None
+            return {}, Decimal('0')
 
         period_data = {}
         for record in combined_records:
@@ -591,7 +605,7 @@ class GeneralView(generics.GenericAPIView):
         elif earliest_income:
             earliest_record = earliest_income
 
-        return earliest_record.new_balance if earliest_record else Decimal(0)
+        return earliest_record.new_balance if earliest_record else Decimal('0')
 
     def get_last_record_before_date(self, date, space_pk):
         last_expense_before_start = HistoryExpense.objects.filter(
@@ -612,14 +626,32 @@ class GeneralView(generics.GenericAPIView):
         elif last_income_before_start:
             last_record_before_start = last_income_before_start
 
-        return last_record_before_start.new_balance if last_record_before_start else Decimal(0)
+        return last_record_before_start.new_balance if last_record_before_start else Decimal('0')
 
     def calculate_percentages(self, period_data, initial_balance):
         percentages = {}
         for date, balance in period_data.items():
-            percentage = (balance / initial_balance) * 100 if initial_balance != 0 else 0
+            percentage = (balance / initial_balance) * 100 if initial_balance != Decimal('0') else 0
             percentages[date] = f"{round(percentage, 2)}%"
         return percentages
+
+    def get_analysis_message(self, period_data, period):
+        balances = period_data.get('balance', {})
+        if not balances:
+            return f"No data available for the {period.lower()}."
+
+        start_date = min(balances.keys())
+        end_date = max(balances.keys())
+        start_balance = balances[start_date]
+        end_balance = balances[end_date]
+        difference = end_balance - start_balance
+
+        if difference > 0:
+            return f"You have {difference} USD more this {period.lower()}."
+        elif difference < 0:
+            return f"You have {abs(difference)} USD less this {period.lower()}."
+        else:
+            return f"Your balance remained the same this {period.lower()}."
 
 
 class RecurringPaymentsStatistic(generics.ListAPIView):
