@@ -1,4 +1,3 @@
-import json
 from typing import Dict, List, Tuple, Union
 
 from _decimal import Decimal
@@ -10,15 +9,13 @@ from .serializers import IncomeStatisticViewSerializer, \
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from drf_multiple_model.views import ObjectMultipleModelAPIView
 
 from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTransfer
-from backend.apps.history.serializers import HistoryExpenseSerializer, \
-    HistoryExpenseAutoDataSerializer, HistoryIncomeAutoDataSerializer, HistoryTransferAutoDataSerializer
+from backend.apps.history.serializers import (HistoryExpenseAutoDataSerializer, HistoryIncomeAutoDataSerializer,
+                                              HistoryTransferAutoDataSerializer)
 
 from rest_framework import generics
-from rest_framework.response import Response
-from backend.apps.history.serializers import HistoryIncomeSerializer, CombinedStatisticSerializer
+from backend.apps.history.serializers import CombinedStatisticSerializer
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.space.models import Space
 
@@ -30,17 +27,54 @@ from django.utils.timezone import make_aware, is_naive
 import pytz
 
 
-class HistoryView(ObjectMultipleModelAPIView):
-    permission_classes = (IsSpaceMember,)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
-    def get_querylist(self):
-        space_pk = self.kwargs["space_pk"]
-        return [
-            {"queryset": HistoryIncome.objects.filter(father_space_id=space_pk), "serializer_class":
-                HistoryIncomeSerializer},
-            {"queryset": HistoryExpense.objects.filter(father_space_id=space_pk), "serializer_class":
-                HistoryExpenseSerializer}
-        ]
+
+class HistoryView(APIView):
+    permission_classes = [IsAuthenticated, IsSpaceMember]
+
+    @staticmethod
+    def get(request, space_pk):
+        income_queryset = HistoryIncome.objects.filter(father_space_id=space_pk).order_by('-created')
+        expense_queryset = HistoryExpense.objects.filter(father_space_id=space_pk).order_by('-created')
+
+        combined_queryset = sorted(
+            list(income_queryset) + list(expense_queryset),
+            key=lambda x: x.created,
+            reverse=True
+        )
+
+        serialized_data = []
+        for item in combined_queryset:
+            formatted_date = item.created.strftime('%Y-%m-%d')
+            formatted_time = item.created.strftime('%H:%M')
+            if isinstance(item, HistoryIncome):
+                serialized_data.append({
+                    "type": "income",
+                    "amount": item.amount,
+                    "currency": item.currency,
+                    "comment": item.comment,
+                    "account": item.account["title"],
+                    "created_date": formatted_date,
+                    "created_time": formatted_time,
+                })
+            elif isinstance(item, HistoryExpense):
+                serialized_data.append({
+                    "type": "expense",
+                    "amount": item.amount,
+                    "currency": item.currency,
+                    "comment": item.comment,
+                    "from_acc": item.from_acc["title"],
+                    "to_cat_title": item.to_cat["title"],
+                    "to_cat_icon": item.to_cat["icon"],
+                    "periodic_expense": item.periodic_expense,
+                    "created_date": formatted_date,
+                    "created_time": formatted_time,
+                })
+
+        return Response(serialized_data)
 
 
 class StatisticView(generics.GenericAPIView):

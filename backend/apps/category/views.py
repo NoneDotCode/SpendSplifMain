@@ -12,6 +12,10 @@ from backend.apps.space.models import Space
 from rest_framework.response import Response
 from rest_framework import status
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class CreateCategory(generics.CreateAPIView):
     serializer_class = CategorySerializer
