@@ -19,12 +19,14 @@ class AccountSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     spend = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     income = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    formatted_spend = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    formatted_income = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     balance_converted = serializers.SerializerMethodField()
 
     class Meta:
         model = Account
-        fields = ('id', 'title', 'balance', 'currency', 'included_in_total_balance', 'father_space', 'spend', 'income',
-                  "balance_converted")
+        fields = ('id', 'title', 'balance', 'balance_converted', 'currency', 'included_in_total_balance',
+                  'spend', 'income', 'formatted_spend', 'formatted_income', 'father_space')
 
     @staticmethod
     def get_balance_converted(obj):
@@ -70,7 +72,8 @@ class AccountSerializer(serializers.ModelSerializer):
         # Добавление данных о расходах и доходах в представление
         data['spend'] = spend_amount
         data['income'] = income_amount
-
+        data['formatted_spend'] = convert_number_to_letter(spend_amount)
+        data['formatted_income'] = convert_number_to_letter(income_amount)
         # Преобразование баланса и добавление в представление
         data['balance_converted'] = self.get_balance_converted(instance)
 

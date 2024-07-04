@@ -4,6 +4,21 @@ from backend.apps.history.models import HistoryExpense, HistoryIncome, HistoryTr
 from datetime import datetime
 
 
+class CombinedHistorySerializer(serializers.Serializer):
+    type = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    currency = serializers.CharField(max_length=4)
+    comment = serializers.CharField(max_length=300, allow_blank=True)
+    account = serializers.CharField()
+    created_date = serializers.DateField()
+    created_time = serializers.TimeField()
+    from_acc = serializers.CharField(required=False)
+    to_cat_title = serializers.CharField(required=False)
+    to_cat_icon = serializers.CharField(required=False)
+    periodic_expense = serializers.BooleanField(required=False)
+    new_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
 class HistoryExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoryExpense
