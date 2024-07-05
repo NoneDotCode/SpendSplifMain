@@ -63,12 +63,12 @@ class HistoryView(APIView):
                 })
             elif isinstance(item, HistoryExpense):
                 try:
-                    cat_title, cat_icon = item.to_cat["title"], item.to_cat["icon"]
+                    cat_title, cat_icon, history_type = item.to_cat["title"], item.to_cat["icon"], "expense"
                 except TypeError:
-                    cat_title, cat_icon = "", ""
+                    cat_title, cat_icon, history_type = "", "", "loss"
                 serialized_data.append({
                     "id": item.id,
-                    "type": "expense",
+                    "type": history_type,
                     "amount": item.amount,
                     "currency": item.currency,
                     "comment": item.comment,
