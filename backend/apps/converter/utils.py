@@ -29,7 +29,7 @@ def convert_number_to_letter(number: Union[int, float, Decimal]) -> str:
             formatted = str(n.normalize()).rstrip('0').rstrip('.')
         else:
             formatted = f"{n:.10f}".rstrip('0').rstrip('.')
-        return formatted.rstrip('.0')  # Удаляем '.0' в конце, если оно есть
+        return formatted
 
     number = abs(number)  # Обрабатываем абсолютное значение
     for key in sorted(suffixes.keys(), reverse=True):

@@ -23,6 +23,8 @@ class CreateAccount(generics.CreateAPIView):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space_pk
+        if not request.data['balance']:
+            request.data['balance'] = 0
         total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
         accounts_count = Account.objects.filter(father_space=space).count()
         if accounts_count >= 1 and not total_balance:
