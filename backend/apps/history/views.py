@@ -52,6 +52,7 @@ class HistoryView(APIView):
             formatted_time = item.created.strftime('%H:%M')
             if isinstance(item, HistoryIncome):
                 serialized_data.append({
+                    "id": item.id,
                     "type": "income",
                     "amount": item.amount,
                     "currency": item.currency,
@@ -66,6 +67,7 @@ class HistoryView(APIView):
                 except TypeError:
                     cat_title, cat_icon = "", ""
                 serialized_data.append({
+                    "id": item.id,
                     "type": "expense",
                     "amount": item.amount,
                     "currency": item.currency,
