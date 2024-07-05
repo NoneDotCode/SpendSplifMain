@@ -11,6 +11,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.conf import settings
 
+from backend.apps.account.models import Account
+from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import (
     CustomUserSerializer,
@@ -142,6 +144,28 @@ class ConfirmRegistrationView(APIView):
             )
 
             TotalBalance.objects.create(father_space=space, balance=0)
+
+            Category.objects.create(
+                title="Food",
+                limit=1000,
+                spent=0,
+                father_space=space,
+                icon="Donut"
+            )
+
+            Category.objects.create(
+                title="Home",
+                spent=0,
+                father_space=space,
+                icon="Home"
+            )
+
+            Account.objects.create(
+                title="Main",
+                balance=0,
+                currency=self.request.data.get("currency"),
+                father_space=space
+            )
 
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
