@@ -5,6 +5,7 @@ from datetime import datetime
 
 
 class CombinedHistorySerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
     type = serializers.CharField()
     amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     currency = serializers.CharField(max_length=4)
