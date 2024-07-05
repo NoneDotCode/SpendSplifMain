@@ -62,27 +62,39 @@ class EditAccount(generics.RetrieveUpdateAPIView):
     serializer_class = AccountSerializer
     permission_classes = (IsSpaceMember, CanEditAccounts)
 
-    def get_queryset(self):
+    def get_object(self):
         pk = self.kwargs.get('pk')
-        return Account.objects.filter(pk=pk)
+        return Account.objects.get(pk=pk)
+
+    def update(self, request, *args, **kwargs):
+        account = self.get_object()
+        new_balance = self.request.data['balance']
+        account_balance = account.balance
+        father_space = account.father_space
+        total_balance = TotalBalance.objects.get(father_space=father_space)
+        total_balance.balance -= convert_currencies(amount=(account_balance - new_balance),
+                                                    from_currency=account.currency,
+                                                    to_currency=father_space.currency)
+        total_balance.save()
+        return super().update(request, *args, **kwargs)
 
 
 class DeleteAccount(generics.RetrieveDestroyAPIView):
     serializer_class = AccountSerializer
     permission_classes = (IsSpaceMember, CanDeleteAccounts)
 
-    def get_queryset(self):
+    def get_object(self):
         pk = self.kwargs.get('pk')
-        return Account.objects.filter(pk=pk)
+        return Account.objects.get(pk=pk)
 
     def destroy(self, request, *args, **kwargs):
         account = self.get_object()
         father_space = account.father_space
-        total_balance = TotalBalance.objects.filter(father_space=father_space)
-        total_balance[0].balance -= convert_currencies(amount=account.balance,
-                                                       from_currency=account.currency,
-                                                       to_currency=father_space.currency)
-        total_balance[0].save()
+        total_balance = TotalBalance.objects.get(father_space=father_space)
+        total_balance.balance -= convert_currencies(amount=account.balance,
+                                                    from_currency=account.currency,
+                                                    to_currency=father_space.currency)
+        total_balance.save()
         return super().destroy(request, *args, **kwargs)
 
 
