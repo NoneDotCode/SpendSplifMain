@@ -241,10 +241,6 @@ class HistoryExpenseEditView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk, *args, **kwargs):
-        permission = CanDeleteHistory()
-        if not permission.has_permission(request, self):
-            return Response({"error": "You don't have permission to delete this history record"},
-                            status=status.HTTP_403_FORBIDDEN)
         try:
             expense = HistoryExpense.objects.select_for_update().get(pk=pk)
         except HistoryExpense.DoesNotExist:
@@ -375,10 +371,6 @@ class HistoryIncomeEditView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk, *args, **kwargs):
-        permission = CanDeleteHistory()
-        if not permission.has_permission(request, self):
-            return Response({"error": "You don't have permission to delete this history record"},
-                            status=status.HTTP_403_FORBIDDEN)
         try:
             income = HistoryIncome.objects.select_for_update().get(pk=pk)
         except HistoryIncome.DoesNotExist:
