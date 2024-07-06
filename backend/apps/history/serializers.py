@@ -13,6 +13,7 @@ class CombinedHistorySerializer(serializers.Serializer):
     created_date = serializers.DateField()
     created_time = serializers.TimeField()
     account = serializers.CharField(required=False)
+    account_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
     category_title = serializers.CharField(required=False)
     category_icon = serializers.CharField(required=False)
     periodic_expense = serializers.BooleanField(required=False)
