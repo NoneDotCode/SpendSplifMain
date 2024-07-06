@@ -217,9 +217,13 @@ class HistoryExpenseEditView(APIView):
             space.totalbalance.save()
 
             # Обновляем amount_in_default_currency
+            if type(new_account) is dict:
+                new_currency = new_account["currency"]
+            else:
+                new_currency = new_account.currency
             expense.amount_in_default_currency = convert_currencies(
                 amount=float(new_amount),
-                from_currency=new_account['currency'],
+                from_currency=new_currency,
                 to_currency=space.currency
             )
 
