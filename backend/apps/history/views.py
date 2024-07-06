@@ -31,6 +31,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from backend.apps.converter.utils import convert_number_to_letter
+
 
 class HistoryView(APIView):
     permission_classes = [IsAuthenticated, IsSpaceMember]
@@ -64,6 +66,7 @@ class HistoryView(APIView):
                     "currency": item.currency,
                     "comment": item.comment,
                     "account": item.account["title"],
+                    "account_balance": convert_number_to_letter(item.account["balance"]),
                     "created_date": formatted_date,
                     "created_time": formatted_time,
                 })
@@ -79,6 +82,7 @@ class HistoryView(APIView):
                     "currency": item.currency,
                     "comment": item.comment,
                     "account": item.from_acc["title"],
+                    "account_balance": convert_number_to_letter(item.from_acc["balance"]),
                     "category_title": cat_title,
                     "category_icon": cat_icon,
                     "periodic_expense": item.periodic_expense,

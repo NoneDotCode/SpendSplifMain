@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.cryptocurrency",
     "apps.api_stocks",
     "apps.messenger",
+    "apps.Dowt",
 ]
 
 # Custom user model auth
@@ -260,3 +261,8 @@ EMAIL_HOST_PASSWORD = env("EMAIL_SECRET_KEY")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_ADMIN = EMAIL_HOST_USER
+
+
+# Anthropic
+
+ANTHROPIC_API_KEY = "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"
