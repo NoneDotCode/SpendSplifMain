@@ -158,7 +158,7 @@ class ConfirmRegistrationView(APIView):
                 title="Home",
                 spent=0,
                 father_space=space,
-                color="#9C27B0",
+                color="#FF5050",
                 icon="Home"
             )
 

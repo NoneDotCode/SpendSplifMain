@@ -7,6 +7,7 @@ from rest_framework.request import Request
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 
+from .permissions import CanEditHistory, CanDeleteHistory
 from .serializers import IncomeStatisticViewSerializer, \
     CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer, \
     HistoryExpenseEditSerializer, HistoryIncomeEditSerializer
@@ -20,7 +21,7 @@ from backend.apps.history.serializers import (HistoryExpenseAutoDataSerializer, 
 
 from rest_framework import generics
 from backend.apps.history.serializers import CombinedStatisticSerializer
-from backend.apps.account.permissions import IsSpaceMember
+from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 from backend.apps.space.models import Space
 
 from backend.apps.account.models import Account
@@ -42,10 +43,16 @@ from ..total_balance.models import TotalBalance
 class HistoryView(APIView):
     permission_classes = [IsAuthenticated, IsSpaceMember]
 
-    @staticmethod
-    def get(request, space_pk):
+    def post(self, request, space_pk):
         # Получаем временную зону, установленную middleware
         user_timezone = timezone.get_current_timezone()
+
+        # Получаем лимит из тела JSON-запроса, по умолчанию возвращаем все записи
+        limit = request.data.get('limit')
+        try:
+            limit = int(limit) if limit else None
+        except ValueError:
+            return Response({"error": "Invalid limit value"}, status=400)
 
         income_queryset = HistoryIncome.objects.filter(father_space_id=space_pk).order_by('-created')
         expense_queryset = HistoryExpense.objects.filter(father_space_id=space_pk).order_by('-created')
@@ -55,6 +62,10 @@ class HistoryView(APIView):
             key=lambda x: x.created,
             reverse=True
         )
+
+        # Применяем лимит, если он указан
+        if limit is not None:
+            combined_queryset = combined_queryset[:limit]
 
         serialized_data = []
         for item in combined_queryset:
@@ -97,9 +108,13 @@ class HistoryView(APIView):
 
         return Response(serialized_data)
 
+    # Оставляем метод get для обратной совместимости
+    def get(self, request, space_pk):
+        return self.post(request, space_pk)
+
 
 class HistoryExpenseEditView(APIView):
-    permission_classes = ()
+    permission_classes = (IsSpaceMember & (IsSpaceOwner | CanEditHistory),)
 
     @transaction.atomic
     def put(self, request, pk, *args, **kwargs):
@@ -222,6 +237,10 @@ class HistoryExpenseEditView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk, *args, **kwargs):
+        permission = CanDeleteHistory()
+        if not permission.has_permission(request, self):
+            return Response({"error": "You don't have permission to delete this history record"},
+                            status=status.HTTP_403_FORBIDDEN)
         try:
             expense = HistoryExpense.objects.select_for_update().get(pk=pk)
         except HistoryExpense.DoesNotExist:
@@ -265,7 +284,7 @@ class HistoryExpenseEditView(APIView):
 
 
 class HistoryIncomeEditView(APIView):
-    permission_classes = ()
+    permission_classes = (IsSpaceMember & (IsSpaceOwner | CanEditHistory),)
 
     @transaction.atomic
     def put(self, request, pk, *args, **kwargs):
@@ -352,6 +371,10 @@ class HistoryIncomeEditView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk, *args, **kwargs):
+        permission = CanDeleteHistory()
+        if not permission.has_permission(request, self):
+            return Response({"error": "You don't have permission to delete this history record"},
+                            status=status.HTTP_403_FORBIDDEN)
         try:
             income = HistoryIncome.objects.select_for_update().get(pk=pk)
         except HistoryIncome.DoesNotExist:
