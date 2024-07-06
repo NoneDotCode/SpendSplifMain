@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
+from backend.apps.account.models import Account
 from backend.apps.history.models import HistoryExpense, HistoryIncome, HistoryTransfer
+from backend.apps.category.models import Category
+
 from datetime import datetime
 
 
@@ -20,10 +23,17 @@ class CombinedHistorySerializer(serializers.Serializer):
     new_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
 
 
-class HistoryExpenseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HistoryExpense
-        fields = '__all__'
+class HistoryExpenseEditSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    category = serializers.ModelField(Category, required=False)
+    account = serializers.ModelField(Account, required=False)
+    comment = serializers.CharField(required=False)
+
+
+class HistoryIncomeEditSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    account = serializers.IntegerField(required=False)
+    comment = serializers.CharField(required=False)
 
 
 class StatisticViewSerializer(serializers.Serializer):

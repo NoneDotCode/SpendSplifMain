@@ -1,11 +1,15 @@
 from typing import Dict, List, Tuple, Union
 
+from django.db import transaction
 from _decimal import Decimal
 from django.utils import timezone
 from rest_framework.request import Request
+from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
 
 from .serializers import IncomeStatisticViewSerializer, \
-    CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer
+    CategoryViewSerializer, ExpensesViewSerializer, GoalTransferStatisticSerializer, \
+    HistoryExpenseEditSerializer, HistoryIncomeEditSerializer
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -31,7 +35,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from backend.apps.converter.utils import convert_number_to_letter
+from backend.apps.converter.utils import convert_number_to_letter, convert_currencies
+from ..total_balance.models import TotalBalance
 
 
 class HistoryView(APIView):
@@ -91,6 +96,291 @@ class HistoryView(APIView):
                 })
 
         return Response(serialized_data)
+
+
+class HistoryExpenseEditView(APIView):
+    permission_classes = ()
+
+    @transaction.atomic
+    def put(self, request, pk, *args, **kwargs):
+        try:
+            expense = HistoryExpense.objects.select_for_update().get(pk=pk)
+        except HistoryExpense.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if timezone.now() - expense.created > timedelta(days=14):
+            return Response({"error": "Cannot edit expenses older than 14 days"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        old_amount = expense.amount
+        old_account_id = expense.from_acc["id"]
+        old_category_id = expense.to_cat["id"] if expense.to_cat else None
+
+        serializer = HistoryExpenseEditSerializer(data=request.data, partial=True)
+
+        if serializer.is_valid():
+            # Обновляем только переданные поля
+            if 'amount' in request.data:
+                new_amount = Decimal(request.data['amount'])
+                expense.amount = new_amount
+            else:
+                new_amount = old_amount
+
+            if 'account' in request.data:
+                new_account_id = request.data['account']
+            else:
+                new_account_id = old_account_id
+
+            if 'category' in request.data:
+                new_category_id = request.data['category']
+            else:
+                new_category_id = old_category_id
+
+            if 'comment' in request.data:
+                expense.comment = request.data['comment']
+
+            # Обновляем баланс счетов только если они существуют и изменились
+            if old_account_id != new_account_id or old_amount != new_amount:
+                try:
+                    old_account = Account.objects.get(pk=old_account_id)
+                    old_account.balance += old_amount
+                    old_account.save()
+                except ObjectDoesNotExist:
+                    pass  # Старый счет не существует, пропускаем обновление
+
+                try:
+                    new_account = Account.objects.get(pk=new_account_id)
+                    new_account.balance -= new_amount
+                    new_account.save()
+                    expense.from_acc = {
+                        'id': new_account.id,
+                        'title': new_account.title,
+                        'balance': float(new_account.balance),
+                        'currency': new_account.currency,
+                        'included_in_total_balance': new_account.included_in_total_balance,
+                        'father_space': new_account.father_space.id
+                    }
+                except ObjectDoesNotExist:
+                    return Response({"error": "Specified new account does not exist"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            else:
+                new_account = expense.from_acc
+
+            # Обновляем категории только если они существуют и изменились
+            if old_category_id != new_category_id or old_amount != new_amount:
+                if old_category_id:
+                    try:
+                        old_category = Category.objects.get(pk=old_category_id)
+                        old_category.spent -= old_amount
+                        old_category.save()
+                    except ObjectDoesNotExist:
+                        pass  # Старая категория не существует, пропускаем обновление
+
+                if new_category_id:
+                    try:
+                        new_category = Category.objects.get(pk=new_category_id)
+                        new_category.spent += new_amount
+                        new_category.save()
+                        expense.to_cat = {
+                            'id': new_category.id,
+                            'title': new_category.title,
+                            'spent': float(new_category.spent),
+                            'limit': float(new_category.limit) if new_category.limit else None,
+                            'color': new_category.color,
+                            'icon': new_category.icon,
+                            'father_space': new_category.father_space.id
+                        }
+                    except ObjectDoesNotExist:
+                        return Response({"error": "Specified new category does not exist"},
+                                        status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    expense.to_cat = None
+
+            # Обновляем общий баланс пространства
+            space = Space.objects.select_for_update().get(pk=expense.father_space_id)
+            space.totalbalance.balance += old_amount - new_amount
+            space.totalbalance.save()
+
+            # Обновляем amount_in_default_currency
+            expense.amount_in_default_currency = convert_currencies(
+                amount=float(new_amount),
+                from_currency=new_account['currency'],
+                to_currency=space.currency
+            )
+
+            # Обновляем new_balance
+            expense.new_balance = space.totalbalance.balance
+
+            # Сохраняем изменения в расходе
+            expense.save()
+
+            return Response({"message": "Expense has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    patch = put
+
+    @transaction.atomic
+    def delete(self, request, pk, *args, **kwargs):
+        try:
+            expense = HistoryExpense.objects.select_for_update().get(pk=pk)
+        except HistoryExpense.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        # Проверяем, прошло ли больше 14 дней с момента создания записи
+        if timezone.now() - expense.created > timedelta(days=14):
+            return Response({"error": "Cannot delete expenses older than 14 days"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        old_amount = expense.amount
+        old_account_id = expense.from_acc["id"]
+        old_category_id = expense.to_cat["id"] if expense.to_cat else None
+
+        # Возвращаем средства на счет
+        try:
+            account = Account.objects.get(pk=old_account_id)
+            account.balance += old_amount
+            account.save()
+        except ObjectDoesNotExist:
+            pass  # Счет не существует, пропускаем обновление
+
+        # Уменьшаем потраченную сумму в категории
+        if old_category_id:
+            try:
+                category = Category.objects.get(pk=old_category_id)
+                category.spent -= old_amount
+                category.save()
+            except ObjectDoesNotExist:
+                pass  # Категория не существует, пропускаем обновление
+
+        # Обновляем общий баланс пространства
+        space = Space.objects.select_for_update().get(pk=expense.father_space_id)
+        space.totalbalance.balance += old_amount
+        space.totalbalance.save()
+
+        # Удаляем запись о расходе
+        expense.delete()
+
+        return Response({"message": "Expense has been deleted successfully"}, status=status.HTTP_200_OK)
+
+
+class HistoryIncomeEditView(APIView):
+    permission_classes = ()
+
+    @transaction.atomic
+    def put(self, request, pk, *args, **kwargs):
+        try:
+            income = HistoryIncome.objects.select_for_update().get(pk=pk)
+        except HistoryIncome.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if timezone.now() - income.created > timedelta(days=14):
+            return Response({"error": "Cannot edit incomes older than 14 days"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        old_amount = income.amount
+        old_account_id = income.account["id"]
+
+        serializer = HistoryIncomeEditSerializer(data=request.data, partial=True)
+
+        if serializer.is_valid():
+            if 'amount' in serializer.validated_data:
+                new_amount = serializer.validated_data['amount']
+                income.amount = new_amount
+            else:
+                new_amount = old_amount
+
+            if 'account' in serializer.validated_data:
+                new_account_id = serializer.validated_data['account']
+            else:
+                new_account_id = old_account_id
+
+            if 'comment' in serializer.validated_data:
+                income.comment = serializer.validated_data['comment']
+
+            if old_account_id != new_account_id or old_amount != new_amount:
+                try:
+                    old_account = Account.objects.get(pk=old_account_id)
+                    old_account.balance -= old_amount
+                    old_account.save()
+                except ObjectDoesNotExist:
+                    pass
+
+                try:
+                    new_account = Account.objects.get(pk=new_account_id)
+                    new_account.balance += new_amount
+                    new_account.save()
+                    income.account = {
+                        'id': new_account.id,
+                        'title': new_account.title,
+                        'balance': float(new_account.balance),
+                        'currency': new_account.currency,
+                        'included_in_total_balance': new_account.included_in_total_balance,
+                        'father_space': new_account.father_space.id
+                    }
+                except ObjectDoesNotExist:
+                    return Response({"error": f"Account with id {new_account_id} does not exist"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            else:
+                new_account = Account.objects.get(pk=old_account_id)
+
+            space = Space.objects.select_for_update().get(pk=income.father_space_id)
+            total_balance = TotalBalance.objects.get(father_space=space)
+            total_balance.balance -= convert_currencies(amount=old_amount,
+                                                        from_currency=income.currency,
+                                                        to_currency=space.currency)
+            total_balance.balance += convert_currencies(amount=new_amount,
+                                                        from_currency=new_account.currency,
+                                                        to_currency=space.currency)
+            total_balance.save()
+
+            income.amount_in_default_currency = convert_currencies(
+                amount=float(new_amount),
+                from_currency=new_account.currency,
+                to_currency=space.currency
+            )
+
+            income.new_balance = total_balance.balance
+            income.currency = new_account.currency
+            income.save()
+
+            return Response({"message": "Income has been updated successfully"}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    patch = put
+
+    @transaction.atomic
+    def delete(self, request, pk, *args, **kwargs):
+        try:
+            income = HistoryIncome.objects.select_for_update().get(pk=pk)
+        except HistoryIncome.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if timezone.now() - income.created > timedelta(days=14):
+            return Response({"error": "Cannot delete incomes older than 14 days"},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        old_amount = income.amount
+        old_account_id = income.account["id"]
+
+        try:
+            account = Account.objects.get(pk=old_account_id)
+            account.balance -= old_amount
+            account.save()
+        except ObjectDoesNotExist:
+            pass
+
+        space = Space.objects.select_for_update().get(pk=income.father_space_id)
+        total_balance = TotalBalance.objects.get(father_space=space)
+        total_balance.balance -= convert_currencies(amount=old_amount,
+                                                    from_currency=income.currency,
+                                                    to_currency=space.currency)
+        total_balance.save()
+
+        income.delete()
+
+        return Response({"message": "Income has been deleted successfully"}, status=status.HTTP_200_OK)
 
 
 class StatisticView(generics.GenericAPIView):
