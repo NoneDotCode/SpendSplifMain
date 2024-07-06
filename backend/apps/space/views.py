@@ -43,6 +43,7 @@ class CreateSpace(generics.CreateAPIView):
                 limit=1000,
                 spent=0,
                 father_space=space,
+                color="#FF9800",
                 icon="Donut"
             )
 
@@ -50,6 +51,7 @@ class CreateSpace(generics.CreateAPIView):
                 title="Home",
                 spent=0,
                 father_space=space,
+                color="#9C27B0",
                 icon="Home"
             )
 
