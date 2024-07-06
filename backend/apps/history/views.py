@@ -37,6 +37,9 @@ class HistoryView(APIView):
 
     @staticmethod
     def get(request, space_pk):
+        # Получаем временную зону, установленную middleware
+        user_timezone = timezone.get_current_timezone()
+
         income_queryset = HistoryIncome.objects.filter(father_space_id=space_pk).order_by('-created')
         expense_queryset = HistoryExpense.objects.filter(father_space_id=space_pk).order_by('-created')
 
@@ -48,8 +51,11 @@ class HistoryView(APIView):
 
         serialized_data = []
         for item in combined_queryset:
-            formatted_date = item.created.strftime('%Y-%m-%d')
-            formatted_time = item.created.strftime('%H:%M')
+            # Переводим время в пользовательскую временную зону
+            localized_time = item.created.astimezone(user_timezone)
+            formatted_date = localized_time.strftime('%Y-%m-%d')
+            formatted_time = localized_time.strftime('%H:%M')
+
             if isinstance(item, HistoryIncome):
                 serialized_data.append({
                     "id": item.id,
