@@ -21,11 +21,16 @@ from backend.apps.total_balance.models import TotalBalance
 
 from django.db import transaction
 
+from backend.apps.space.models import Space
 
 class CreateSpace(generics.CreateAPIView):
     serializer_class = SpaceSerializer
 
     def perform_create(self, serializer):
+        user_space_counter = Space.objects.filter(members=self.request.user).count()
+        if user_space_counter >= 5:
+            return Response("Error: you can't create more than 5 spaces", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
         with transaction.atomic():
             # Save the space instance
             space = serializer.save()
