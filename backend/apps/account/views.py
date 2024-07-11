@@ -23,6 +23,9 @@ class CreateAccount(generics.CreateAPIView):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space_pk
+        user_account_counter = Account.objects.filter(father_space=space).count()
+        if user_account_counter >= 25:
+            return Response("Error: you can't create more than 25 accounts", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         try:
             balance = request.data['balance']
         except KeyError:
