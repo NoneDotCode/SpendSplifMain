@@ -9,3 +9,9 @@ class Goal(models.Model):
     collected = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def collected_percentage(self):
+        if self.goal:
+            return (self.collected / self.goal) * 100
+        return 0

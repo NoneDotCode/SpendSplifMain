@@ -134,10 +134,8 @@ class HistoryExpenseEditView(APIView):
         serializer = HistoryExpenseEditSerializer(data=request.data, partial=True)
 
         if serializer.is_valid():
-            # Обновляем только переданные поля
             if 'amount' in request.data:
                 new_amount = Decimal(request.data['amount'])
-                expense.amount = new_amount
             else:
                 new_amount = old_amount
 
@@ -145,6 +143,16 @@ class HistoryExpenseEditView(APIView):
                 new_account_id = request.data['account']
             else:
                 new_account_id = old_account_id
+
+            # Проверка достаточности средств на новом счете
+            try:
+                new_account = Account.objects.get(pk=new_account_id)
+                if new_account.balance + old_amount < new_amount:
+                    return Response({"error": "Insufficient funds in the account"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            except ObjectDoesNotExist:
+                return Response({"error": "Specified new account does not exist"},
+                                status=status.HTTP_400_BAD_REQUEST)
 
             if 'category' in request.data:
                 new_category_id = request.data['category']
@@ -305,7 +313,6 @@ class HistoryIncomeEditView(APIView):
         if serializer.is_valid():
             if 'amount' in serializer.validated_data:
                 new_amount = serializer.validated_data['amount']
-                income.amount = new_amount
             else:
                 new_amount = old_amount
 
@@ -313,6 +320,16 @@ class HistoryIncomeEditView(APIView):
                 new_account_id = serializer.validated_data['account']
             else:
                 new_account_id = old_account_id
+
+            # Проверка достаточности средств при уменьшении дохода
+            if new_amount < old_amount:
+                try:
+                    account = Account.objects.get(pk=old_account_id)
+                    if account.balance < (old_amount - new_amount):
+                        return Response({"error": "Insufficient funds in the account to decrease income"},
+                                        status=status.HTTP_400_BAD_REQUEST)
+                except ObjectDoesNotExist:
+                    pass
 
             if 'comment' in serializer.validated_data:
                 income.comment = serializer.validated_data['comment']
