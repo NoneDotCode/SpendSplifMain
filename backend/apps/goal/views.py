@@ -1,5 +1,7 @@
 from rest_framework.generics import get_object_or_404
 from rest_framework import generics
+from rest_framework.response import Response
+from rest_framework import status
 
 from backend.apps.goal.serializers import GoalSerializer
 from backend.apps.goal.models import Goal
@@ -20,6 +22,11 @@ class CreateGoal(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
+
+        user_goals_counter = Goal.objects.filter(father_space=space).count()
+        if user_goals_counter >= 50:
+            return Response("Error: you can't create more than 50 goals", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
         request.data['father_space'] = space.pk
         request.data['collected'] = 0
         return super().create(request, *args, **kwargs)

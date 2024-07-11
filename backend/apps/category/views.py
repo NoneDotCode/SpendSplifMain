@@ -25,6 +25,10 @@ class CreateCategory(generics.CreateAPIView):
         space_pk = self.kwargs.get('space_pk')
         space = get_object_or_404(Space, pk=space_pk)
 
+        user_categories_counter = Category.objects.filter(father_space=space).count()
+        if user_categories_counter >= 100:
+            return Response("Error: you can't create more than 100 categories", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
         data = request.data.copy()
         data['father_space'] = space.pk
         data['spent'] = 0
