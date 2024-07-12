@@ -2,14 +2,14 @@ from rest_framework import serializers
 from backend.apps.converter.utils import convert_number_to_letter
 from backend.apps.goal.models import Goal
 from backend.apps.space.models import Space
-
+from django.utils import timezone
 
 class GoalSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     father_space = serializers.PrimaryKeyRelatedField(queryset=Space.objects.all())
     collected_percentage = serializers.SerializerMethodField()
-    created_date = serializers.DateField(format="%d.%m.%Y", read_only=True)
-    created_time = serializers.TimeField(format="%H:%M", read_only=True)
+    created_date = serializers.SerializerMethodField()
+    created_time = serializers.SerializerMethodField()
     goal_converted = serializers.SerializerMethodField()
     collected_converted = serializers.SerializerMethodField()
 
@@ -29,3 +29,13 @@ class GoalSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_collected_converted(obj):
         return convert_number_to_letter(float(obj.collected))
+
+    def get_created_date(self, obj):
+        user_timezone = timezone.get_current_timezone()
+        localized_time = obj.created.astimezone(user_timezone)
+        return localized_time.strftime('%d.%m.%Y')
+
+    def get_created_time(self, obj):
+        user_timezone = timezone.get_current_timezone()
+        localized_time = obj.created.astimezone(user_timezone)
+        return localized_time.strftime('%H:%M')
