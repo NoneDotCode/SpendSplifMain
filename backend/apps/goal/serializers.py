@@ -33,7 +33,7 @@ class GoalSerializer(serializers.ModelSerializer):
     def get_created_date(self, obj):
         user_timezone = timezone.get_current_timezone()
         localized_time = obj.created.astimezone(user_timezone)
-        return localized_time.strftime('%d.%m.%Y')
+        return localized_time.strftime('%d %B %Y')
 
     def get_created_time(self, obj):
         user_timezone = timezone.get_current_timezone()
