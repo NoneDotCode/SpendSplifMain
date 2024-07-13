@@ -42,17 +42,17 @@ class CanDeleteGoals(permissions.BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
-        space_pk = view.kwargs.get("space_pk", )
-        goal_pk = view.kwargs.get("pk", )
+        space_pk = view.kwargs.get("space_pk")
+        goal_pk = view.kwargs.get("pk")
         space = Space.objects.get(pk=space_pk)
 
         try:
-            goal = Account.objects.get(pk=goal_pk)
+            goal = Goal.objects.get(pk=goal_pk)
         except Goal.DoesNotExist:
             return False
 
         if goal.father_space_id != space_pk:
             return False
 
-        return (IsSpaceOwner().has_permission(request, view) or
-                space.members.filter(id=user.id, memberpermissions__delete_goals=True).exists())
+        return ((IsSpaceOwner().has_permission(request, view)) or
+                (space.members.filter(id=user.id, memberpermissions__delete_goals=True).exists()))

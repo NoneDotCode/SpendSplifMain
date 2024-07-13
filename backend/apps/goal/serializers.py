@@ -4,9 +4,11 @@ from backend.apps.goal.models import Goal
 from backend.apps.space.models import Space
 from django.utils import timezone
 
+
 class GoalSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
-    father_space = serializers.PrimaryKeyRelatedField(queryset=Space.objects.all())
+    father_space = serializers.PrimaryKeyRelatedField(queryset=Space.objects.all(), required=False)
+    collected = serializers.IntegerField(read_only=True)
     collected_percentage = serializers.SerializerMethodField()
     created_date = serializers.SerializerMethodField()
     created_time = serializers.SerializerMethodField()
