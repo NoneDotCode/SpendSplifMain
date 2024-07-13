@@ -12,11 +12,12 @@ class GoalSerializer(serializers.ModelSerializer):
     created_time = serializers.SerializerMethodField()
     goal_converted = serializers.SerializerMethodField()
     collected_converted = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Goal
         fields = ('id', 'title', 'goal', 'goal_converted', 'collected', 'collected_converted',
-                  'father_space', 'collected_percentage', 'created_date', 'created_time')
+                  'father_space', 'collected_percentage', 'currency', 'created_date', 'created_time')
 
     @staticmethod
     def get_collected_percentage(obj):
@@ -39,3 +40,7 @@ class GoalSerializer(serializers.ModelSerializer):
         user_timezone = timezone.get_current_timezone()
         localized_time = obj.created.astimezone(user_timezone)
         return localized_time.strftime('%H:%M')
+
+    @staticmethod
+    def get_currency(obj):
+        return obj.father_space.currency
