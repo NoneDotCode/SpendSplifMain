@@ -14,7 +14,7 @@ class NotificationList(generics.GenericAPIView):
             type=Value('notification', output_field=CharField())
         ).values('message', 'color', 'created_at', 'type')
 
-        company_notifications = NotificationCompany.objects.filter(who_can_view=user).exclude(seen=user).annotate(
+        company_notifications = NotificationCompany.objects.exclude(seen=user).annotate(
             type=Value('notification_company', output_field=CharField())
         ).values('message', 'color', 'created_at', 'type')
 

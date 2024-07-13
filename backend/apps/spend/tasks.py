@@ -6,14 +6,30 @@ from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.converter.utils import convert_currencies
 from backend.apps.history.models import HistoryExpense
+from backend.apps.notifications.models import Notification
+from backend.apps.space.models import Space
 from backend.apps.total_balance.models import TotalBalance
 
 
 @shared_task(bind=True)
 def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_currency):
-    account = Account.objects.get(pk=account_pk)
-    category = Category.objects.get(pk=category_pk)
+    space = Space.objects.get(pk=space_pk)
+    try:
+        account = Account.objects.get(pk=account_pk)
+    except Account.DoesNotExist:
+        notif_message = f"Recurring spend {title} in space {space.title} was not completed because account was deleted."
+        Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
+        return "Expense did not complete successfully"
+    try:
+        category = Category.objects.get(pk=category_pk)
+    except Category.DoesNotExist:
+        notif_message = f"Recurring spend {title} in space {space.title} was not completed because category was deleted."
+        Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
+        return "Expense did not complete successfully"
     if amount > int(account.balance):
+        notif_message = (f"Recurring spend {title} in space {space.title} was not completed because you have not enough"
+                         f"money on the balance {account.title}.")
+        Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
         return f"It is not enough money on the balance for {title} spend."
     account.balance -= Decimal(amount)
     account.save()
