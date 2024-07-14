@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 
 from backend.apps.account.models import Account
-from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
+from backend.apps.account.permissions import IsSpaceMember
 
 from backend.apps.category.models import Category
 
@@ -29,7 +29,7 @@ import json
 
 class SpendView(generics.GenericAPIView):
     serializer_class = SpendSerializer
-    permission_classes = (IsSpaceMember, SpendPermission)
+    permission_classes = (SpendPermission,)
 
     @staticmethod
     def put(request, *args, **kwargs):
@@ -46,7 +46,6 @@ class SpendView(generics.GenericAPIView):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
-        to_currency = space.currency
 
         category = None
         if category_pk:
