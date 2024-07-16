@@ -1,9 +1,12 @@
+from datetime import timezone
+
 from rest_framework import generics
 from backend.apps.notifications.serializers import UpdateViewersSerializer
 from backend.apps.notifications.models import Notification, NotificationCompany
 from rest_framework.response import Response
 from django.utils.dateformat import DateFormat
 from django.db.models import Value, CharField
+from rest_framework import status
 
 
 class NotificationList(generics.GenericAPIView):
@@ -62,3 +65,22 @@ class UpdateSeen(generics.UpdateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class SimulateNotification(generics.GenericAPIView):
+
+    def post(self, request, *args, **kwargs):
+        user = self.request.user
+        Notification.objects.create(who_can_view=user,
+                                    message="It is an important notification!",
+                                    importance="Important",
+                                    created_at=timezone.utc)
+        Notification.objects.create(who_can_view=user,
+                                    message="It is a medium important notification!",
+                                    importance="Medium",
+                                    created_at=timezone.utc)
+        Notification.objects.create(who_can_view=user,
+                                    message="It is a standard important notification!",
+                                    importance="Standard",
+                                    created_at=timezone.utc)
+        return Response({'message': 'success'}, status=status.HTTP_200_OK)
