@@ -172,7 +172,7 @@ class AddMemberToSpace(generics.GenericAPIView):
         # Add user to the space.
         space.members.add(user)
 
-        notif_message = f"The user {user.username}#{user.tag} has been added to the {space.title} space."
+        notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Medium")
 
         # Return success answer

@@ -17,18 +17,18 @@ def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_cu
     try:
         account = Account.objects.get(pk=account_pk)
     except Account.DoesNotExist:
-        notif_message = f"Recurring spend {title} in space {space.title} was not completed because account was deleted."
+        notif_message = f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because account was deleted."
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
         return "Expense did not complete successfully"
     try:
         category = Category.objects.get(pk=category_pk)
     except Category.DoesNotExist:
-        notif_message = f"Recurring spend {title} in space {space.title} was not completed because category was deleted."
+        notif_message = f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because category was deleted."
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
         return "Expense did not complete successfully"
     if amount > int(account.balance):
-        notif_message = (f"Recurring spend {title} in space {space.title} was not completed because you have not enough"
-                         f"money on the balance {account.title}.")
+        notif_message = (f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because you have not enough"
+                         f"money on the balance ~{account.title}~.")
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
         return f"It is not enough money on the balance for {title} spend."
     account.balance -= Decimal(amount)

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.utils.dateformat import DateFormat
 from django.db.models import Value, CharField
 from rest_framework import status
+from django.utils.formats import date_format
 
 
 class NotificationList(generics.GenericAPIView):
@@ -31,7 +32,8 @@ class NotificationList(generics.GenericAPIView):
             {
                 'message': notification['message'],
                 'importance': notification['importance'],
-                'created_at': DateFormat(notification['created_at']).format('d-m-Y'),
+                'date': date_format(notification['created_at'], format="d F"),
+                'time': date_format(notification['created_at'], format="H:i"),
                 'type': notification['type']
             }
             for notification in all_notifications
@@ -83,10 +85,10 @@ class SimulateNotification(generics.GenericAPIView):
         Notification.objects.create(message="It is an important notification!",
                                     importance="important",
                                     created_at=timezone.utc).who_can_view.set([user,])
-        Notification.objects.create(message="It is a medium important notification!",
+        Notification.objects.create(message="It is a medium important ~notification!~",
                                     importance="medium",
                                     created_at=timezone.utc).who_can_view.set([user,])
-        Notification.objects.create(message="It is a standard important notification!",
+        Notification.objects.create(message="~It is~ a standard important notification!",
                                     importance="standard",
                                     created_at=timezone.utc).who_can_view.set([user,])
         NotificationCompany.objects.create(message="In our new update we added notifications!!!",
