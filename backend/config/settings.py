@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.api_stocks",
     "apps.messenger",
     "apps.Dowt",
+    "apps.notifications",
 ]
 
 # Custom user model auth
