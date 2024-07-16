@@ -7,18 +7,11 @@ class UpdateViewersSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=[('notification', 'Notification'),
                                             ('notification_company', 'NotificationCompany')])
 
-    def update(self, instance, validated_data):
-        user = self.context["request"].user
-
-        if validated_data['type'] == 'notification':
-            notification = Notification.objects.get(id=validated_data['id'])
-        else:
-            notification = NotificationCompany.objects.get(id=validated_data['id'])
-
-        notification.seen.add(user)
-        notification.save()
-
-        return notification
+    def to_representation(self, instance):
+        return {
+            'id': instance.id,
+            'type': 'notification' if isinstance(instance, Notification) else 'notification_company'
+        }
 
 
 class NotificationSerializer(serializers.ModelSerializer):
