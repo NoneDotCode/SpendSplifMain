@@ -14,13 +14,13 @@ class NotificationList(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         user = self.request.user
 
-        notifications = Notification.objects.filter(who_can_view=user).exclude(seen=user).annotate(
+        notifications = Notification.objects.filter(who_can_view=user).annotate(
             type=Value('notification', output_field=CharField())
-        ).values('message', 'importance', 'created_at', 'type')
+        ).values('id', 'message', 'importance', 'created_at', 'type')
 
-        company_notifications = NotificationCompany.objects.exclude(seen=user).annotate(
+        company_notifications = NotificationCompany.objects.all().annotate(
             type=Value('notification_company', output_field=CharField())
-        ).values('message', 'importance', 'created_at', 'type')
+        ).values('id', 'message', 'importance', 'created_at', 'type')
 
         all_notifications = sorted(
             list(notifications) + list(company_notifications),
@@ -30,6 +30,7 @@ class NotificationList(generics.GenericAPIView):
 
         formatted_notifications = [
             {
+                'id': notification['id'],
                 'message': notification['message'],
                 'importance': notification['importance'],
                 'date': date_format(notification['created_at'], format="d F"),
