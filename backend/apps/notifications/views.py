@@ -58,23 +58,27 @@ class HowManyUnseen(generics.GenericAPIView):
 class UpdateSeen(generics.UpdateAPIView):
     serializer_class = UpdateViewersSerializer
 
-    def get_object(self):
-        serializer = self.get_serializer(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
-        if serializer.validated_data['type'] == 'notification':
-            return Notification.objects.get(id=serializer.validated_data['id'])
-        return NotificationCompany.objects.get(id=serializer.validated_data['id'])
-
     def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
 
-    def perform_update(self, serializer):
+        updated_notifications = []
+        for item in serializer.validated_data['notifications']:
+            if item['type'] == 'notification':
+                instance = Notification.objects.get(id=item['id'])
+            else:
+                instance = NotificationCompany.objects.get(id=item['id'])
+
+            self.perform_update(instance)
+            updated_notifications.append({
+                'id': instance.id,
+                'type': item['type']
+            })
+
+        return Response(updated_notifications)
+
+    def perform_update(self, instance):
         user = self.request.user
-        instance = serializer.instance
         instance.seen.add(user)
         instance.save()
 

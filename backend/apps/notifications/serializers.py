@@ -2,16 +2,14 @@ from rest_framework import serializers
 from backend.apps.notifications.models import Notification, NotificationCompany
 
 
-class UpdateViewersSerializer(serializers.Serializer):
+class NotificationItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     type = serializers.ChoiceField(choices=[('notification', 'Notification'),
                                             ('notification_company', 'NotificationCompany')])
 
-    def to_representation(self, instance):
-        return {
-            'id': instance.id,
-            'type': 'notification' if isinstance(instance, Notification) else 'notification_company'
-        }
+
+class UpdateViewersSerializer(serializers.Serializer):
+    notifications = NotificationItemSerializer(many=True)
 
 
 class NotificationSerializer(serializers.ModelSerializer):
