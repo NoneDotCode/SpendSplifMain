@@ -4,29 +4,33 @@ from rest_framework import generics
 from backend.apps.notifications.serializers import UpdateViewersSerializer
 from backend.apps.notifications.models import Notification, NotificationCompany
 from rest_framework.response import Response
-from django.utils.dateformat import DateFormat
 from django.db.models import Value, CharField
 from rest_framework import status
 from django.utils.formats import date_format
 
 
 class NotificationList(generics.GenericAPIView):
-    def get(self, request, *args, **kwargs):
+
+    def post(self, request, *args, **kwargs):
         user = self.request.user
+
+        count = request.data.get('count', 20)
 
         notifications = Notification.objects.filter(who_can_view=user).annotate(
             type=Value('notification', output_field=CharField())
-        ).values('id', 'message', 'importance', 'created_at', 'type')
+        ).values('id', 'message', 'importance', 'created_at', 'type', 'seen')
 
         company_notifications = NotificationCompany.objects.all().annotate(
             type=Value('notification_company', output_field=CharField())
-        ).values('id', 'message', 'importance', 'created_at', 'type')
+        ).values('id', 'message', 'importance', 'created_at', 'type', 'seen')
 
         all_notifications = sorted(
             list(notifications) + list(company_notifications),
             key=lambda x: x['created_at'],
             reverse=True
         )
+
+        all_notifications = all_notifications[:count]
 
         formatted_notifications = [
             {
@@ -35,7 +39,9 @@ class NotificationList(generics.GenericAPIView):
                 'importance': notification['importance'],
                 'date': date_format(notification['created_at'], format="d F"),
                 'time': date_format(notification['created_at'], format="H:i"),
-                'type': notification['type']
+                'type': notification['type'],
+                'seen': True if (notification['seen']) and (user.id == notification['seen']
+                                                            or user in notification['seen']) else False
             }
             for notification in all_notifications
         ]
