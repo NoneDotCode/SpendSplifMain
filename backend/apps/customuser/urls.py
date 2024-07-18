@@ -10,5 +10,5 @@ urlpatterns = [
     path("me/profile/edit/verify_new_email/", ConfirmNewEmailView.as_view(), name="new_email_verify"),
     path("me/logout/", LogoutView.as_view(), name="logout"),
     path("me/profile/", UserProfileView.as_view(), name="my_profile"),
-    path('google/', GoogleLoginView.as_view(), name='google-login'),
+    path('auth/google/', GoogleLoginView.as_view(), name='google-login'),
 ]
