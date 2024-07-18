@@ -8,6 +8,11 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from backend.apps.customuser.models import CustomUser
 
 
+class GoogleAuthSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    currency = serializers.CharField(max_length=3, required=False)
+
+
 class CustomUserSerializer(serializers.ModelSerializer, ):
     class Meta:
         model = CustomUser

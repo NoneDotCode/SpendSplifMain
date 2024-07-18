@@ -1,13 +1,10 @@
-from rest_framework import generics, permissions, authentication, status
-from rest_framework.response import Response
+from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 
-from django.db import transaction
 
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.conf import settings
 
@@ -16,20 +13,21 @@ from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import (
     CustomUserSerializer,
-    EmailTokenObtainPairSerializer,
-    VerifyEmailSerializer,
     CustomTokenRefreshSerializer,
-    ResetPasswordSerializer,
 )
-from backend.apps.customuser.utils import get_verify_code, send_code_to_new_user, cookie_response_payload_handler
+from backend.apps.customuser.utils import cookie_response_payload_handler
 
 from backend.apps.space.models import Space, MemberPermissions
 
-from backend.apps.messenger.models import SpaceGroup
 
 from datetime import datetime
 
 from backend.apps.total_balance.models import TotalBalance
+from rest_framework.response import Response
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from rest_framework_simplejwt.tokens import RefreshToken
+from backend.apps.customuser.serializers import GoogleAuthSerializer
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -208,3 +206,95 @@ class CustomUserUpdateAPIView(generics.UpdateAPIView):
             serializer = self.get_serializer(instance)
 
         return Response(serializer.data)
+
+
+class GoogleLoginView(generics.CreateAPIView):
+    serializer_class = GoogleAuthSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data['token']
+
+        try:
+            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), settings.GOOGLE_CLIENT_ID)
+
+            if 'email' not in idinfo:
+                return Response({'error': 'Google login failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+            email = idinfo['email']
+            name = idinfo.get('name', '')
+            username = email.split('@')[0]
+
+            user, created = CustomUser.objects.get_or_create(email=email,
+                                                             defaults={
+                                                                 'username': username,
+                                                                 'is_active': True,
+                                                                 'verify_code': 'verified'
+                                                             })
+
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+                currency = serializer.validated_data['currency']
+                # Создаем пространство для нового пользователя
+                space = Space.objects.create(title="Main", currency=currency)
+
+                MemberPermissions.objects.create(
+                    member=user,
+                    space=space,
+                    owner=True
+                )
+
+                TotalBalance.objects.create(father_space=space, balance=0)
+
+                Category.objects.create(
+                    title="Food",
+                    limit=1000,
+                    spent=0,
+                    father_space=space,
+                    color="#FF9800",
+                    icon="Donut"
+                )
+
+                Category.objects.create(
+                    title="Home",
+                    spent=0,
+                    father_space=space,
+                    color="#FF5050",
+                    icon="Home"
+                )
+
+                Account.objects.create(
+                    title="Main",
+                    balance=0,
+                    currency='USD',  # Используем дефолтную валюту USD
+                    father_space=space
+                )
+
+            refresh = RefreshToken.for_user(user)
+            user_data = CustomUserSerializer(user).data
+
+            # Устанавливаем refresh token в куки
+            response = Response({
+                'access': str(refresh.access_token),
+                'user': user_data,
+            })
+
+            refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
+
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
+                value=str(refresh),
+                expires=refresh_token_expiration,
+                httponly=True,
+                samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
+                secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
+            )
+
+            return response
+
+        except ValueError:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
