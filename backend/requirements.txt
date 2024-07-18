@@ -16,3 +16,4 @@ requests~=2.31.0
 django-colorfield==0.11.0
 anthropic==0.30.1
 dj-rest-auth==6.0.0
+google-auth==2.32.0
