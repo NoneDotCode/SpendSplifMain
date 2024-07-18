@@ -1,7 +1,8 @@
 from django.urls import path
 
 from backend.apps.history.views import HistoryView, ExpenseAutoDataView, IncomeAutoDataView, \
-    TransferAutoDataView, StatisticView, StatisticSimulation, HistoryExpenseEditView, HistoryIncomeEditView
+    TransferAutoDataView, StatisticView, StatisticSimulation, HistoryExpenseEditView, \
+        HistoryIncomeEditView, HistoryPeriodView
 
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('auto_transfer/', TransferAutoDataView.as_view(), name='transfer'),
     path('statistic/', StatisticView.as_view(), name='stat'),
     path('statistic_simulation/', StatisticSimulation.as_view(), name='stat'),
+    path('period/', HistoryPeriodView.as_view(), name='history_of_period')
 ]

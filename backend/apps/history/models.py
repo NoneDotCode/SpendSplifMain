@@ -22,7 +22,7 @@ class HistoryExpense(models.Model):
     periodic_expense = models.BooleanField(default=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class HistoryIncome(models.Model):
@@ -33,7 +33,7 @@ class HistoryIncome(models.Model):
     account = models.JSONField(verbose_name='account', null=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class HistoryTransfer(models.Model):
@@ -48,4 +48,4 @@ class HistoryTransfer(models.Model):
     goal_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     collected = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    created = models.DateTimeField(auto_now_add=True)

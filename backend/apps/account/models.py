@@ -11,6 +11,7 @@ class Account(models.Model):
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     included_in_total_balance = models.BooleanField(default=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
+    created = models.DateField(auto_now=True)
 
     def __str__(self):
         return self.title

@@ -132,3 +132,6 @@ class CombinedStatisticSerializer(serializers.Serializer):
     Goals = serializers.DictField()
     Recurring_Payments = serializers.DictField()
     Categories = serializers.DictField()
+
+class HistoryPeriodSerializer(serializers.Serializer):
+    period = serializers.DateField(format="%d-%m-%Y")

@@ -1,3 +1,4 @@
+import json
 from typing import Dict, List, Tuple, Union
 
 from django.db import transaction
@@ -17,7 +18,7 @@ from decimal import Decimal
 
 from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTransfer
 from backend.apps.history.serializers import (HistoryExpenseAutoDataSerializer, HistoryIncomeAutoDataSerializer,
-                                              HistoryTransferAutoDataSerializer)
+                                              HistoryTransferAutoDataSerializer, HistoryPeriodSerializer)
 
 from rest_framework import generics
 from backend.apps.history.serializers import CombinedStatisticSerializer
@@ -1585,3 +1586,87 @@ class TransferAutoDataView(generics.ListAPIView):
         HistoryTransfer.objects.bulk_create(transfers)
 
         return HistoryTransfer.objects.filter(father_space=father_space)
+
+def get_lastest_model_object(queryset, period):
+    start_date = datetime.strptime(period, "%d:%m:%Y")
+    end_date = start_date + timedelta(days=1)
+    return queryset.filter(created__range=(start_date, end_date)).order_by("-created").first()
+    
+    
+    
+def get_user_acc_data(user_spaces, period):
+    """Returns latest account data by period"""
+    acc_data = {}
+    user_accounts = [Account.objects.filter(father_space=space) for space in user_spaces]
+    
+    for account_qs in user_accounts:
+        for account in account_qs:
+            latest_expense = get_lastest_model_object(HistoryExpense.objects.filter(from_acc__id=account.id), period)
+            latest_income = get_lastest_model_object(HistoryIncome.objects.filter(account__id=account.id), period)
+            latest_transfer = get_lastest_model_object(HistoryTransfer.objects.filter(from_acc__id=account.id), period)
+
+            models_with_dates = [latest_expense, latest_income, latest_transfer]
+            models_with_dates = [model for model in models_with_dates if model is not None]
+
+            if models_with_dates:
+                closest_model = max(models_with_dates, key=lambda x: x.created)
+                
+                if isinstance(closest_model, HistoryIncome):
+                    acc = closest_model.account
+                else:    
+                    acc = closest_model.from_acc
+
+                acc_data[account.id] = {
+                    "id": acc["id"],
+                    "title": acc["title"],
+                    "currency": acc["currency"],
+                    "balance": acc["balance"],
+                    # "included_in_total_balance":acc["included_in_total_balance"],
+                    # "father_space": acc["father_space"].id,
+                    # "created": acc["created"]
+                }
+            else:
+                acc_data[account.id] = None
+    
+    return acc_data
+
+def get_user_cat_data(user_spaces, period):
+    """returns latest categories data by period"""
+    user_categories = [Category.objects.filter(father_space=space) for space in user_spaces]
+    cat_data = {}
+    for category_qs in user_categories:
+        for category in category_qs:
+        
+            if category:
+                latest_expense = get_lastest_model_object(HistoryExpense.objects.filter(to_cat__id=category.id), period)
+                if latest_expense:
+                    cat = latest_expense.to_cat
+                    # father_space_id = Space.objects.get(title=cat["father_space"]).id 
+                    cat_data[category.id] = {
+                        "id": cat["id"],
+                        "title": cat["title"],
+                        "spent": float(cat["spent"]),
+                        "limit": float(cat["limit"]) if cat["limit"] else None,
+                        "color": cat["color"],
+                        "icon": cat["icon"],
+                        # "father_space": father_space_id if father_space_id else None,
+                        # "created": str(cat["created"]),
+                    }
+                
+                else:
+                    cat_data[category.id] = None
+    return cat_data
+
+
+class HistoryPeriodView(APIView):
+    serializer_class = HistoryPeriodSerializer
+    permission_classes = ()
+    
+    def post(self, request, *args, **kwargs):
+
+        user_spaces = Space.objects.filter(members=request.user)
+        period = request.data.get("period")
+        cat_data = get_user_cat_data(user_spaces=user_spaces, period=period)
+        acc_data = get_user_acc_data(user_spaces=user_spaces, period=period)
+        combined_data = {"Accounts": acc_data, "Categories": cat_data} 
+        return Response(combined_data, status=status.HTTP_200_OK)

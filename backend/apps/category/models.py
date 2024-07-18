@@ -13,6 +13,7 @@ class Category(models.Model):
     color = ColorField(format="hex")
     icon = models.CharField(choices=Icons.choices)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
+    created = models.DateField(auto_now=True)
 
     def __str__(self):
         return self.title
