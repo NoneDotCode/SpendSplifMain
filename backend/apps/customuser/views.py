@@ -213,39 +213,27 @@ class GoogleLoginView(generics.CreateAPIView):
     serializer_class = GoogleAuthSerializer
     permission_classes = (permissions.AllowAny,)
 
-    def exchange_auth_token(self, auth_token):
+    def exchange_access_token(self, access_token):
         try:
-            response = requests.post(
-                'https://oauth2.googleapis.com/token',
-                data={
-                    'code': auth_token,
-                    'client_id': settings.GOOGLE_CLIENT_ID,
-                    'client_secret': settings.GOOGLE_CLIENT_SECRET,
-                    'grant_type': 'authorization_code'
-                }
-            )
-            response_data = response.json()
-            if 'id_token' not in response_data:
-                access_token = response_data.get('access_token')
-                if access_token:
-                    userinfo_response = requests.get(
-                        'https://www.googleapis.com/oauth2/v3/userinfo',
-                        headers={'Authorization': f'Bearer {access_token}'}
-                    )
-                    userinfo_data = userinfo_response.json()
-                    if 'sub' in userinfo_data:
-                        return userinfo_data
-            return response_data["id_token"]
+            if access_token:
+                userinfo_response = requests.get(
+                    'https://www.googleapis.com/oauth2/v2/userinfo',
+                    headers={'Authorization': f'Bearer {access_token}'}
+                )
+                userinfo_data = userinfo_response.json()
+                if userinfo_data:
+                    return userinfo_data
         except Exception as e:
             raise ValueError("Failed to exchange auth token for id token")
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        auth_token = serializer.validated_data['auth_token']
+        access_token = serializer.validated_data['access_token']
 
         try:
-            userinfo = self.exchange_auth_token(auth_token)
+            userinfo = self.exchange_access_token(access_token)
+            print(userinfo)
             if not userinfo:
                 return Response({'error': 'Google login failed'}, status=status.HTTP_400_BAD_REQUEST)
 
