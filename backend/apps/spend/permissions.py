@@ -80,7 +80,7 @@ class CanDeletePeriodicSpends(permissions.BasePermission):
             account = Account.objects.get(pk=account_pk)
             category = Category.objects.get(pk=category_pk)
             space = Space.objects.get(pk=space_pk)
-        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist):
+        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist, PeriodicTask.DoesNotExist):
             return False
 
         task_args = ast.literal_eval(task.args)
@@ -107,7 +107,7 @@ class CanEditPeriodicSpends(permissions.BasePermission):
             account = Account.objects.get(pk=account_pk)
             category = Category.objects.get(pk=category_pk)
             space = Space.objects.get(pk=space_pk)
-        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist):
+        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist, PeriodicTask.DoesNotExist):
             return False
 
         task_args = ast.literal_eval(task.args)

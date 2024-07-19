@@ -1,15 +1,8 @@
-from rest_framework import generics, status
-from rest_framework.response import Response
-
+from rest_framework import generics
 from backend.apps.total_balance.models import TotalBalance
 from backend.apps.total_balance.serializers import TotalBalanceSerializer
 
-from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
-
-from backend.apps.converter.utils import convert_currencies
-
-from backend.apps.category.models import Category
-from backend.apps.goal.models import Goal
+from backend.apps.account.permissions import IsSpaceMember
 
 
 class ViewTotalBalance(generics.ListAPIView):

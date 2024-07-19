@@ -10,18 +10,15 @@ from backend.apps.converter.utils import convert_currencies
 from backend.apps.goal.models import Goal
 from backend.apps.history.models import HistoryTransfer
 
-from backend.apps.total_balance.models import TotalBalance
-
 from backend.apps.transfer.permissions import TransferPermission
 
 
 class TransferView(generics.GenericAPIView):
+    serializer_class = AccountSerializer
+    permission_classes = (IsSpaceMember, TransferPermission)
 
     def get_queryset(self):
         return Account.objects.filter(pk=self.kwargs.get("account_pk"))
-
-    serializer_class = AccountSerializer
-    permission_classes = (IsSpaceMember, TransferPermission)
 
     @staticmethod
     def put(request, *args, **kwargs):
