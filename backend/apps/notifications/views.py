@@ -7,9 +7,11 @@ from rest_framework.response import Response
 from django.db.models import Value, CharField
 from rest_framework import status
 from django.utils.formats import date_format
+from rest_framework.permissions import IsAuthenticated
 
 
 class NotificationList(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         user = self.request.user
@@ -62,6 +64,7 @@ class HowManyUnseen(generics.GenericAPIView):
 
 
 class UpdateSeen(generics.UpdateAPIView):
+    permission_classes = (IsAuthenticated,)
     serializer_class = UpdateViewersSerializer
 
     def update(self, request, *args, **kwargs):
@@ -90,6 +93,7 @@ class UpdateSeen(generics.UpdateAPIView):
 
 
 class AllSeen(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
         user = self.request.user
@@ -108,6 +112,7 @@ class AllSeen(generics.ListAPIView):
 
 
 class SimulateNotification(generics.GenericAPIView):
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         user = self.request.user

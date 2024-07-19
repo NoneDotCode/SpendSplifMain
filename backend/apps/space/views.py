@@ -23,8 +23,11 @@ from backend.apps.total_balance.models import TotalBalance
 from django.db import transaction
 
 from backend.apps.space.models import Space
+from rest_framework.permissions import IsAuthenticated
+
 
 class CreateSpace(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
     serializer_class = SpaceSerializer
 
     def perform_create(self, serializer):
@@ -72,6 +75,7 @@ class CreateSpace(generics.CreateAPIView):
 
 
 class ListOfSpaces(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
     serializer_class = SpaceListSerializer
 
     def get_queryset(self):
