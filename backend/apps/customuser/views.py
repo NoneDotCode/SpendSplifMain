@@ -233,7 +233,6 @@ class GoogleLoginView(generics.CreateAPIView):
 
         try:
             userinfo = self.exchange_access_token(access_token)
-            print(userinfo)
             if not userinfo:
                 return Response({'error': 'Google login failed'}, status=status.HTTP_400_BAD_REQUEST)
 
