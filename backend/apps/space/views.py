@@ -5,6 +5,7 @@ from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import CustomUserSerializer
+from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions
 from backend.apps.space.serializers import SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
@@ -170,6 +171,9 @@ class AddMemberToSpace(generics.GenericAPIView):
 
         # Add user to the space.
         space.members.add(user)
+
+        notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
+        Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Medium")
 
         # Return success answer
         return Response({"success": "User successfully added to the space."}, status=status.HTTP_200_OK)
