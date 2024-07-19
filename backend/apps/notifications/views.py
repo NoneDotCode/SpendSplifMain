@@ -36,7 +36,7 @@ class NotificationList(generics.GenericAPIView):
             {
                 'id': notification['id'],
                 'message': notification['message'],
-                'importance': notification['importance'],
+                'importance': notification['importance'].upper(),
                 'date': date_format(notification['created_at'], format="d F"),
                 'time': date_format(notification['created_at'], format="H:i"),
                 'type': notification['type'],
@@ -87,6 +87,24 @@ class UpdateSeen(generics.UpdateAPIView):
         user = self.request.user
         instance.seen.add(user)
         instance.save()
+
+
+class AllSeen(generics.ListAPIView):
+
+    def get(self, request, *args, **kwargs):
+        user = self.request.user
+
+        notifications = Notification.objects.filter(who_can_view=user).exclude(seen=user)
+
+        company_notifications = NotificationCompany.objects.all().exclude(seen=user)
+
+        all_notifications = list(notifications) + list(company_notifications)
+
+        for notification in all_notifications:
+            notification.seen.add(user)
+            notification.save()
+
+        return Response({'Result:': "All notifications have been marked as seen successfully!"}, status=status.HTTP_200_OK)
 
 
 class SimulateNotification(generics.GenericAPIView):
