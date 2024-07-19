@@ -9,7 +9,7 @@ from backend.apps.customuser.models import CustomUser
 
 
 class GoogleAuthSerializer(serializers.Serializer):
-    token = serializers.CharField()
+    auth_token = serializers.CharField()
     currency = serializers.CharField(max_length=3, required=False)
 
 

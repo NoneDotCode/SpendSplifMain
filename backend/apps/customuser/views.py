@@ -28,6 +28,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
 from backend.apps.customuser.serializers import GoogleAuthSerializer
+import requests
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -212,19 +213,44 @@ class GoogleLoginView(generics.CreateAPIView):
     serializer_class = GoogleAuthSerializer
     permission_classes = (permissions.AllowAny,)
 
+    def exchange_auth_token(self, auth_token):
+        try:
+            response = requests.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'code': auth_token,
+                    'client_id': settings.GOOGLE_CLIENT_ID,
+                    'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                    'grant_type': 'authorization_code'
+                }
+            )
+            response_data = response.json()
+            if 'id_token' not in response_data:
+                access_token = response_data.get('access_token')
+                if access_token:
+                    userinfo_response = requests.get(
+                        'https://www.googleapis.com/oauth2/v3/userinfo',
+                        headers={'Authorization': f'Bearer {access_token}'}
+                    )
+                    userinfo_data = userinfo_response.json()
+                    if 'sub' in userinfo_data:
+                        return userinfo_data
+            return response_data["id_token"]
+        except Exception as e:
+            raise ValueError("Failed to exchange auth token for id token")
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        token = serializer.validated_data['token']
+        auth_token = serializer.validated_data['auth_token']
 
         try:
-            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), settings.GOOGLE_CLIENT_ID)
-
-            if 'email' not in idinfo:
+            userinfo = self.exchange_auth_token(auth_token)
+            if not userinfo:
                 return Response({'error': 'Google login failed'}, status=status.HTTP_400_BAD_REQUEST)
 
-            email = idinfo['email']
-            name = idinfo.get('name', '')
+            email = userinfo['email']
+            name = userinfo.get('name', '')
             username = email.split('@')[0]
 
             user, created = CustomUser.objects.get_or_create(email=email,
@@ -296,5 +322,5 @@ class GoogleLoginView(generics.CreateAPIView):
 
             return response
 
-        except ValueError:
-            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
