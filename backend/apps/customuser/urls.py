@@ -1,7 +1,10 @@
 from django.urls import path
 
 from backend.apps.customuser.views import (CustomUserRegistrationView, ConfirmRegistrationView, CustomUserUpdateAPIView,
-                                           ConfirmNewEmailView, UserProfileView, LogoutView, GoogleLoginView)
+                                           ConfirmNewEmailView, UserProfileView, LogoutView, GoogleLoginRedirectApi,
+                                           GoogleLoginApi)
+
+app_name = 'customuser'
 
 urlpatterns = [
     path("register/", CustomUserRegistrationView.as_view(), name="register"),
@@ -10,5 +13,6 @@ urlpatterns = [
     path("me/profile/edit/verify_new_email/", ConfirmNewEmailView.as_view(), name="new_email_verify"),
     path("me/logout/", LogoutView.as_view(), name="logout"),
     path("me/profile/", UserProfileView.as_view(), name="my_profile"),
-    path('auth/google/', GoogleLoginView.as_view(), name='google-login'),
+    path('auth/google/login/', GoogleLoginRedirectApi.as_view(), name='google_login'),
+    path('auth/google/callback/', GoogleLoginApi.as_view(), name='google_callback'),
 ]
