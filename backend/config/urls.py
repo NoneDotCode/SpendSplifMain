@@ -8,7 +8,7 @@ base_space_url = "api/v1/my_spaces/<int:space_pk>/"
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/v1/", include("apps.customuser.urls")),
+    path("api/v1/", include("apps.customuser.urls", namespace="customuser")),
     path("api/v1/", include("apps.space.urls")),
     path("api/v1/", include("apps.api_stocks.urls")),
     path("api/v1/", include("apps.cryptocurrency.urls")),
