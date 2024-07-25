@@ -4,13 +4,15 @@ from django.conf import settings
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework import status
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.db.models import Sum, F
 
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTransfer
 from backend.apps.space.models import Space
+from backend.apps.Dowt.models import Advice
 from django.utils import timezone
+from backend.apps.customuser.views import get_highest_role
 
 
 class FinancialAdviceView(GenericAPIView):
@@ -23,6 +25,20 @@ class FinancialAdviceView(GenericAPIView):
     def get(self, request, **kwargs):
         space_id = kwargs.get('space_pk')
         time_range = request.data.get('time_range', '30_days')
+
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        advice_counter = Advice.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
+        highest_role = get_highest_role(request.user.roles)
+
+        if advice_counter >= 25 and highest_role == "premium":
+            return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif advice_counter >= 13 and highest_role == "standard":
+            return Response("Error: you can't get more than 13 advices because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif advice_counter >= 7 and highest_role == "free":
+            return Response("Error: you can't get more than 7 advices because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
+
 
         try:
             space = self.get_object()
@@ -112,6 +128,11 @@ class FinancialAdviceView(GenericAPIView):
         )
 
         advice = message.content[0].text
+        Advice.objects.create(
+            user=request.user,
+            advice=advice,
+            space=Space.objects.get(id=space_id)
+        )
         return Response({"advice": advice})
 
 
@@ -224,4 +245,9 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         )
 
         advice = message.content[0].text
+        Advice.objects.create(
+            user=request.user,
+            advice=advice,
+            space=Space.objects.get(id=space_id)
+        )
         return Response({"advice": advice})

@@ -7,7 +7,7 @@ COPY ./requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir django gunicorn
 
-COPY ../ /SpendSplif/backend
+COPY ./ /SpendSplif/backend
 
 WORKDIR /SpendSplif
 

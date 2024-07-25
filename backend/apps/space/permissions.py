@@ -2,6 +2,11 @@ from rest_framework.permissions import BasePermission
 
 from backend.apps.space.models import Space
 
+class UserRolePermision(BasePermission):
+    def has_permission(self, request, view):
+        if  "free" in request.user.roles:
+            return False
+        return True
 
 class IsSpaceMember(BasePermission):
 

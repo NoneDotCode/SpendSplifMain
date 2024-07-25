@@ -13,6 +13,7 @@ from backend.apps.history.models import HistoryIncome
 from backend.apps.space.models import Space
 from backend.apps.total_balance.models import TotalBalance
 from backend.apps.total_balance.serializers import TotalBalanceSerializer
+from backend.apps.customuser.views import get_highest_role
 
 
 class CreateAccount(generics.CreateAPIView):
@@ -24,8 +25,18 @@ class CreateAccount(generics.CreateAPIView):
         space = get_object_or_404(Space, pk=space_pk)
         request.data['father_space'] = space_pk
         user_account_counter = Account.objects.filter(father_space=space).count()
-        if user_account_counter >= 25:
+        highest_role = get_highest_role(request.user.roles)
+        
+        if user_account_counter > 25:
             return Response("Error: you can't create more than 25 accounts", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif user_account_counter > 12 and highest_role =="premium":
+            return Response("Error: you can't create more than 12 accounts because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
+        elif user_account_counter > 6 and highest_role == "standard":
+            return Response("Error: you can't create more than 6 accounts because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
+        elif user_account_counter > 3 and highest_role == "free":
+            return Response("Error: you can't create more than 3 accounts because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
+       
         try:
             balance = request.data['balance']
         except KeyError:

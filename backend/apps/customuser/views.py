@@ -311,3 +311,9 @@ class GoogleLoginView(generics.CreateAPIView):
 
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+def get_highest_role(user_roles):
+    role_priorities = ["employee", "sponsor", "premium", "standard", "free"]
+    for role in role_priorities:
+        if role in user_roles:
+            return role 

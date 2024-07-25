@@ -24,6 +24,8 @@ from backend.apps.total_balance.models import TotalBalance
 
 from backend.apps.space.models import Space
 
+from backend.apps.customuser.views import get_highest_role
+
 import json
 
 
@@ -106,7 +108,7 @@ class SpendView(generics.GenericAPIView):
 class PeriodicSpendCreateView(generics.GenericAPIView):
     serializer_class = PeriodicSpendCreateSerializer
     permission_classes = (IsSpaceMember, CanCreatePeriodicSpends)
-
+    
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -120,6 +122,25 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
+
+        def key(task):
+            try:
+                check1 = f"periodic_spend_{request.user.id}" in task.name
+                check2 = ast.literal_eval(task.args)[2] == kwargs.get("space_pk")
+                return check1 and check2
+            except (ValueError, KeyError, IndexError):
+                return False
+        
+        periodic_spends_count = len(list(filter(key, PeriodicTask.objects.all())))
+        highest_role = get_highest_role(request.user.roles)
+
+        if periodic_spends_count > 20 and highest_role == "premium":
+            return Response("Error: you can't create more than 20 periodic spends because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif periodic_spends_count > 10 and highest_role == "standard":
+            return Response("Error: you can't create more than 10 periodic spends because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif periodic_spends_count > 5 and highest_role == "free":
+            return Response("Error: you can't create more than 5 periodic spends because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
