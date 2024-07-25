@@ -56,5 +56,6 @@ class MemberPermissions(models.Model):
 class SpaceBackup(models.Model):
     accounts = models.JSONField(verbose_name="state of accounts")
     categories = models.JSONField(verbose_name="state of categories")
+    total_balance = models.JSONField(verbose_name="state of total balance")
     date = models.DateField(verbose_name="date of backup")
     father_space = models.ForeignKey(Space, on_delete=models.CASCADE, verbose_name="father_space")

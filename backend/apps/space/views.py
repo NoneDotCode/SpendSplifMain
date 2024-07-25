@@ -40,7 +40,7 @@ class CreateSpace(generics.CreateAPIView):
         user_space_counter = Space.objects.filter(members=self.request.user).count()
         if user_space_counter >= 5:
             return Response("Error: you can't create more than 5 spaces", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        
+
         with transaction.atomic():
             # Save the space instance
             space = serializer.save()
@@ -122,7 +122,7 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
@@ -264,15 +264,18 @@ class SpaceBackupSimulator:
     def generate_backup(self, backup_date):
         accounts = self.generate_accounts()
         categories = self.generate_categories()
+        total_balance = self.generate_total_balance()
 
         return SpaceBackup.objects.create(
             father_space=self.space,
             date=backup_date,
             accounts=accounts,
-            categories=categories
+            categories=categories,
+            total_balance=total_balance
         )
 
-    def generate_accounts(self):
+    @staticmethod
+    def generate_accounts():
         accounts = []
         for i in range(random.randint(2, 5)):
             balance = Decimal(random.uniform(0, 10000)).quantize(Decimal('0.01'))
@@ -291,7 +294,8 @@ class SpaceBackupSimulator:
             accounts.append(account)
         return accounts
 
-    def generate_categories(self):
+    @staticmethod
+    def generate_categories():
         categories = []
         for i in range(random.randint(3, 7)):
             spent = Decimal(random.uniform(0, 500)).quantize(Decimal('0.01'))
@@ -308,6 +312,14 @@ class SpaceBackupSimulator:
             }
             categories.append(category)
         return categories
+
+    @staticmethod
+    def generate_total_balance():
+        balance = Decimal(random.uniform(0, 50000)).quantize(Decimal('0.01'))
+        return {
+            'balance': float(balance),
+            'balance_converted': convert_number_to_letter(balance),
+        }
 
 
 class SpaceBackupListView(APIView):
@@ -347,7 +359,8 @@ class SpaceBackupListView(APIView):
             'id': latest_backup.id,
             'date': latest_backup.date,
             'accounts': latest_backup.accounts,
-            'categories': latest_backup.categories
+            'categories': latest_backup.categories,
+            'total_balance': latest_backup.total_balance
         }
 
         return Response(backup_data)
