@@ -15,6 +15,7 @@ from backend.apps.category.models import Category
 from backend.apps.spend.permissions import SpendPermission, CanCreatePeriodicSpends, CanDeletePeriodicSpends, \
     CanEditPeriodicSpends
 from backend.apps.spend.serializers import PeriodicSpendCreateSerializer, PeriodicSpendEditSerializer, SpendSerializer
+from backend.apps.spend.models import PeriodicSpendCounter
 
 from backend.apps.converter.utils import convert_currencies
 
@@ -122,7 +123,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
-
+        father_space = Space.objects.get(pk=kwargs.get("space_pk"))
         def key(task):
             try:
                 check1 = f"periodic_spend_{request.user.id}" in task.name
@@ -131,7 +132,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
             except (ValueError, KeyError, IndexError):
                 return False
         
-        periodic_spends_count = len(list(filter(key, PeriodicTask.objects.all())))
+        periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
         highest_role = get_highest_role(request.user.roles)
 
         if periodic_spends_count > 20 and highest_role == "premium":
@@ -159,9 +160,10 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                                                          kwargs.get("space_pk"),
                                                          amount,
                                                          title,
-                                                         request.user.currency)))
+                                                         father_space.currency)))
         except ValidationError:
             return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
+        PeriodicSpendCounter.obejcts.create(user=request.user, father_space=father_space, title=title)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
 
 
