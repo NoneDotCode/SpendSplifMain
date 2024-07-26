@@ -277,3 +277,4 @@ GOOGLE_PROJECT_ID = "spendsplif-421713"
 
 
 BASE_BACKEND_URL = 'http://localhost:8000'
+FRONTEND_URL = 'http://localhost:5173'

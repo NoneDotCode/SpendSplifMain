@@ -464,12 +464,7 @@ class GoogleLoginApi(APIView):
             refresh = RefreshToken.for_user(user)
             user_data = CustomUserSerializer(user).data
 
-            response = Response({
-                'access': str(refresh.access_token),
-                'user': user_data,
-                'id_token_decoded': id_token_decoded,
-                'user_info': user_info
-            })
+            response = redirect(settings.FRONTEND_URL)
 
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
 
