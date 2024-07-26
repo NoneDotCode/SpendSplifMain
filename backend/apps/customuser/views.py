@@ -1,3 +1,7 @@
+from random import SystemRandom
+from typing import Dict
+
+import jwt
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -5,8 +9,12 @@ from rest_framework.generics import GenericAPIView
 
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+import google_auth_oauthlib.flow
+from random import SystemRandom
+from urllib.parse import urlencode
 
-from django.conf import settings
+from django.shortcuts import redirect
+from rest_framework.views import APIView
 
 from backend.apps.account.models import Account
 from backend.apps.category.models import Category
@@ -16,8 +24,11 @@ from backend.apps.customuser.serializers import (
     CustomTokenRefreshSerializer,
 )
 from backend.apps.customuser.utils import cookie_response_payload_handler
+from rest_framework.exceptions import APIException
 
 from backend.apps.space.models import Space, MemberPermissions
+from rest_framework import serializers, status
+from django.urls import reverse_lazy
 
 
 from datetime import datetime
@@ -29,6 +40,10 @@ from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
 from backend.apps.customuser.serializers import GoogleAuthSerializer
 import requests
+from attr import define
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -209,50 +224,209 @@ class CustomUserUpdateAPIView(generics.UpdateAPIView):
         return Response(serializer.data)
 
 
-class GoogleLoginView(generics.CreateAPIView):
-    serializer_class = GoogleAuthSerializer
-    permission_classes = (permissions.AllowAny,)
+@define
+class GoogleLoginCredentials:
+    client_id: str
+    client_secret: str
+    project_id: str
 
-    def exchange_access_token(self, access_token):
+
+def google_login_get_credentials() -> GoogleLoginCredentials:
+    client_id = settings.GOOGLE_CLIENT_ID
+    client_secret = settings.GOOGLE_CLIENT_SECRET
+    project_id = settings.GOOGLE_PROJECT_ID
+
+    if not client_id:
+        raise ImproperlyConfigured("GOOGLE_CLIENT_ID missing in env.")
+
+    if not client_secret:
+        raise ImproperlyConfigured("GOOGLE_CLIENT_SECRET missing in env.")
+
+    if not project_id:
+        raise ImproperlyConfigured("GOOGLE_PROJECT_ID missing in env.")
+
+    credentials = GoogleLoginCredentials(
+        client_id=client_id,
+        client_secret=client_secret,
+        project_id=project_id
+    )
+
+    return credentials
+
+
+@define
+class GoogleAccessTokens:
+    id_token: str
+    access_token: str
+
+    def decode_id_token(self) -> Dict[str, str]:
+        id_token = self.id_token
+        decoded_token = jwt.decode(jwt=id_token, options={"verify_signature": False})
+        return decoded_token
+
+
+class PublicApi(APIView):
+    authentication_classes = ()
+    permission_classes = ()
+
+
+class GoogleLoginRedirectApi(PublicApi):
+    def get(self, request, *args, **kwargs):
+        google_login_flow = GoogleLoginFlowService()
+
+        authorization_url, state = google_login_flow.get_authorization_url()
+
+        request.session["google_oauth2_state"] = state
+
+        return redirect(authorization_url)
+
+
+class GoogleLoginFlowService:
+    API_URI = reverse_lazy("customuser:google_callback")
+
+    GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth"
+    GOOGLE_ACCESS_TOKEN_OBTAIN_URL = "https://oauth2.googleapis.com/token"
+    GOOGLE_USER_INFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+
+    SCOPES = [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "openid",
+    ]
+
+    def __init__(self):
+        self._credentials = google_login_get_credentials()
+
+    @staticmethod
+    def _generate_state_session_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
+        rand = SystemRandom()
+        state = "".join(rand.choice(chars) for _ in range(length))
+        return state
+
+    def _get_redirect_uri(self):
+        domain = settings.BASE_BACKEND_URL
+        api_uri = self.API_URI
+        redirect_uri = f"{domain}{api_uri}"
+        return redirect_uri
+
+    def get_authorization_url(self):
+        redirect_uri = self._get_redirect_uri()
+
+        state = self._generate_state_session_token()
+
+        params = {
+            "response_type": "code",
+            "client_id": self._credentials.client_id,
+            "redirect_uri": redirect_uri,
+            "scope": " ".join(self.SCOPES),
+            "state": state,
+            "access_type": "offline",
+            "include_granted_scopes": "true",
+            "prompt": "select_account",
+        }
+
+        query_params = urlencode(params)
+        authorization_url = f"{self.GOOGLE_AUTH_URL}?{query_params}"
+
+        return authorization_url, state
+
+    def get_tokens(self, *, code: str) -> GoogleAccessTokens:
+        redirect_uri = self._get_redirect_uri()
+
+        data = {
+            "code": code,
+            "client_id": self._credentials.client_id,
+            "client_secret": self._credentials.client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        }
+
+        response = requests.post(self.GOOGLE_ACCESS_TOKEN_OBTAIN_URL, data=data)
+
+        if not response.ok:
+            raise APIException("Failed to obtain access token from Google.")
+
+        tokens = response.json()
+        google_tokens = GoogleAccessTokens(
+            id_token=tokens["id_token"],
+            access_token=tokens["access_token"]
+        )
+
+        return google_tokens
+
+    def get_user_info(self, *, google_tokens: GoogleAccessTokens):
+        access_token = google_tokens.access_token
+
+        response = requests.get(
+            self.GOOGLE_USER_INFO_URL,
+            params={"access_token": access_token}
+        )
+
+        if not response.ok:
+            raise APIException("Failed to obtain user info from Google.")
+
+        return response.json()
+
+
+class GoogleLoginApi(APIView):
+    permission_classes = ()
+
+    class InputSerializer(serializers.Serializer):
+        code = serializers.CharField(required=False)
+        error = serializers.CharField(required=False)
+        state = serializers.CharField(required=False)
+
+    def get(self, request, *args, **kwargs):
+        input_serializer = self.InputSerializer(data=request.GET)
+        input_serializer.is_valid(raise_exception=True)
+
+        validated_data = input_serializer.validated_data
+
+        code = validated_data.get("code")
+        error = validated_data.get("error")
+        state = validated_data.get("state")
+
+        if error is not None:
+            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        if code is None or state is None:
+            return Response({"error": "Missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
+
+        session_state = request.session.get("google_oauth2_state")
+
+        if session_state is None:
+            return Response({"error": "CSRF check failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        del request.session["google_oauth2_state"]
+
+        if state != session_state:
+            return Response({"error": "CSRF check failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        google_login_flow = GoogleLoginFlowService()
+
         try:
-            if access_token:
-                userinfo_response = requests.get(
-                    'https://www.googleapis.com/oauth2/v2/userinfo',
-                    headers={'Authorization': f'Bearer {access_token}'}
-                )
-                userinfo_data = userinfo_response.json()
-                if userinfo_data:
-                    return userinfo_data
-        except Exception as e:
-            raise ValueError("Failed to exchange auth token for id token")
+            google_tokens = google_login_flow.get_tokens(code=code)
+            id_token_decoded = google_tokens.decode_id_token()
+            user_info = google_login_flow.get_user_info(google_tokens=google_tokens)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        access_token = serializer.validated_data['access_token']
-
-        try:
-            userinfo = self.exchange_access_token(access_token)
-            if not userinfo:
-                return Response({'error': 'Google login failed'}, status=status.HTTP_400_BAD_REQUEST)
-
-            email = userinfo['email']
-            name = userinfo.get('name', '')
+            email = id_token_decoded["email"]
+            name = user_info.get('name', '')
             username = email.split('@')[0]
 
-            user, created = CustomUser.objects.get_or_create(email=email,
-                                                             defaults={
-                                                                 'username': username,
-                                                                 'is_active': True,
-                                                                 'verify_code': 'verified'
-                                                             })
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': username,
+                    'is_active': True,
+                    'verify_code': 'verified'
+                }
+            )
 
             if created:
                 user.set_unusable_password()
                 user.save()
 
-                currency = serializer.validated_data['currency']
-                # Создаем пространство для нового пользователя
+                currency = validated_data.get('currency', 'USD')
                 space = Space.objects.create(title="Main", currency=currency)
 
                 MemberPermissions.objects.create(
@@ -283,18 +457,14 @@ class GoogleLoginView(generics.CreateAPIView):
                 Account.objects.create(
                     title="Main",
                     balance=0,
-                    currency='USD',  # Используем дефолтную валюту USD
+                    currency=currency,
                     father_space=space
                 )
 
             refresh = RefreshToken.for_user(user)
             user_data = CustomUserSerializer(user).data
 
-            # Устанавливаем refresh token в куки
-            response = Response({
-                'access': str(refresh.access_token),
-                'user': user_data,
-            })
+            response = redirect(settings.FRONTEND_URL)
 
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
 
@@ -309,5 +479,5 @@ class GoogleLoginView(generics.CreateAPIView):
 
             return response
 
-        except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

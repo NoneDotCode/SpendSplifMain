@@ -20,8 +20,7 @@ class FinancialAdviceView(GenericAPIView):
         space = Space.objects.get(id=self.kwargs['space_pk'])
         return space
 
-    def get(self, request, **kwargs):
-        space_id = kwargs.get('space_pk')
+    def post(self, request, **kwargs):
         time_range = request.data.get('time_range', '30_days')
 
         try:
@@ -74,16 +73,20 @@ class FinancialAdviceView(GenericAPIView):
         client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
         system_prompt = """
-        You are Dowt, a friendly and knowledgeable financial advisor. Provide personalized financial advice based on the given financial data. Be encouraging and supportive in your advice. Use some beautiful phrases before concluding your response. End your advice with one of the following signatures:
+        You are Dowt, a friendly and knowledgeable financial advisor. Provide personalized financial advice based on the
+         given financial data. Be encouraging and supportive in your advice. Use some beautiful phrases before 
+         concluding your response. End your advice with one of the following signatures:
         "Regards, Dowt."
         "Your financial advisor, Dowt."
         "Your Dowt."
         Remember to tailor your advice to the specific financial situation presented in the data.
-        Note: User can't write you a message, so don't write something like 'If you need any clarification or have additional questions, feel free to ask. I am here to help you on your path to financial wellbeing.'
+        Note: User can't write you a message, so don't write something like 'If you need any clarification or have 
+        additional questions, feel free to ask. I am here to help you on your path to financial wellbeing.'
         """
 
         user_prompt = f"""
-        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else 'current month to date'}:
+        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else 
+        'current month to date'}:
         Monthly Income: ${result['income']}
         Total Monthly Expenses: ${result['expenses']}
         Amount spent on categories (e.g., food, home, medicine, education): ${result['categories']}
@@ -122,8 +125,7 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         space = Space.objects.get(id=self.kwargs['space_pk'])
         return space
 
-    def get(self, request, **kwargs):
-        space_id = kwargs.get('space_pk')
+    def post(self, request, **kwargs):
         time_range = request.data.get('time_range', '30_days')
 
         try:
@@ -136,7 +138,6 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         else:  # default to last 30 days
             start_date = timezone.now() - timedelta(days=30)
 
-        # Получаем полную историю трат
         expenses = HistoryExpense.objects.filter(
             father_space=space,
             created__gte=start_date
@@ -145,13 +146,11 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
             category_icon=F('to_cat__icon')
         ).values('amount', 'currency', 'comment', 'category_title', 'category_icon', 'periodic_expense', 'created')
 
-        # Получаем доходы
         incomes = HistoryIncome.objects.filter(
             father_space=space,
             created__gte=start_date
         ).values('amount', 'currency', 'comment', 'created')
 
-        # Получаем переводы
         transfers = HistoryTransfer.objects.filter(
             father_space=space,
             created__gte=start_date
@@ -160,7 +159,6 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         total_income = sum(income['amount'] for income in incomes)
         total_expenses = sum(expense['amount'] for expense in expenses)
 
-        # Группируем траты по категориям
         category_expenses = {}
         for expense in expenses:
             category = expense['category_title'] or 'Uncategorized'
@@ -181,11 +179,15 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
         system_prompt = """
-        You are Dowt, a friendly and knowledgeable financial advisor. Analyze the given financial data and provide personalized advice on reducing expenses, optimizing finances, and achieving financial goals. Be specific in your recommendations, referring to actual spending patterns and categories. Use encouraging language and offer practical tips. End your advice with a signature like "Your financial advisor, Dowt."
+        You are Dowt, a friendly and knowledgeable financial advisor. Analyze the given financial data and provide 
+        personalized advice on reducing expenses, optimizing finances, and achieving financial goals. Be specific in 
+        your recommendations, referring to actual spending patterns and categories. Use encouraging language and offer 
+        practical tips. End your advice with a signature like "Your financial advisor, Dowt."
         """
 
         user_prompt = f"""
-        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else 'current month to date'}:
+        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else 
+        'current month to date'}:
         Total Income: ${result['total_income']}
         Total Expenses: ${result['total_expenses']}
 

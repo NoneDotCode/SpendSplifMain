@@ -17,3 +17,6 @@ django-colorfield==0.11.0
 anthropic==0.30.1
 dj-rest-auth==6.0.0
 google-auth==2.32.0
+attrs==23.2.0
+google==3.0.0
+google-auth-oauthlib==1.2.1

@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import generics
 
 from backend.apps.account.models import Account
@@ -6,7 +5,7 @@ from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.notifications.models import Notification
-from backend.apps.space.models import Space, MemberPermissions
+from backend.apps.space.models import Space, MemberPermissions, SpaceBackup
 from backend.apps.space.serializers import SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
                                             CanEditMembers)
@@ -22,8 +21,15 @@ from backend.apps.total_balance.models import TotalBalance
 
 from django.db import transaction
 
-from backend.apps.space.models import Space
 from rest_framework.permissions import IsAuthenticated
+import random
+from datetime import timedelta
+from decimal import Decimal
+from django.utils import timezone
+from rest_framework.views import APIView
+from backend.apps.space.permissions import IsSpaceMember, IsSpaceOwner
+from backend.apps.account.permissions import IsSpaceMember as IsSpaceMemberAcc
+from backend.apps.converter.utils import convert_number_to_letter
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -34,7 +40,7 @@ class CreateSpace(generics.CreateAPIView):
         user_space_counter = Space.objects.filter(members=self.request.user).count()
         if user_space_counter >= 5:
             return Response("Error: you can't create more than 5 spaces", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        
+
         with transaction.atomic():
             # Save the space instance
             space = serializer.save()
@@ -116,7 +122,7 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
-    
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
@@ -249,3 +255,141 @@ class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
         instance.save()
 
         return Response({'status': 'success'}, status=status.HTTP_200_OK)
+
+
+class SpaceBackupSimulator:
+    def __init__(self, space):
+        self.space = space
+
+    def generate_backup(self, backup_date):
+        accounts = self.generate_accounts()
+        categories = self.generate_categories()
+        total_balance = self.generate_total_balance()
+
+        return SpaceBackup.objects.create(
+            father_space=self.space,
+            date=backup_date,
+            accounts=accounts,
+            categories=categories,
+            total_balance=total_balance
+        )
+
+    @staticmethod
+    def generate_accounts():
+        accounts = []
+        for i in range(random.randint(2, 5)):
+            balance = Decimal(random.uniform(0, 10000)).quantize(Decimal('0.01'))
+            account = {
+                'id': i + 1,
+                'title': f'Account {i + 1}',
+                'balance': float(balance),
+                'balance_converted': convert_number_to_letter(balance),
+                'currency': random.choice(['USD', 'EUR', 'GBP']),
+                'included_in_total_balance': random.choice([True, False]),
+                'spend': float(Decimal(random.uniform(0, 1000)).quantize(Decimal('0.01'))),
+                'income': float(Decimal(random.uniform(0, 2000)).quantize(Decimal('0.01'))),
+            }
+            account['formatted_spend'] = convert_number_to_letter(account['spend'])
+            account['formatted_income'] = convert_number_to_letter(account['income'])
+            accounts.append(account)
+        return accounts
+
+    @staticmethod
+    def generate_categories():
+        categories = []
+        for i in range(random.randint(3, 7)):
+            spent = Decimal(random.uniform(0, 500)).quantize(Decimal('0.01'))
+            limit = Decimal(random.uniform(float(spent), 1000)).quantize(Decimal('0.01'))
+            category = {
+                'id': i + 1,
+                'title': f'Category {i + 1}',
+                'spent': float(spent),
+                'limit': float(limit),
+                'limit_formatted': convert_number_to_letter(limit),
+                'color': f'#{random.randint(0, 0xFFFFFF):06x}',
+                'icon': random.choice(['Home', 'Food', 'Transport', 'Entertainment']),
+                'spent_percentage': f"{round((spent / limit) * 100)}%"
+            }
+            categories.append(category)
+        return categories
+
+    @staticmethod
+    def generate_total_balance():
+        balance = Decimal(random.uniform(0, 50000)).quantize(Decimal('0.01'))
+        return {
+            'balance': float(balance),
+            'balance_converted': convert_number_to_letter(balance),
+        }
+
+
+class SpaceBackupListView(APIView):
+    permission_classes = [IsAuthenticated, IsSpaceMemberAcc]
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        space_id = kwargs.get('space_pk')
+        try:
+            space = Space.objects.get(id=space_id)
+        except Space.DoesNotExist:
+            return Response({"error": "Space not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        year = request.data.get('year')
+        month = request.data.get('month')
+
+        if year and month:
+            try:
+                year = int(year)
+                month = int(month)
+            except ValueError:
+                return Response({"error": "Year and month must be integers"}, status=status.HTTP_400_BAD_REQUEST)
+
+            backups = SpaceBackup.objects.filter(
+                father_space=space,
+                date__year=year,
+                date__month=month
+            ).order_by('-date')
+        else:
+            return Response({"error": "Year and month are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not backups.exists():
+            return Response({"message": "No backups found for the specified period"}, status=status.HTTP_404_NOT_FOUND)
+
+        latest_backup = backups.first()
+        backup_data = {
+            'id': latest_backup.id,
+            'date': latest_backup.date,
+            'accounts': latest_backup.accounts,
+            'categories': latest_backup.categories,
+            'total_balance': latest_backup.total_balance
+        }
+
+        return Response(backup_data)
+
+
+class SpaceBackupSimulatorView(APIView):
+    permission_classes = (IsSpaceMemberAcc,)
+
+    def post(self, request, *args, **kwargs):
+        space_id = kwargs.get('space_pk')
+        num_backups = request.data.get('num_backups', 7)  # По умолчанию создаем 3 бэкапа
+
+        try:
+            space = Space.objects.get(id=space_id)
+        except Space.DoesNotExist:
+            return Response({"error": "Space not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        simulator = SpaceBackupSimulator(space)
+        created_backups = []
+
+        for i in range(num_backups):
+            backup_date = timezone.now().date() - timedelta(days=30 * i)
+            backup = simulator.generate_backup(backup_date)
+            created_backups.append({
+                'id': backup.id,
+                'date': backup.date,
+            })
+
+        return Response({
+            "message": f"Successfully created {num_backups} backups",
+            "backups": created_backups
+        }, status=status.HTTP_201_CREATED)

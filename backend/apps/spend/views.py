@@ -120,6 +120,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
+        space = Space.objects.get(pk=kwargs["space_pk"])
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
@@ -138,7 +139,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                                                          kwargs.get("space_pk"),
                                                          amount,
                                                          title,
-                                                         request.user.currency)))
+                                                         space.currency)))
         except ValidationError:
             return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
@@ -228,7 +229,7 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
         periodic_spends_list = list(filter(key, PeriodicTask.objects.all()))
         result = []
         for spend in periodic_spends_list:
-            spend_args = ast.literal_eval(i.args)
+            spend_args = ast.literal_eval(spend.args)
             temp = {
                 "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
                 "account_pk": spend_args[0],

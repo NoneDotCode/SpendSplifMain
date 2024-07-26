@@ -274,3 +274,8 @@ ANTHROPIC_API_KEY = "sk-ant-api03-mqBtIiFrvSAz50MNcvXzodCEa7GRnv6Q0DGZr6scuTd1_C
 
 GOOGLE_CLIENT_ID = "902312829636-l04tkdlapql3jjblg7q0vlf76k7v9dlj.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_PROJECT_ID = "spendsplif-421713"
+
+
+BASE_BACKEND_URL = 'http://localhost:8000'
+FRONTEND_URL = 'http://localhost:5173'
