@@ -20,3 +20,4 @@ google-auth==2.32.0
 attrs==23.2.0
 google==3.0.0
 google-auth-oauthlib==1.2.1
+inflect==7.3.1
