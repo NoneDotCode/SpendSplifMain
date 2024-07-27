@@ -1,4 +1,3 @@
-import json
 import ast
 
 from django_celery_beat.models import PeriodicTask, CrontabSchedule
@@ -24,7 +23,11 @@ from backend.apps.total_balance.models import TotalBalance
 
 from backend.apps.space.models import Space
 
+import datetime
 import json
+import inflect
+
+p = inflect.engine()
 
 
 class SpendView(generics.GenericAPIView):
@@ -230,16 +233,21 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
         result = []
         for spend in periodic_spends_list:
             spend_args = ast.literal_eval(spend.args)
+            if spend.crontab.day_of_week == "*" and spend.crontab.day_of_month != "*":
+                spend_sch_str = "Every month"
+                spend_sch_int = p.ordinal(p.number_to_words(int(spend.crontab.day_of_month)))
+            elif spend.crontab.day_of_week != "*" and spend.crontab.day_of_month == "*":
+                spend_sch_str = "Every week"
+                spend_sch_int = datetime.datetime.strptime(str(spend.crontab.day_of_week), "%w").strftime("%A")
+            else:
+                continue
             temp = {
                 "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
                 "account_pk": spend_args[0],
                 "category_pk": spend_args[1],
                 "amount": spend_args[3],
-                "hour": spend.crontab.hour,
-                "minute": spend.crontab.minute,
-                "day_of_week": spend.crontab.day_of_week,
-                "day_of_month": spend.crontab.day_of_month,
-                "month_of_year": spend.crontab.month_of_year
+                "schedule": spend_sch_str,
+                "day": spend_sch_int
             }
             result.append(temp)
         return Response(result, status=status.HTTP_200_OK)
