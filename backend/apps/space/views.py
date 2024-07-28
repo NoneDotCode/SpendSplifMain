@@ -42,7 +42,7 @@ class CreateSpace(generics.CreateAPIView):
         highest_role = get_highest_role(self.request.user.roles)
         if highest_role == "free" or highest_role == "standard":
             return Response("Error: you can't create spaces because your role is free or standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        if user_space_counter > 5:
+        if user_space_counter >= 5:
             return Response("Error: you can't create more than 5 spaces", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         
         with transaction.atomic():

@@ -28,11 +28,11 @@ class CreateCategory(generics.CreateAPIView):
 
         user_categories_counter = Category.objects.filter(father_space=space).count()
         highest_role = get_highest_role(request.user.roles)
-        if user_categories_counter > 100:
+        if user_categories_counter >= 100:
             return Response("Error: you can't create more than 100 categories", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif user_categories_counter > 50 and highest_role == "standard" :
+        elif user_categories_counter >= 50 and highest_role == "standard" :
             return Response("Error: you can't create more than 50 categories because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif user_categories_counter > 25 and highest_role == "free":
+        elif user_categories_counter >= 25 and highest_role == "free":
             return Response("Error: you can't create more than 25 categories because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
        
         data = request.data.copy()

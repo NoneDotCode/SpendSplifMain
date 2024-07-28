@@ -2,7 +2,7 @@ from django.db import models
 from backend.apps.customuser.models import CustomUser
 from backend.apps.space.models import Space
 
-class Advice(models.Model):
+class AdviceCounter(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     advice = models.TextField()
     created = models.DateField(auto_now_add=True)

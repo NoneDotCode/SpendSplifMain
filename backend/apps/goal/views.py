@@ -27,9 +27,7 @@ class CreateGoal(generics.CreateAPIView):
         user_goals_counter = Goal.objects.filter(father_space=space).count()
         highest_role = get_highest_role(request.user.roles)
 
-        if user_goals_counter > 50:
-            return Response("Error: you can't create more than 50 goals", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif user_goals_counter >= 20 and highest_role == "premium":
+        if user_goals_counter >= 20 and highest_role == "premium":
             return Response("Error: you can't create more than 20 goals because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
         elif user_goals_counter >= 10 and highest_role == "standard":
             return Response("Error: you can't create more than 10 goals because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY) 
