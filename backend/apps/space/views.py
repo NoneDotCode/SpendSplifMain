@@ -30,7 +30,6 @@ from rest_framework.views import APIView
 from backend.apps.space.permissions import IsSpaceMember, IsSpaceOwner
 from backend.apps.account.permissions import IsSpaceMember as IsSpaceMemberAcc
 from backend.apps.converter.utils import convert_number_to_letter
-from backend.apps.customuser.views import get_highest_role
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -39,7 +38,7 @@ class CreateSpace(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user_space_counter = Space.objects.filter(members=self.request.user).count()
-        highest_role = get_highest_role(self.request.user.roles)
+        highest_role = self.request.user.roles[0]
         if highest_role == "free" or highest_role == "standard":
             return Response("Error: you can't create spaces because your role is free or standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         if user_space_counter >= 5:

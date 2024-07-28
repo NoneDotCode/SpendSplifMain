@@ -12,7 +12,6 @@ from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTr
 from backend.apps.space.models import Space
 from backend.apps.Dowt.models import AdviceCounter
 from django.utils import timezone
-from backend.apps.customuser.views import get_highest_role
 
 
 class FinancialAdviceView(GenericAPIView):
@@ -29,7 +28,7 @@ class FinancialAdviceView(GenericAPIView):
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
         advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
-        highest_role = get_highest_role(request.user.roles)
+        highest_role = self.request.user.roles[0]
 
         if advice_counter >= 25 and highest_role == "premium":
             return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -160,8 +159,7 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
         advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
-        highest_role = get_highest_role(request.user.roles)
-
+        highest_role = self.request.user.roles[0]   
         if advice_counter >= 25 and highest_role == "premium":
             return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif advice_counter >= 13 and highest_role == "standard":

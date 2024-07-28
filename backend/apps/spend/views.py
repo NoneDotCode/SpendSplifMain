@@ -25,7 +25,6 @@ from backend.apps.total_balance.models import TotalBalance
 
 from backend.apps.space.models import Space
 
-from backend.apps.customuser.views import get_highest_role
 
 import json
 
@@ -133,7 +132,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                 return False
         
         periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
-        highest_role = get_highest_role(request.user.roles)
+        highest_role = self.request.user.roles[0]
 
         if periodic_spends_count >= 20 and highest_role == "premium":
             return Response("Error: you can't create more than 20 periodic spends because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)

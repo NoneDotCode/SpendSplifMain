@@ -84,8 +84,8 @@ class CustomUser(AbstractUser):
     def add_role(self, role, *args, **kwargs):
         if role not in [choice[0] for choice in self.roles_choices]:
             raise ValueError(f"Role {role} is not a valide one.")
-        if role not in self.roles:
-            self.roles.append(role)
+        if role != self.roles[0]:
+            self.roles[0] = role
             self.save() 
 
     def save(self, *args, **kwargs):
