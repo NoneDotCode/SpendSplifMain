@@ -28,6 +28,7 @@ class FinancialAdviceView(GenericAPIView):
         start_of_week = today - timedelta(days=today.weekday())
         advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
         highest_role = self.request.user.roles[0]
+        
 
         if advice_counter >= 25 and highest_role == "premium":
             return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -133,7 +134,7 @@ class FinancialAdviceView(GenericAPIView):
         AdviceCounter.objects.create(
             user=request.user,
             advice=advice,
-            space=Space.objects.get(id=space_id)
+            space=Space.objects.get(id=self.get_object().id)
         )
         return Response({"advice": advice})
 
@@ -258,9 +259,27 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         )
 
         advice = message.content[0].text
-        Advice.objects.create(
+        AdviceCounter.objects.create(
             user=request.user,
             advice=advice,
-            space=Space.objects.get(id=space_id)
+            space=Space.objects.get(id=self.get_object().id)
         )
         return Response({"advice": advice})
+    
+class GetAdviceNumber(GenericAPIView):
+    permission_classes = (IsSpaceMember,)
+    
+    def get(self, request, *args, **kwargs):
+
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
+        highest_role = self.request.user.roles[0]   
+
+        if highest_role == "premium":
+            return Response({"advices_left": 25-advice_counter})
+        elif highest_role == "standard":
+            return Response({"advices_left": 13-advice_counter})
+        elif highest_role == "free":
+            return Response({"advices_left": 7-advice_counter})
+
