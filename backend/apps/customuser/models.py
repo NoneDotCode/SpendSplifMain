@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser, Group, Permission, BaseUser
 from django.core.validators import MaxValueValidator
 from django.db import models
 from rest_framework.exceptions import ValidationError
+from django.contrib.postgres.fields import ArrayField
 
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
@@ -52,6 +53,19 @@ class CustomUser(AbstractUser):
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
     email = models.EmailField(unique=True, null=False, blank=False)
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
+    
+    roles_choices = [
+        ("free", "Free"),
+        ("standard", "Standard"),
+        ("premium", "Premium"),
+        ("sponsor", "Sponsor"),
+        ("employee", "Employee"),
+        ]
+    roles = ArrayField(
+        models.CharField(max_length=12, choices=roles_choices), 
+        default=["premium"], 
+        blank=True
+        )
 
     new_email = models.EmailField(null=True, blank=True)
 
@@ -66,6 +80,13 @@ class CustomUser(AbstractUser):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
+
+    def add_role(self, role, *args, **kwargs):
+        if role not in [choice[0] for choice in self.roles_choices]:
+            raise ValueError(f"Role {role} is not a valide one.")
+        if role != self.roles[0]:
+            self.roles[0] = role
+            self.save() 
 
     def save(self, *args, **kwargs):
         """

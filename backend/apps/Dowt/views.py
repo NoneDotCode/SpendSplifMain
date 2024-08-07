@@ -4,12 +4,13 @@ from django.conf import settings
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework import status
-from datetime import timedelta
+from datetime import datetime, timedelta
 from django.db.models import Sum, F
 
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.history.models import HistoryIncome, HistoryExpense, HistoryTransfer
 from backend.apps.space.models import Space
+from backend.apps.Dowt.models import AdviceCounter
 from django.utils import timezone
 
 
@@ -22,6 +23,21 @@ class FinancialAdviceView(GenericAPIView):
 
     def post(self, request, **kwargs):
         time_range = request.data.get('time_range', '30_days')
+
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
+        highest_role = self.request.user.roles[0]
+        
+
+        if advice_counter >= 25 and highest_role == "premium":
+            return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif advice_counter >= 13 and highest_role == "standard":
+            return Response("Error: you can't get more than 13 advices because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif advice_counter >= 7 and highest_role == "free":
+            return Response("Error: you can't get more than 7 advices because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
+
 
         try:
             space = self.get_object()
@@ -115,6 +131,11 @@ class FinancialAdviceView(GenericAPIView):
         )
 
         advice = message.content[0].text
+        AdviceCounter.objects.create(
+            user=request.user,
+            advice=advice,
+            space=Space.objects.get(id=self.get_object().id)
+        )
         return Response({"advice": advice})
 
 
@@ -138,6 +159,18 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         else:  # default to last 30 days
             start_date = timezone.now() - timedelta(days=30)
 
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
+        highest_role = self.request.user.roles[0]   
+        if advice_counter >= 25 and highest_role == "premium":
+            return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif advice_counter >= 13 and highest_role == "standard":
+            return Response("Error: you can't get more than 13 advices because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif advice_counter >= 7 and highest_role == "free":
+            return Response("Error: you can't get more than 7 advices because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        # Получаем полную историю трат
         expenses = HistoryExpense.objects.filter(
             father_space=space,
             created__gte=start_date
@@ -226,4 +259,27 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         )
 
         advice = message.content[0].text
+        AdviceCounter.objects.create(
+            user=request.user,
+            advice=advice,
+            space=Space.objects.get(id=self.get_object().id)
+        )
         return Response({"advice": advice})
+    
+class GetAdviceNumber(GenericAPIView):
+    permission_classes = (IsSpaceMember,)
+    
+    def get(self, request, *args, **kwargs):
+
+        today = timezone.now().date()
+        start_of_week = today - timedelta(days=today.weekday())
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
+        highest_role = self.request.user.roles[0]   
+
+        if highest_role == "premium":
+            return Response({"advices_left": 25-advice_counter})
+        elif highest_role == "standard":
+            return Response({"advices_left": 13-advice_counter})
+        elif highest_role == "free":
+            return Response({"advices_left": 7-advice_counter})
+

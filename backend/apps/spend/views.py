@@ -14,6 +14,7 @@ from backend.apps.category.models import Category
 from backend.apps.spend.permissions import SpendPermission, CanCreatePeriodicSpends, CanDeletePeriodicSpends, \
     CanEditPeriodicSpends
 from backend.apps.spend.serializers import PeriodicSpendCreateSerializer, PeriodicSpendEditSerializer, SpendSerializer
+from backend.apps.spend.models import PeriodicSpendCounter
 
 from backend.apps.converter.utils import convert_currencies
 
@@ -24,6 +25,7 @@ from backend.apps.total_balance.models import TotalBalance
 from backend.apps.space.models import Space
 
 import datetime
+
 import json
 import inflect
 
@@ -109,7 +111,7 @@ class SpendView(generics.GenericAPIView):
 class PeriodicSpendCreateView(generics.GenericAPIView):
     serializer_class = PeriodicSpendCreateSerializer
     permission_classes = (IsSpaceMember, CanCreatePeriodicSpends)
-
+    
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -124,6 +126,17 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
         space = Space.objects.get(pk=kwargs["space_pk"])
+        
+        periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
+        highest_role = self.request.user.roles[0]
+
+        if periodic_spends_count >= 20 and highest_role == "premium":
+            return Response("Error: you can't create more than 20 periodic spends because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif periodic_spends_count >= 10 and highest_role == "standard":
+            return Response("Error: you can't create more than 10 periodic spends because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif periodic_spends_count >= 5 and highest_role == "free":
+            return Response("Error: you can't create more than 5 periodic spends because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
@@ -145,6 +158,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                                                          space.currency)))
         except ValidationError:
             return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
+        PeriodicSpendCounter.obejcts.create(user=request.user, father_space=space, title=title)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
 
 
@@ -241,10 +255,15 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
                 spend_sch_int = datetime.datetime.strptime(str(spend.crontab.day_of_week), "%w").strftime("%A")
             else:
                 continue
+            account = Account.objects.get(pk=spend_args[0])
+            category = Category.objects.get(pk=spend_args[1])
             temp = {
+                "id": spend.id,
                 "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
-                "account_pk": spend_args[0],
-                "category_pk": spend_args[1],
+                "account": account.title,
+                "category": category.title,
+                "category_icon": category.icon,
+                "currency": account.currency,
                 "amount": spend_args[3],
                 "schedule": spend_sch_str,
                 "day": spend_sch_int

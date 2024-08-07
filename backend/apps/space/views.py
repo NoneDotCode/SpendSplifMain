@@ -8,7 +8,7 @@ from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions, SpaceBackup
 from backend.apps.space.serializers import SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
 from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
-                                            CanEditMembers)
+                                            CanEditMembers, UserRolePermision)
 from backend.apps.account import permissions
 from rest_framework.response import Response
 from rest_framework import status
@@ -33,11 +33,14 @@ from backend.apps.converter.utils import convert_number_to_letter
 
 
 class CreateSpace(generics.CreateAPIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, UserRolePermision)
     serializer_class = SpaceSerializer
 
     def perform_create(self, serializer):
         user_space_counter = Space.objects.filter(members=self.request.user).count()
+        highest_role = self.request.user.roles[0]
+        if highest_role == "free" or highest_role == "standard":
+            return Response("Error: you can't create spaces because your role is free or standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         if user_space_counter >= 5:
             return Response("Error: you can't create more than 5 spaces", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
@@ -113,7 +116,7 @@ class ListOfUsersInSpace(generics.ListAPIView):
 
 class EditSpace(generics.RetrieveUpdateAPIView):
     serializer_class = SpaceSerializer
-    permission_classes = (IsSpaceMember, IsSpaceOwner,)
+    permission_classes = (IsSpaceMember, IsSpaceOwner, UserRolePermision)
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
@@ -152,7 +155,7 @@ class EditSpace(generics.RetrieveUpdateAPIView):
 
 class DeleteSpace(generics.RetrieveDestroyAPIView):
     serializer_class = SpaceSerializer
-    permission_classes = (IsSpaceMember, IsSpaceOwner,)
+    permission_classes = (IsSpaceMember, IsSpaceOwner, UserRolePermision)
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
