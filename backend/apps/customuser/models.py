@@ -56,9 +56,9 @@ class CustomUser(AbstractUser):
     
     roles_choices = [
         ("free", "Free"),
-        ("standard","Standard"), 
-        ("premium","Premium"), 
-        ("sponsor","Sponsor"),
+        ("standard", "Standard"),
+        ("premium", "Premium"),
+        ("sponsor", "Sponsor"),
         ("employee", "Employee"),
         ]
     roles = ArrayField(

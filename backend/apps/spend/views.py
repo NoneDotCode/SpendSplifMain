@@ -255,10 +255,15 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
                 spend_sch_int = datetime.datetime.strptime(str(spend.crontab.day_of_week), "%w").strftime("%A")
             else:
                 continue
+            account = Account.objects.get(pk=spend_args[0])
+            category = Category.objects.get(pk=spend_args[1])
             temp = {
+                "id": spend.id,
                 "title": spend.name.replace(f"periodic_spend_{request.user.id}_", ""),
-                "account_pk": spend_args[0],
-                "category_pk": spend_args[1],
+                "account": account.title,
+                "category": category.title,
+                "category_icon": category.icon,
+                "currency": account.currency,
                 "amount": spend_args[3],
                 "schedule": spend_sch_str,
                 "day": spend_sch_int

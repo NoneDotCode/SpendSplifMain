@@ -791,7 +791,8 @@ class GoalTransferStatisticView(generics.ListAPIView):
         return sorted_summary
 
     def _update_summary(self, summary: Dict[str, Dict[str, str]], transfer: HistoryTransfer, currency: str) -> None:
-        goal = transfer.to_goal.get("title")
+        print(transfer)
+        goal = transfer.to_goal
         goal_amount = transfer.goal_amount
         collected = transfer.amount_in_default_currency
 
@@ -813,7 +814,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def _init_goal_amounts(transfers: List[HistoryTransfer]) -> Dict[str, Dict[str, Decimal]]:
         goal_amounts = {}
         for transfer in transfers:
-            goal = transfer.to_goal.get("title")
+            goal = transfer.to_goal
             goal_amount = transfer.goal_amount
             collected = transfer.amount_in_default_currency
 
