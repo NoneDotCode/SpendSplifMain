@@ -113,7 +113,7 @@ class CanEditPeriodicSpends(permissions.BasePermission):
         task_args = ast.literal_eval(task.args)
         father_space = Space.objects.get(pk=task_args[2])
 
-        if account.father_space != space or category.fater_space != space or father_space.pk != space_pk:
+        if account.father_space != space or category.father_space != space or father_space.pk != space_pk:
             return False
 
         return (IsSpaceOwner().has_permission(request, view) or
