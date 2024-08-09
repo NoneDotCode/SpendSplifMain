@@ -34,18 +34,24 @@ class NotificationList(generics.GenericAPIView):
 
         all_notifications = all_notifications[:count]
 
-        formatted_notifications = [
-            {
-                'id': notification['id'],
-                'message': notification['message'],
-                'importance': notification['importance'].upper(),
-                'date': date_format(notification['created_at'], format="d F"),
-                'time': date_format(notification['created_at'], format="H:i"),
-                'type': notification['type'],
-                'seen': True if (notification['seen']) and (user in list(notification['seen'])) else False
-            }
-            for notification in all_notifications
-        ]
+        for notification in all_notifications:
+            if type(notification["seen"]) is int:
+                seen = (notification["seen"],)
+            else:
+                seen = notification["seen"]
+
+            formatted_notifications = [
+                {
+                    'id': notification['id'],
+                    'message': notification['message'],
+                    'importance': notification['importance'].upper(),
+                    'date': date_format(notification['created_at'], format="d F"),
+                    'time': date_format(notification['created_at'], format="H:i"),
+                    'type': notification['type'],
+                    'seen': True if (notification['seen']) and (user in seen) else False
+                }
+                for notification in all_notifications
+            ]
 
         return Response(formatted_notifications)
 
