@@ -19,7 +19,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG")
 
 
-ALLOWED_HOSTS = ["34.38.192.230"]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -103,11 +103,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "spendsplif",
-        "USER": "postgres",
-        "PASSWORD": "gc9!V-APp!69vL8",
-        "HOST": "localhost",
-        "PORT": 5432,
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("DB_HOST"),
+        "PORT": env.int("DB_PORT"),
     }
 }
 
@@ -148,7 +148,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
@@ -208,8 +207,8 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5473",
     "http://127.0.0.1:8000",
-    "http://34.38.192.230:5473",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
 ]
@@ -218,9 +217,9 @@ CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5473",
     "http://localhost:3000",
     "http://127.0.0.1:8000",
-    "http://34.38.192.230:5473",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
 ]
@@ -229,13 +228,13 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "http://34.38.192.230:5473",
+    "http://localhost:5473",
     "http://127.0.0.1:8000",
     ]
 SESSION_COOKIE_SAMESITE = "Lax"
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:5173",
-    "http://34.38.192.230:5473",
+    "http://localhost:5473",
     "http://127.0.0.1:8000",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
