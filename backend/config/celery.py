@@ -57,7 +57,7 @@ app.conf.beat_schedule = {
     },
     "create_space_backup_end_of_month": {
         "task": "backend.apps.space.tasks.create_space_backup",
-        "schedule": crontab(hour="23", minute="59", day_of_month='last'),
+        "schedule": crontab(hour="23", minute="59", day_of_month='28, 30, 31'),
     },
 }
 
