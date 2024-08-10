@@ -10,6 +10,7 @@ class IPAndHeaderCheckMiddleware:
 
     def __call__(self, request):
         ip = self.get_client_ip(request)
+        print(request.META)
 
         if ip not in self.ALLOWED_IPS:
             expo_app_key = request.headers.get('EXPO-APP-KEY')
