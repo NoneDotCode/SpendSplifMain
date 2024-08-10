@@ -15,6 +15,7 @@ class IPAndHeaderCheckMiddleware:
             expo_app_key = request.headers.get('EXPO-APP-KEY')
             if expo_app_key != self.EXPO_APP_KEY:
                 print(ip)
+                print(expo_app_key)
                 return JsonResponse({'detail': 'Forbidden: Invalid EXPO-APP-KEY or IP address'}, status=403)
 
         response = self.get_response(request)
