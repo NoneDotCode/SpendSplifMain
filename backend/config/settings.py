@@ -209,6 +209,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://34.79.174.110:5473",
     "http://127.0.0.1:8000",
     "http://34.38.192.230:5473",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
@@ -220,6 +221,7 @@ CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://34.79.174.110:5473",
     "http://127.0.0.1:8000",
     "http://34.38.192.230:5473",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
@@ -231,12 +233,14 @@ CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://34.38.192.230:5473",
+    "http://34.79.174.110:5473",
     "http://127.0.0.1:8000",
     ]
 SESSION_COOKIE_SAMESITE = "Lax"
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:5173",
     "http://34.38.192.230:5473",
+    "http://34.79.174.110:5473",
     "http://127.0.0.1:8000",
     "exp://bw-wbvi.anonymous.8081.exp.direct",
     "https://ee76-88-103-194-16.ngrok-free.app",
