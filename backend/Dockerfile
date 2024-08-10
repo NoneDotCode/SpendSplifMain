@@ -10,5 +10,3 @@ RUN pip install --no-cache-dir django gunicorn
 COPY ./ /SpendSplif/backend
 
 WORKDIR /SpendSplif
-
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
