@@ -2,7 +2,7 @@ from django.http import JsonResponse
 
 
 class IPAndHeaderCheckMiddleware:
-    ALLOWED_IPS = ('34.38.192.230', '127.0.0.1', '172.18.0.1')
+    ALLOWED_IPS = ('34.38.192.230', '127.0.0.1', '172.18.0.1', '34.79.174.110')
     EXPO_APP_KEY = 'd142c3a6-34df-4c3e-993e-fa14fa88d94f'
 
     def __init__(self, get_response):
