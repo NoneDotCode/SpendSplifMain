@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.messenger",
     "apps.Dowt",
     "apps.notifications",
+    "apps.store",
 ]
 
 # Custom user model auth
@@ -74,7 +75,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "backend.config.middleware.CheckHostMiddleware",
+    "backend.config.middleware.IPAndHeaderCheckMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -276,6 +277,19 @@ GOOGLE_CLIENT_ID = "902312829636-l04tkdlapql3jjblg7q0vlf76k7v9dlj.apps.googleuse
 GOOGLE_CLIENT_SECRET = "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"
 GOOGLE_PROJECT_ID = "spendsplif-421713"
 
+# Custom variables
 
 BASE_BACKEND_URL = 'http://localhost:8000'
 FRONTEND_URL = 'http://localhost:5173'
+MOBILE_APP_ACTUAL_VERSION = "0.0.1"
+
+SUBSCRIBES_DATA = {
+    "Standard": {
+        "price": "10€",
+        "period": "1 month ~+2 weeks~"
+    },
+    "Premium": {
+        "price": "20€",
+        "period": "1 month ~+2 weeks~"
+    }
+}

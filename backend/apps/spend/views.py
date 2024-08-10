@@ -158,7 +158,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
                                                          space.currency)))
         except ValidationError:
             return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
-        PeriodicSpendCounter.obejcts.create(user=request.user, father_space=space, title=title)
+        PeriodicSpendCounter.objects.create(user=request.user, father_space=space, title=title)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
 
 
@@ -171,11 +171,8 @@ class PeriodicSpendDeleteView(generics.GenericAPIView):
         task = PeriodicTask.objects.get(pk=periodic_spend_pk)
         task_args = ast.literal_eval(task.args)
         space = Space.objects.get(pk=task_args[2])
-        if kwargs.get("space_pk") == space.pk and space.owner.pk == request.user.pk:
-            task.delete()
-            return Response({"success": "Periodic spend successfully deleted."}, status=status.HTTP_200_OK)
-        return Response({"error": "You can't delete spend which you have not."},
-                        status=status.HTTP_400_BAD_REQUEST)
+        task.delete()
+        return Response({"success": "Periodic spend successfully deleted."}, status=status.HTTP_200_OK)
 
 
 class PeriodicSpendEditView(generics.GenericAPIView):
@@ -200,34 +197,32 @@ class PeriodicSpendEditView(generics.GenericAPIView):
         task = PeriodicTask.objects.get(pk=periodic_spend_pk)
         task_args = ast.literal_eval(task.args)
         space = Space.objects.get(pk=task_args[2])
-        if kwargs.get("space_pk") == space.pk and space.owner.pk == request.user.pk:
-            new_args = [account_pk, category_pk, kwargs.get("space_pk"), amount, title, request.user.currency]
-            for i in range(len(new_args)):
-                if new_args[i] is None:
-                    new_args[i] = task_args[i]
-            task.args = f"{new_args}"
-            task.save()
-            task.name = f"periodic_spend_{request.user.id}_{new_args[4]}"
-            task_crontab = task.crontab
-            task_crontab_dict = {"hour": task_crontab.hour,
-                                 "minute": task_crontab.minute,
-                                 "day_of_week": task_crontab.day_of_week,
-                                 "day_of_month": task_crontab.day_of_month,
-                                 "month_of_year": task_crontab.month_of_year}
-            crontab_vars = {"hour": hour, "minute": minute, "day_of_week": day_of_week, "day_of_month": day_of_month,
-                            "month_of_year": month_of_year}
-            for i in crontab_vars:
-                if crontab_vars[i] is None:
-                    crontab_vars[i] = task_crontab_dict[i]
-            schedule, created = CrontabSchedule.objects.get_or_create(hour=crontab_vars["hour"],
-                                                                      minute=crontab_vars["minute"],
-                                                                      day_of_week=crontab_vars["day_of_week"],
-                                                                      day_of_month=crontab_vars["day_of_month"],
-                                                                      month_of_year=crontab_vars["month_of_year"])
-            task.crontab = schedule
-            task.save()
-            return Response({"success": "Periodic Spend successfully edited."}, status=status.HTTP_200_OK)
-        return Response({"error": "You can't edit spend which is not your."})
+        new_args = [account_pk, category_pk, kwargs.get("space_pk"), amount, title, space.currency]
+        for i in range(len(new_args)):
+            if new_args[i] is None:
+                new_args[i] = task_args[i]
+        task.args = f"{new_args}"
+        task.save()
+        task.name = f"periodic_spend_{request.user.id}_{new_args[4]}"
+        task_crontab = task.crontab
+        task_crontab_dict = {"hour": task_crontab.hour,
+                             "minute": task_crontab.minute,
+                             "day_of_week": task_crontab.day_of_week,
+                             "day_of_month": task_crontab.day_of_month,
+                             "month_of_year": task_crontab.month_of_year}
+        crontab_vars = {"hour": hour, "minute": minute, "day_of_week": day_of_week, "day_of_month": day_of_month,
+                        "month_of_year": month_of_year}
+        for i in crontab_vars:
+            if crontab_vars[i] is None:
+                crontab_vars[i] = task_crontab_dict[i]
+        schedule, created = CrontabSchedule.objects.get_or_create(hour=crontab_vars["hour"],
+                                                                  minute=crontab_vars["minute"],
+                                                                  day_of_week=crontab_vars["day_of_week"],
+                                                                  day_of_month=crontab_vars["day_of_month"],
+                                                                  month_of_year=crontab_vars["month_of_year"])
+        task.crontab = schedule
+        task.save()
+        return Response({"success": "Periodic Spend successfully edited."}, status=status.HTTP_200_OK)
 
 
 class PeriodicSpendsGetView(generics.GenericAPIView):

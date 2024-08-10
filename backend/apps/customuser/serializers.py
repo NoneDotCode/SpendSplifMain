@@ -131,3 +131,7 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         self.request.user.save()
 
         return data
+
+
+class CheckAppVersionSerializer(serializers.Serializer):
+    version = serializers.CharField()

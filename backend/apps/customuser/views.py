@@ -1,15 +1,12 @@
-from random import SystemRandom
 from typing import Dict
 
 import jwt
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
+from rest_framework import generics, permissions
 from rest_framework.generics import GenericAPIView
 
 
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-import google_auth_oauthlib.flow
 from random import SystemRandom
 from urllib.parse import urlencode
 
@@ -21,7 +18,7 @@ from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import (
     CustomUserSerializer,
-    CustomTokenRefreshSerializer,
+    CustomTokenRefreshSerializer, CheckAppVersionSerializer,
 )
 from backend.apps.customuser.utils import cookie_response_payload_handler
 from rest_framework.exceptions import APIException
@@ -35,10 +32,7 @@ from datetime import datetime
 
 from backend.apps.total_balance.models import TotalBalance
 from rest_framework.response import Response
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
-from backend.apps.customuser.serializers import GoogleAuthSerializer
 import requests
 from attr import define
 from django.conf import settings
@@ -481,3 +475,14 @@ class GoogleLoginApi(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CheckAppVersion(generics.GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = CheckAppVersionSerializer
+
+    def post(self, request, *args, **kwargs):
+        actual_version = settings.MOBILE_APP_ACTUAL_VERSION
+        if actual_version != request.data['version']:
+            return Response({"status": False}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": True}, status=status.HTTP_200_OK)
