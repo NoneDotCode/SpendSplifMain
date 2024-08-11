@@ -74,7 +74,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 value=refresh_cookie_payload['refresh'],
                 expires=refresh_cookie_payload['exp'],
                 httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
-                samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
+                samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', None),
                 secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
             )
         return response
