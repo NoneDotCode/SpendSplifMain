@@ -74,7 +74,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 value=refresh_cookie_payload['refresh'],
                 expires=refresh_cookie_payload['exp'],
                 httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
-                samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', None),
+                samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
                 secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
             )
         return response
@@ -122,7 +122,7 @@ class CustomTokenRefreshView(GenericAPIView):
                     value=str(new_refresh_token),
                     expires=refresh_token_expiration,
                     httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
-                    samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', None),
+                    samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
                     secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
                     domain=settings.SIMPLE_JWT.get('AUTH_COOKIE_DOMAIN', None),
                 )
