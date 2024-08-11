@@ -196,7 +196,7 @@ SIMPLE_JWT = {
         'max_age': 604800,
         'httponly': True,
         'samesite': "None",  # TODO: CHANGE TO LAX WHEN IN PRODUCTION, NECESSARY
-        'secure': False,
+        'secure': True,
         'path': '/',
         },
 
