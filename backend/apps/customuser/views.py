@@ -124,6 +124,7 @@ class CustomTokenRefreshView(GenericAPIView):
                     httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
                     samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
                     secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
+                    domain=settings.SIMPLE_JWT.get('AUTH_COOKIE_DOMAIN', None),
                 )
                 return response
             else:
