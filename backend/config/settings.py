@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    'dj_rest_auth',
+    "rest_framework.authtoken",
     "corsheaders",
     # Celery
     "celery",
@@ -54,6 +56,8 @@ INSTALLED_APPS = [
     "apps.cryptocurrency",
     "apps.api_stocks",
     "apps.messenger",
+    "apps.Dowt",
+    "apps.notifications",
 ]
 
 # Custom user model auth
@@ -70,6 +74,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "backend.config.middleware.CheckHostMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -259,3 +264,18 @@ EMAIL_HOST_PASSWORD = env("EMAIL_SECRET_KEY")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_ADMIN = EMAIL_HOST_USER
+
+
+# Anthropic
+
+ANTHROPIC_API_KEY = "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"
+
+# Google Auth
+
+GOOGLE_CLIENT_ID = "902312829636-l04tkdlapql3jjblg7q0vlf76k7v9dlj.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_PROJECT_ID = "spendsplif-421713"
+
+
+BASE_BACKEND_URL = 'http://localhost:8000'
+FRONTEND_URL = 'http://localhost:5173'

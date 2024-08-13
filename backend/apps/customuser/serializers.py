@@ -8,10 +8,15 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from backend.apps.customuser.models import CustomUser
 
 
+class GoogleAuthSerializer(serializers.Serializer):
+    access_token = serializers.CharField()
+    currency = serializers.CharField(max_length=3, required=False)
+
+
 class CustomUserSerializer(serializers.ModelSerializer, ):
     class Meta:
         model = CustomUser
-        fields = ("id", "username", "email", "password", "language", "tag")
+        fields = ("id", "username", "email", "password", "language", "tag", "roles")
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):

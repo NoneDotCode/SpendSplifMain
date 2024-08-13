@@ -17,8 +17,8 @@ class HistoryExpense(models.Model):
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=12, decimal_places=2)
     comment = models.CharField(max_length=300, null=True, blank=True)
-    from_acc = models.ForeignKey(Account, verbose_name='from_acc', on_delete=models.DO_NOTHING)
-    to_cat = models.ForeignKey(Category, verbose_name='to_cat', on_delete=models.DO_NOTHING, null=True)
+    from_acc = models.JSONField(verbose_name="from_acc", null=False)
+    to_cat = models.JSONField(verbose_name='to_cat', null=True)
     periodic_expense = models.BooleanField(default=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
@@ -30,20 +30,17 @@ class HistoryIncome(models.Model):
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=20, decimal_places=2)
     comment = models.CharField(max_length=300, blank=True)
-    account = models.ForeignKey(Account, verbose_name='account', on_delete=models.DO_NOTHING)
+    account = models.JSONField(verbose_name='account', null=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     created = models.DateTimeField(default=datetime.now)
 
 
 class HistoryTransfer(models.Model):
-    from_acc = models.ForeignKey(Account, related_name='transfers_from', verbose_name='from_acc',
-                                 on_delete=models.DO_NOTHING)
-    to_acc = models.ForeignKey(Account, related_name='transfers_to', verbose_name='to_acc', on_delete=models.DO_NOTHING)
-    from_goal = models.ForeignKey(Goal, related_name='transfers_from_goal', verbose_name='from_goal',
-                                  on_delete=models.DO_NOTHING)
-    to_goal = models.ForeignKey(Goal, related_name='transfers_to_goal', verbose_name='to_goal',
-                                on_delete=models.DO_NOTHING)
+    from_acc = models.JSONField(verbose_name="from_acc", null=True)
+    to_acc = models.JSONField(verbose_name="to_acc", null=True)
+    from_goal = models.JSONField(verbose_name='from_goal', null=True)
+    to_goal = models.JSONField(verbose_name='to_goal', null=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=12, decimal_places=2)

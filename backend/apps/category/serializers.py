@@ -12,10 +12,12 @@ class CategorySerializer(serializers.ModelSerializer):
     limit = serializers.IntegerField(required=False)
     icon = serializers.CharField(required=False)
     spent_percentage = serializers.SerializerMethodField()
+    limit_formatted = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ('id', 'title', 'spent', 'limit', 'color', 'icon', 'father_space', 'spent_percentage')
+        fields = ('id', 'title', 'spent', 'limit', 'limit_formatted', 'color', 'icon', 'father_space',
+                  'spent_percentage')
 
     @staticmethod
     def get_spent_percentage(obj):
@@ -29,7 +31,10 @@ class CategorySerializer(serializers.ModelSerializer):
 
         if representation['spent']:
             representation['spent'] = convert_number_to_letter(representation['spent'])
-        if representation['limit']:
-            representation['limit'] = convert_number_to_letter(representation['limit'])
 
         return representation
+
+    @staticmethod
+    def get_limit_formatted(obj):
+        if obj.limit:
+            return convert_number_to_letter(obj.limit)

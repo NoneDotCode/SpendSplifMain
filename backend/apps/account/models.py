@@ -7,7 +7,7 @@ from backend.apps.customuser.constants import Currency
 
 class Account(models.Model):
     title = models.CharField(max_length=24)
-    balance = models.DecimalField(max_digits=12, decimal_places=2)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     included_in_total_balance = models.BooleanField(default=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)

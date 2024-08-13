@@ -1,13 +1,39 @@
 from rest_framework import serializers
 
+from backend.apps.account.models import Account
 from backend.apps.history.models import HistoryExpense, HistoryIncome, HistoryTransfer
+from backend.apps.category.models import Category
+
 from datetime import datetime
 
 
-class HistoryExpenseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HistoryExpense
-        fields = '__all__'
+class CombinedHistorySerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    type = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    currency = serializers.CharField(max_length=4)
+    comment = serializers.CharField(max_length=300, allow_blank=True)
+    created_date = serializers.DateField()
+    created_time = serializers.TimeField()
+    account = serializers.CharField(required=False)
+    account_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
+    category_title = serializers.CharField(required=False)
+    category_icon = serializers.CharField(required=False)
+    periodic_expense = serializers.BooleanField(required=False)
+    new_balance = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class HistoryExpenseEditSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    category = serializers.ModelField(Category, required=False)
+    account = serializers.ModelField(Account, required=False)
+    comment = serializers.CharField(required=False)
+
+
+class HistoryIncomeEditSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    account = serializers.IntegerField(required=False)
+    comment = serializers.CharField(required=False)
 
 
 class StatisticViewSerializer(serializers.Serializer):
