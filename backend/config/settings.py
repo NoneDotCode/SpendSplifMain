@@ -19,7 +19,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG")
 
 
-ALLOWED_HOSTS = ["34.38.192.230"]
+ALLOWED_HOSTS = ["spendsplif.com", "api.spendsplif.com"]
 
 
 # Application definition
