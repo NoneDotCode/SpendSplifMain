@@ -13,34 +13,66 @@ class GoogleAuthSerializer(serializers.Serializer):
     currency = serializers.CharField(max_length=3, required=False)
 
 
-class CustomUserSerializer(serializers.ModelSerializer, ):
+class CustomUserSerializer(serializers.ModelSerializer):
+    sponsor = serializers.BooleanField(write_only=True, required=False)
+    company = serializers.CharField(write_only=True, required=False)
+    number = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = CustomUser
-        fields = ("id", "username", "email", "password", "language", "tag", "roles")
+        fields = (
+            "id", "username", "email", "password", "language", "tag", "roles", 
+            "sponsor", "company", "number"
+        )
         extra_kwargs = {"password": {"write_only": True}}
 
-    def validate(self, data):
-        
-        password = data.get ("password")
+    def validate(self, attrs):
+        password = attrs.get("password")
+        sponsor = attrs.get('sponsor', False)
+        company = attrs.get('company')
+        number = attrs.get('number')
+
         if password:
-        
             if not 8 <= len(password) <= 24:
-                raise serializers.ValidationError("the password should be at least 8 characters long")
+                raise serializers.ValidationError("The password should be at least 8 characters long")
 
             if password.isdecimal():
-                raise serializers.ValidationError("the password cannot be all numeric")
+                raise serializers.ValidationError("The password cannot be all numeric")
 
             if len(re.findall(r'[a-zA-Z]', password)) < 4:
-                raise serializers.ValidationError("the password should have more than four letters")
+                raise serializers.ValidationError("The password should have more than four letters")
 
             if len(re.findall(r'\d', password)) < 3:
-                raise serializers.ValidationError("the password should have more than 3 numbers")
+                raise serializers.ValidationError("The password should have more than 3 numbers")
 
             if len(re.findall(r'[!@#$%^&*()_+{}\[\]:;<>,.?/~`]', password)) < 1:
-                raise serializers.ValidationError("the password must contain at least 1 special character")
+                raise serializers.ValidationError("The password must contain at least 1 special character")
 
-        return data
+        if sponsor:
+            if not company or not number:
+                raise serializers.ValidationError("Company and number are required for sponsors.")
 
+        return attrs
+
+    def create(self, validated_data):
+        sponsor = validated_data.pop('sponsor', False)
+        company = validated_data.pop('company', None)
+        number = validated_data.pop('number', None)
+
+        # Create a new user
+        user = CustomUser.objects.create_user(**validated_data)
+
+        # Initialize the roles list
+        user.roles = ['premium']
+
+        # If user is a sponsor, add the 'sponsor' role
+        if sponsor:
+            user.roles.append('sponsor')
+
+        user.save()
+        
+        return user
+        
 
     def update(self, instance, validated_data):
         if instance.email != validated_data.get("email", instance.email):

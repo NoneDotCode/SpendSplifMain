@@ -51,6 +51,9 @@ class CustomUserRegistrationView(generics.CreateAPIView):
     serializer_class = CustomUserSerializer
     permission_classes = (permissions.AllowAny,)
 
+    def perform_create(self, serializer):
+        serializer.save()
+
 
 class UserProfileView(generics.RetrieveAPIView):
     serializer_class = CustomUserSerializer

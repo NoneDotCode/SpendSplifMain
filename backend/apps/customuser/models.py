@@ -63,7 +63,7 @@ class CustomUser(AbstractUser):
         ]
     roles = ArrayField(
         models.CharField(max_length=12, choices=roles_choices), 
-        default=["premium"], 
+        default=list, 
         blank=True
         )
 
