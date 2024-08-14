@@ -4,6 +4,9 @@ from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from backend.apps.customuser.models import CustomUser
+
+
 class SubscribePricesView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
@@ -59,3 +62,41 @@ class CreatePaymentSessionView(generics.GenericAPIView):
             })
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StripeWebhookView(generics.GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        payload = request.body
+        sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+        endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except ValueError as e:
+            return Response({'error': 'Invalid payload'}, status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.SignatureVerificationError as e:
+            return Response({'error': 'Invalid signature'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            # Access the customer ID from the event object
+            customer_id = payment_intent['customer']
+
+            # Retrieve the customer object based on the customer ID
+            customer = stripe.Customer.retrieve(customer_id)
+
+            user = CustomUser.objects.get(email=customer["email"])
+            price_premium = int(settings.SUBSCRIBES_DATA['Premium']['price'].replace("€", "")) * 100
+            price_standard = int(settings.SUBSCRIBES_DATA['Standard']['price'].replace("€", "")) * 100
+            if payment_intent['amount'] == price_standard:
+                user.roles = ["standard/pre"]
+            elif payment_intent['amount'] == price_premium:
+                user.roles.remove("premium")
+                user.roles = ["premium/pre"]
+            user.save()
+        elif event['type'] == 'payment_intent.payment_failed':
+            return Response({'error': 'Payment was not successful'}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)
