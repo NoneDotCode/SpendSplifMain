@@ -195,7 +195,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_COOKIE_OPTIONS': {
         'max_age': 604800,
         'httponly': True,
-        'samesite': "None",  # TODO: CHANGE TO LAX WHEN IN PRODUCTION, NECESSARY
+        'samesite': "None",
         'secure': True,
         'path': '/',
         },
