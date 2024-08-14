@@ -219,12 +219,12 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "None"
 CSRF_TRUSTED_ORIGINS = [
     "https://spendsplif.com",
     "https://api.spendsplif.com"
 ]
-SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "None"
 CORS_ORIGIN_WHITELIST = [
     "https://spendsplif.com",
     "https://api.spendsplif.com"
