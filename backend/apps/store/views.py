@@ -87,23 +87,17 @@ class StripeWebhookView(generics.GenericAPIView):
 
             # Retrieve the customer object based on the customer ID
             customer = stripe.Customer.retrieve(customer_id)
-            print(customer['email'])
 
             user = CustomUser.objects.get(email=customer["email"])
-            print(user)
             price_premium = int(settings.SUBSCRIBES_DATA['Premium']['price'].replace("€", "")) * 100
             price_standard = int(settings.SUBSCRIBES_DATA['Standard']['price'].replace("€", "")) * 100
             if payment_intent['amount'] == price_standard:
                 user.roles = ["standard/pre"]
-                print("standard/pre")
             elif payment_intent['amount'] == price_premium:
                 user.roles.remove("premium")
                 user.roles = ["premium/pre"]
-                print("premium/pre")
             user.save()
-            print(user)
         elif event['type'] == 'payment_intent.payment_failed':
-            print("buba")
             return Response({'error': 'Payment was not successful'}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         return Response({'status': 'success'}, status=status.HTTP_200_OK)
