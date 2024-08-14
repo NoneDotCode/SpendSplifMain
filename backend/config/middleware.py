@@ -7,7 +7,7 @@ class IPAndHeaderCheckMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
+        print(request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME']))
 
         response = self.get_response(request)
         return response
