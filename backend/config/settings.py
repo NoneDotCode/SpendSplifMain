@@ -290,5 +290,6 @@ SUBSCRIBES_DATA = {
 STRIPE = {
     "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00LMdADPfK',
     "payment_callback_url": "localhost:8000/api/v1/store/payment/callback/",
-    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIrNxh800O6IQOFEP"
+    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIrNxh800O6IQOFEP",
+    "webhook_secret_key": "whsec_1pEYQFoMLQf1OxA12IgZ4M9LUdv4X151"
 }
