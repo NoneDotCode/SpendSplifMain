@@ -99,7 +99,6 @@ class CustomTokenRefreshView(GenericAPIView):
     serializer_class = CustomTokenRefreshSerializer
     def get(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
-        print("refresh" + refresh_token)
 
         if refresh_token is None:
             return Response({'error': 'Refresh token not found.'}, status=status.HTTP_401_UNAUTHORIZED)
