@@ -8,7 +8,7 @@ class IPAndHeaderCheckMiddleware:
 
     def __call__(self, request):
         print(request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME']))
-        print(request.COOKIES.get("Authorization"))
+        print(request.headers.get("Authorization"))
 
         response = self.get_response(request)
         return response
