@@ -97,7 +97,7 @@ class LogoutView(APIView):
 class CustomTokenRefreshView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = CustomTokenRefreshSerializer
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
         print("refresh" + refresh_token)
 
