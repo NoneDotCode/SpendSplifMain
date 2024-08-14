@@ -292,3 +292,8 @@ SUBSCRIBES_DATA = {
         "period": "1 month ~+2 weeks~"
     }
 }
+
+STRIPE = {
+    "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00LMdADPfK',
+    "payment_callback_url": "https://api.spendsplif.com/v1/store/payment/callback/"
+}
