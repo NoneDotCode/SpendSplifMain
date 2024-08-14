@@ -65,6 +65,7 @@ class CreatePaymentSessionView(generics.GenericAPIView):
 
 
 class StripeWebhookView(generics.GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
     def post(self, request, *args, **kwargs):
         payload = request.body
         sig_header = request.META['HTTP_STRIPE_SIGNATURE']
