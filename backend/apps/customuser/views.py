@@ -97,7 +97,7 @@ class LogoutView(APIView):
 class CustomTokenRefreshView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = CustomTokenRefreshSerializer
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
 
         if refresh_token is None:
@@ -123,6 +123,7 @@ class CustomTokenRefreshView(GenericAPIView):
                     httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
                     samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
                     secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
+                    domain=settings.SIMPLE_JWT.get('AUTH_COOKIE_DOMAIN', None),
                 )
                 return response
             else:

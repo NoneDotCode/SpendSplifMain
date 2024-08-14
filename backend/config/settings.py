@@ -19,7 +19,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG")
 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["spendsplif.com", "api.spendsplif.com"]
 
 
 # Application definition
@@ -103,11 +103,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB"),
-        "USER": env("POSTGRES_USER"),
-        "PASSWORD": env("POSTGRES_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env.int("DB_PORT"),
+        "NAME": "spendsplif",
+        "USER": "postgres",
+        "PASSWORD": "gc9!V-APp!69vL8",
+        "HOST": "localhost",
+        "PORT": 5432,
     }
 }
 
@@ -148,6 +148,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
@@ -194,8 +195,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_COOKIE_OPTIONS': {
         'max_age': 604800,
         'httponly': True,
-        'samesite': 'Lax',
-        'secure': False,
+        'samesite': "None",  # TODO: CHANGE TO LAX WHEN IN PRODUCTION, NECESSARY
+        'secure': True,
         'path': '/',
         },
 
@@ -206,38 +207,27 @@ SIMPLE_JWT = {
 # Cors
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://127.0.0.1:8000",
-    "exp://bw-wbvi.anonymous.8081.exp.direct",
-    "https://ee76-88-103-194-16.ngrok-free.app",
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
 ]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://localhost:3000",
-    "http://127.0.0.1:8000",
-    "exp://bw-wbvi.anonymous.8081.exp.direct",
-    "https://ee76-88-103-194-16.ngrok-free.app",
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "None"
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://127.0.0.1:8000",
-    ]
-SESSION_COOKIE_SAMESITE = "Lax"
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
+]
+SESSION_COOKIE_SAMESITE = "None"
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://127.0.0.1:8000",
-    "exp://bw-wbvi.anonymous.8081.exp.direct",
-    "https://ee76-88-103-194-16.ngrok-free.app",
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
 ]
 
 # Celery
@@ -276,10 +266,9 @@ GOOGLE_CLIENT_ID = "902312829636-l04tkdlapql3jjblg7q0vlf76k7v9dlj.apps.googleuse
 GOOGLE_CLIENT_SECRET = "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"
 GOOGLE_PROJECT_ID = "spendsplif-421713"
 
-# Custom variables
 
-BASE_BACKEND_URL = 'http://localhost:8000'
-FRONTEND_URL = 'http://localhost:5173'
+BASE_BACKEND_URL = 'https://api.spendsplif.com'
+FRONTEND_URL = 'https://spendsplif.com'
 MOBILE_APP_ACTUAL_VERSION = "0.0.1"
 
 SUBSCRIBES_DATA = {
