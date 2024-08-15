@@ -242,14 +242,22 @@ class PeriodicSpendsGetView(generics.GenericAPIView):
         result = []
         for spend in periodic_spends_list:
             spend_args = ast.literal_eval(spend.args)
-            if spend.crontab.day_of_week == "*" and spend.crontab.day_of_month != "*":
+            crontab = spend.crontab
+
+            if crontab.day_of_week == "*" and crontab.day_of_month != "*":
                 spend_sch_str = "Every month"
-                spend_sch_int = p.ordinal(p.number_to_words(int(spend.crontab.day_of_month)))
-            elif spend.crontab.day_of_week != "*" and spend.crontab.day_of_month == "*":
+                spend_sch_int = p.ordinal(p.number_to_words(int(crontab.day_of_month)))
+            elif crontab.day_of_week != "*" and crontab.day_of_month == "*":
                 spend_sch_str = "Every week"
-                spend_sch_int = datetime.datetime.strptime(str(spend.crontab.day_of_week), "%w").strftime("%A")
+
+                try:
+                    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                    spend_sch_int = days[int(crontab.day_of_week) - 1]
+                except (ValueError, IndexError):
+                    continue
             else:
                 continue
+
             account = Account.objects.get(pk=spend_args[0])
             category = Category.objects.get(pk=spend_args[1])
             temp = {

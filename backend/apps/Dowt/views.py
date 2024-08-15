@@ -276,10 +276,9 @@ class GetAdviceNumber(GenericAPIView):
         advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
         highest_role = self.request.user.roles[0]   
 
-        if highest_role == "premium":
+        if highest_role == "premium" or highest_role == "premium/pre":
             return Response({"advices_left": 25-advice_counter})
-        elif highest_role == "standard":
+        elif highest_role == "standard" or highest_role == "standard/pre":
             return Response({"advices_left": 13-advice_counter})
         elif highest_role == "free":
             return Response({"advices_left": 7-advice_counter})
-
