@@ -34,6 +34,8 @@ class NotificationList(generics.GenericAPIView):
 
         all_notifications = all_notifications[:count]
 
+        formatted_notifications = []
+
         for notification in all_notifications:
             if type(notification["seen"]) is int:
                 seen = (notification["seen"],)
