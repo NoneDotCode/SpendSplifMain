@@ -4,9 +4,10 @@ import re
 
 
 class UserAgentMiddleware(MiddlewareMixin):
-    def process_request(self, request):
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-        expo_app_key = request.META.get('HTTP_EXPO_APP_KEY', '')
+    @staticmethod
+    def process_request(request):
+        user_agent = request.headers.get('User-Agent', '')
+        expo_app_key = request.headers.get('HTTP_EXPO_APP_KEY', '')
 
         browser_user_agents = [
             'Mozilla',
@@ -21,10 +22,10 @@ class UserAgentMiddleware(MiddlewareMixin):
             if expo_app_key == 'd142c3a6-34df-4c3e-993e-fa14fa88d94f':
                 print("OK")
                 return None
-            else:
-                print("FAIL")
-                print(request.META)
-                return JsonResponse({'error': 'Forbidden'}, status=403)
+
+            print("FAIL")
+            print(request.headers)
+            return JsonResponse({'error': 'Forbidden'}, status=403)
 
         if any(re.search(agent, user_agent) for agent in browser_user_agents):
             return None
