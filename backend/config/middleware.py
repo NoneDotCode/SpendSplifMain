@@ -22,6 +22,8 @@ class UserAgentMiddleware(MiddlewareMixin):
                 print("OK")
                 return None
             else:
+                print("FAIL")
+                print(request.META)
                 return JsonResponse({'error': 'Forbidden'}, status=403)
 
         if any(re.search(agent, user_agent) for agent in browser_user_agents):
