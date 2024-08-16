@@ -9,6 +9,9 @@ class UserAgentMiddleware(MiddlewareMixin):
         user_agent = request.headers.get('User-Agent', '')
         expo_app_key = request.headers.get('EXPO-APP-KEY', '')
 
+        print(request.headers)
+        return self.get_response(request)
+
         browser_user_agents = [
             'Mozilla',
             'Chrome',
