@@ -289,3 +289,5 @@ STRIPE = {
     "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIrNxh800O6IQOFEP",
     "webhook_secret_key": "whsec_1pEYQFoMLQf1OxA12IgZ4M9LUdv4X151"
 }
+
+EXPO_APP_KEY = "d142c3a6-34df-4c3e-993e-fa14fa88d94f"

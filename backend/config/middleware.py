@@ -1,14 +1,14 @@
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 import re
+from django.conf import settings
 
 
 class UserAgentMiddleware(MiddlewareMixin):
     @staticmethod
     def process_request(request):
         user_agent = request.headers.get('User-Agent', '')
-        expo_app_key = request.META.get('HTTP_EXPO_APP_KEY', '')
-        print("key:" + expo_app_key)
+        expo_app_key = request.headers.get('EXPO-APP-KEY', '')
 
         browser_user_agents = [
             'Mozilla',
@@ -20,12 +20,9 @@ class UserAgentMiddleware(MiddlewareMixin):
         ]
 
         if 'okhttp' in user_agent:
-            if expo_app_key == 'd142c3a6-34df-4c3e-993e-fa14fa88d94f':
-                print("OK")
+            if expo_app_key == settings.EXPO_APP_KEY:
                 return None
 
-            print("FAIL")
-            print(request.headers)
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
         if any(re.search(agent, user_agent) for agent in browser_user_agents):
