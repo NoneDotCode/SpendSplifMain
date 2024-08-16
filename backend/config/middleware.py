@@ -21,9 +21,9 @@ class UserAgentMiddleware(MiddlewareMixin):
             if expo_app_key == 'd142c3a6-34df-4c3e-993e-fa14fa88d94f':
                 return None
             else:
-                return JsonResponse({'error': 'Forbidden: Invalid HTTP_EXPO_APP_KEY'}, status=403)
+                return JsonResponse({'error': 'Forbidden'}, status=403)
 
         if any(re.search(agent, user_agent) for agent in browser_user_agents):
             return None
 
-        return JsonResponse({'error': 'Forbidden: Invalid User-Agent'}, status=403)
+        return JsonResponse({'error': 'Forbidden'}, status=403)
