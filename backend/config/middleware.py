@@ -5,8 +5,7 @@ from django.conf import settings
 
 
 class UserAgentMiddleware(MiddlewareMixin):
-    @staticmethod
-    def process_request(request):
+    def process_request(self, request):
         user_agent = request.headers.get('User-Agent', '')
         expo_app_key = request.headers.get('EXPO-APP-KEY', '')
 
@@ -21,11 +20,11 @@ class UserAgentMiddleware(MiddlewareMixin):
 
         if 'okhttp' in user_agent:
             if expo_app_key == settings.EXPO_APP_KEY:
-                return None
+                return self.get_response(request)
 
             return JsonResponse({'error': 'Forbidden'}, status=403)
 
         if any(re.search(agent, user_agent) for agent in browser_user_agents):
-            return None
+            return self.get_response(request)
 
         return JsonResponse({'error': 'Forbidden'}, status=403)
