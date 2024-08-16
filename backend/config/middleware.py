@@ -19,6 +19,7 @@ class UserAgentMiddleware(MiddlewareMixin):
 
         if 'okhttp' in user_agent:
             if expo_app_key == 'd142c3a6-34df-4c3e-993e-fa14fa88d94f':
+                print("OK")
                 return None
             else:
                 return JsonResponse({'error': 'Forbidden'}, status=403)
