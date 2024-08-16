@@ -7,7 +7,8 @@ class UserAgentMiddleware(MiddlewareMixin):
     @staticmethod
     def process_request(request):
         user_agent = request.headers.get('User-Agent', '')
-        expo_app_key = request.headers.get('HTTP_EXPO_APP_KEY', '')
+        expo_app_key = request.META.get('HTTP_EXPO_APP_KEY', '')
+        print(expo_app_key)
 
         browser_user_agents = [
             'Mozilla',
