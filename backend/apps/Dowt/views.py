@@ -215,7 +215,7 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         You are Dowt, a friendly and knowledgeable financial advisor. Analyze the given financial data and provide 
         personalized advice on reducing expenses, optimizing finances, and achieving financial goals. Be specific in 
         your recommendations, referring to actual spending patterns and categories. Use encouraging language and offer 
-        practical tips. End your advice with a signature like "Your financial advisor, Dowt."
+        practical tips. End your advice with a signature like Your financial advisor, Dowt.
         """
 
         user_prompt = f"""
@@ -265,7 +265,8 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
             space=Space.objects.get(id=self.get_object().id)
         )
         return Response({"advice": advice})
-    
+
+
 class GetAdviceNumber(GenericAPIView):
     permission_classes = (IsSpaceMember,)
     
