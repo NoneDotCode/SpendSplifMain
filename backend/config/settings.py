@@ -1,7 +1,6 @@
 import os
 from datetime import timedelta
 
-import dj_database_url
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -9,14 +8,13 @@ env = environ.Env()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 
-
 # Quick-start development settings - unsuitable for production
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = env("SECRET_KEY")
-DEBUG = env.bool("DEBUG")
+SECRET_KEY = "wpx-5^owzo27j^x8mhbrw&57i=*8butq$6_(_n8^9-ifa2^m)j"
+DEBUG = False
 
 
 ALLOWED_HOSTS = ["spendsplif.com", "api.spendsplif.com"]
@@ -221,10 +219,6 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = "None"
-CSRF_TRUSTED_ORIGINS = [
-    "https://spendsplif.com",
-    "https://api.spendsplif.com"
-]
 SESSION_COOKIE_SAMESITE = "None"
 CORS_ORIGIN_WHITELIST = [
     "https://spendsplif.com",
@@ -259,7 +253,8 @@ EMAIL_ADMIN = EMAIL_HOST_USER
 
 # Anthropic
 
-ANTHROPIC_API_KEY = "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"
+ANTHROPIC_API_KEY = ("sk-ant-api03-mqBtIiFrvSAz50MNcvXzodCEa7GRnv6Q0DGZr6scuTd1_CmXk4rpm6jtytSjrMvpCic_lvKSLpQ36tSny-"
+                     "GKEg-UE6i-QAA")
 
 # Google Auth
 
@@ -285,8 +280,10 @@ SUBSCRIBES_DATA = {
 }
 
 STRIPE = {
-    "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00LMdADPfK',
-    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIrNxh800O6IQOFEP",
+    "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00L'
+              'MdADPfK',
+    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIr"
+                      "Nxh800O6IQOFEP",
     "webhook_secret_key": "whsec_1pEYQFoMLQf1OxA12IgZ4M9LUdv4X151"
 }
 
