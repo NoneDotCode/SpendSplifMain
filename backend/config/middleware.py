@@ -15,9 +15,9 @@ class UserAgentMiddleware(MiddlewareMixin):
             'Safari',
             'Firefox',
             'Edge',
-            'Opera'
+            'Opera',
+            "Stripe"
         ]
-        print(user_agent)
 
         if 'okhttp' in user_agent:
             if expo_app_key == settings.EXPO_APP_KEY:
