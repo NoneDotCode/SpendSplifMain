@@ -179,10 +179,10 @@ class ConfirmRegistrationView(APIView):
                 father_space=space
             )
 
-            Notification.objects.create(importance="standard",
-                                        who_can_view=(user,),
-                                        message="Welcome, we're glad you're with us. SpendSplif - the best "
-                                                "helper for your financial well-being")
+            notification = Notification.objects.create(importance="standard",
+                                                       message="Welcome, we're glad you're with us. SpendSplif - the "
+                                                               "best helper for your financial well-being")
+            notification.who_can_view.set(user)
 
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
@@ -465,10 +465,10 @@ class GoogleLoginApi(APIView):
             refresh = RefreshToken.for_user(user)
             user_data = CustomUserSerializer(user).data
 
-            Notification.objects.create(importance="standard",
-                                        who_can_view=(user,),
-                                        message="Welcome, we're glad you're with us. SpendSplif - the best "
-                                                "helper for your financial well-being")
+            notification = Notification.objects.create(importance="standard",
+                                                       message="Welcome, we're glad you're with us. SpendSplif - the "
+                                                               "best helper for your financial well-being")
+            notification.who_can_view.set(user)
 
             response = redirect(settings.FRONTEND_URL)
 
