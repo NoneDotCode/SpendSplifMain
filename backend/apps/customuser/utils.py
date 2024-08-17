@@ -7,6 +7,11 @@ from random import randint
 
 from datetime import datetime
 
+from email.message import EmailMessage
+from email.utils import formataddr
+import smtplib
+import ssl
+
 
 def send_code_to_new_user(email: str, code: int, flag: str):
     """
@@ -35,32 +40,106 @@ def send_code_to_new_user(email: str, code: int, flag: str):
 
 
 def send_code_for_verify_email(email: str, code: int, flag: str):
+    smtp_server = "smtp.gmail.com"
+    port = 587  # Для TLS
+    sender_email = "spendsplif@gmail.com"
+    password = "your_app_password_here"  # Используйте пароль приложения для Gmail
+
     if flag == "registration":
         subject = 'Email Verification'
-        message = f'''
-Уважаемый пользователь!
+        text_message = f'''
+Dear User,
 
-Добро пожаловать в SpendSplif - ваш надежный помощник в управлении личными финансами. Мы рады, что вы присоединились к нашему сообществу, и хотим подтвердить регистрацию вашей учетной записи.
+Welcome to SpendSplif - your reliable assistant in personal finance management. We are glad that you have joined our community and would like to confirm your account registration.
 
-Для подтверждения адреса электронной почты, пожалуйста, введите следующий код подтверждения в соответствующее поле в приложении:
+To verify your email address, please enter the following verification code in the appropriate field in the application:
 
 {code}
 
-После успешного подтверждения вы сможете в полной мере использовать все возможности SpendSplif для отслеживания доходов, контроля расходов и достижения ваших финансовых целей.
+After successful confirmation, you will be able to fully utilize all the features of SpendSplif for tracking income, controlling expenses, and achieving your financial goals.
 
-Не стесняйтесь обращаться к нам, если у вас возникнут какие-либо вопросы или понадобится помощь. Мы всегда рады помочь!
+Feel free to contact us if you have any questions or need assistance. We are always happy to help!
 
-Желаем вам приятного и эффективного использования SpendSplif!
+We wish you a pleasant and effective experience using SpendSplif!
 
-Искренне ваша,
-Команда SpendSplif
+Sincerely,
+The SpendSplif Team
+        '''
+        html_message = f'''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendSplif Email Verification</title>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        .code {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin: 20px 0;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to SpendSplif</h1>
+        <p>Dear User,</p>
+        <p>We are glad that you have joined our community and would like to confirm your account registration.</p>
+        <p>To verify your email address, please enter the following verification code in the appropriate field in the application:</p>
+        <div class="code">{code}</div>
+        <p>After successful confirmation, you will be able to fully utilize all the features of SpendSplif for tracking income, controlling expenses, and achieving your financial goals.</p>
+        <p>Feel free to contact us if you have any questions or need assistance. We are always happy to help!</p>
+        <p>We wish you a pleasant and effective experience using SpendSplif!</p>
+        <p>Sincerely,<br>The SpendSplif Team</p>
+    </div>
+</body>
+</html>
         '''
     elif flag == "change email":
         subject = "Email Verification"
-        message = f"{code}"
-    from_email = 'spendsplif@gmail.com'
-    to_email = email
-    send_mail(subject, message, from_email, [to_email])
+        text_message = f"Your verification code is: {code}"
+        html_message = f"<html><body><h2>Your verification code is: <span style='color: #4CAF50;'>{code}</span></h2></body></html>"
+
+    # Создаем объект EmailMessage
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = formataddr(("SpendSplif", sender_email))
+    msg['To'] = email
+    msg['X-Priority'] = '1'  # Высокий приоритет
+    msg['X-MSMail-Priority'] = 'High'
+    msg['Importance'] = 'High'
+    msg['X-Entity-Ref-ID'] = str(code)  # Добавляем код в заголовок
+
+    # Добавляем текстовую и HTML версии письма
+    msg.set_content(text_message)
+    msg.add_alternative(html_message, subtype='html')
+
+    # Создаем защищенное SSL соединение
+    context = ssl.create_default_context()
+
+    try:
+        # Подключаемся к серверу и отправляем письмо
+        with smtplib.SMTP(smtp_server, port) as server:
+            server.starttls(context=context)
+            server.login(sender_email, password)
+            server.send_message(msg)
+        print(f"Email sent successfully to {email}")
+        return True
+    except Exception as e:
+        print(f"Error sending email to {email}: {str(e)}")
+        return False
 
 
 def get_verify_code():
