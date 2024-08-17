@@ -17,6 +17,7 @@ class UserAgentMiddleware(MiddlewareMixin):
             'Edge',
             'Opera'
         ]
+        print(user_agent)
 
         if 'okhttp' in user_agent:
             if expo_app_key == settings.EXPO_APP_KEY:
