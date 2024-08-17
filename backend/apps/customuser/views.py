@@ -23,6 +23,7 @@ from backend.apps.customuser.serializers import (
 from backend.apps.customuser.utils import cookie_response_payload_handler
 from rest_framework.exceptions import APIException
 
+from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions
 from rest_framework import serializers, status
 from django.urls import reverse_lazy
@@ -177,6 +178,11 @@ class ConfirmRegistrationView(APIView):
                 currency=self.request.data.get("currency"),
                 father_space=space
             )
+
+            Notification.objects.create(importance="standard",
+                                        who_can_view=user.id,
+                                        message="Welcome, we're glad you're with us. SpendSplif - the best "
+                                                "helper for your financial well-being")
 
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
@@ -458,6 +464,11 @@ class GoogleLoginApi(APIView):
 
             refresh = RefreshToken.for_user(user)
             user_data = CustomUserSerializer(user).data
+
+            Notification.objects.create(importance="standard",
+                                        who_can_view=user.id,
+                                        message="Welcome, we're glad you're with us. SpendSplif - the best "
+                                                "helper for your financial well-being")
 
             response = redirect(settings.FRONTEND_URL)
 
