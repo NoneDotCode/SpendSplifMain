@@ -405,7 +405,6 @@ class GoogleLoginApi(APIView):
             user_info = google_login_flow.get_user_info(google_tokens=google_tokens)
 
             email = id_token_decoded["email"]
-            name = user_info.get('name', '')
             username = email.split('@')[0]
 
             user, created = CustomUser.objects.get_or_create(
