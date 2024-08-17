@@ -401,22 +401,29 @@ class HistoryIncomeEditView(APIView):
         old_account_id = income.account["id"]
 
         try:
-            account = Account.objects.get(pk=old_account_id)
-            account.balance -= old_amount
+            account = Account.objects.select_for_update().get(pk=old_account_id)
+            # Calculate the net effect on the account balance
+            net_effect = old_amount - max(0, account.balance)
+
+            # Update account balance
+            account.balance = max(0, account.balance - old_amount)
             account.save()
+
+            # Update total balance
+            space = Space.objects.select_for_update().get(pk=income.father_space_id)
+            total_balance = TotalBalance.objects.select_for_update().get(father_space=space)
+            total_balance.balance -= convert_currencies(amount=net_effect,
+                                                        from_currency=income.currency,
+                                                        to_currency=space.currency)
+            total_balance.balance = max(0, total_balance.balance)  # Ensure non-negative balance
+            total_balance.save()
+
+            # Delete the income record
+            income.delete()
+
+            return Response({"message": "Income has been deleted successfully"}, status=status.HTTP_200_OK)
         except ObjectDoesNotExist:
-            pass
-
-        space = Space.objects.select_for_update().get(pk=income.father_space_id)
-        total_balance = TotalBalance.objects.get(father_space=space)
-        total_balance.balance -= convert_currencies(amount=old_amount,
-                                                    from_currency=income.currency,
-                                                    to_currency=space.currency)
-        total_balance.save()
-
-        income.delete()
-
-        return Response({"message": "Income has been deleted successfully"}, status=status.HTTP_200_OK)
+            return Response({"error": "Account or Space not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class StatisticView(generics.GenericAPIView):
