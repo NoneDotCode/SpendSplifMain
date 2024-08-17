@@ -8,7 +8,6 @@ class UserAgentMiddleware(MiddlewareMixin):
     def process_request(self, request):
         user_agent = request.headers.get('User-Agent', '')
         expo_app_key = request.headers.get('EXPO-APP-KEY', '')
-        print("headers", request.headers)
 
         browser_user_agents = [
             'Mozilla',
@@ -18,6 +17,9 @@ class UserAgentMiddleware(MiddlewareMixin):
             'Edge',
             'Opera',
         ]
+
+        if "Stripe" in user_agent:
+            return self.get_response(request)
 
         if 'okhttp' in user_agent:
             if expo_app_key == settings.EXPO_APP_KEY:
