@@ -90,12 +90,16 @@ class StripeWebhookView(generics.GenericAPIView):
             price_premium = int(settings.SUBSCRIBES_DATA['Premium']['price'].replace("€", "")) * 100
             price_standard = int(settings.SUBSCRIBES_DATA['Standard']['price'].replace("€", "")) * 100
             if payment_intent['amount'] == price_standard:
-                user.roles.remove("premium/pre")
-                user.roles.remove("premium")
+                if "premium/pre" in user.roles:
+                    user.roles.remove("premium/pre")
+                elif "premium" in user.roles:
+                    user.roles.remove("premium")
                 user.roles = ["standard/pre"]
             elif payment_intent['amount'] == price_premium:
-                user.roles.remove("premium")
-                user.roles.remove("standard/pre")
+                if "premium" in user.roles:
+                    user.roles.remove("premium")
+                elif "standard/pre" in user.roles:
+                    user.roles.remove("standard/pre")
                 user.roles = ["premium/pre"]
             user.save()
         elif event['type'] == 'payment_intent.payment_failed':

@@ -180,7 +180,7 @@ class ConfirmRegistrationView(APIView):
             )
 
             Notification.objects.create(importance="standard",
-                                        who_can_view=user.id,
+                                        who_can_view=(user,),
                                         message="Welcome, we're glad you're with us. SpendSplif - the best "
                                                 "helper for your financial well-being")
 
@@ -466,7 +466,7 @@ class GoogleLoginApi(APIView):
             user_data = CustomUserSerializer(user).data
 
             Notification.objects.create(importance="standard",
-                                        who_can_view=user.id,
+                                        who_can_view=(user,),
                                         message="Welcome, we're glad you're with us. SpendSplif - the best "
                                                 "helper for your financial well-being")
 
