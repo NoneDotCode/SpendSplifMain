@@ -2,7 +2,6 @@ from rest_framework import generics, permissions, status
 import stripe
 from django.conf import settings
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from backend.apps.customuser.models import CustomUser
 
@@ -92,9 +91,12 @@ class StripeWebhookView(generics.GenericAPIView):
             price_premium = int(settings.SUBSCRIBES_DATA['Premium']['price'].replace("€", "")) * 100
             price_standard = int(settings.SUBSCRIBES_DATA['Standard']['price'].replace("€", "")) * 100
             if payment_intent['amount'] == price_standard:
+                user.roles.remove("premium/pre")
+                user.roles.remove("premium")
                 user.roles = ["standard/pre"]
             elif payment_intent['amount'] == price_premium:
                 user.roles.remove("premium")
+                user.roles.remove("standard/pre")
                 user.roles = ["premium/pre"]
             user.save()
         elif event['type'] == 'payment_intent.payment_failed':
