@@ -106,3 +106,9 @@ class StripeWebhookView(generics.GenericAPIView):
             return Response({'error': 'Payment was not successful'}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         return Response({'status': 'success'}, status=status.HTTP_200_OK)
+
+
+class SubscribeCancel(generics.GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        return Response({'status': 'Your subscribe will end when you will die.'},
+                        status=status.HTTP_200_OK)
