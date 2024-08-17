@@ -263,9 +263,9 @@ ANTHROPIC_API_KEY = "sk-ant-api03-mqBtIiFrvSAz50MNcvXzodCEa7GRnv6Q0DGZr6scuTd1_C
 
 # Google Auth
 
-GOOGLE_CLIENT_ID = "902312829636-l04tkdlapql3jjblg7q0vlf76k7v9dlj.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
-GOOGLE_PROJECT_ID = "spendsplif-421713"
+GOOGLE_CLIENT_ID = "1002186527863-pd1c9naj1kt8hq6cogg80kn3nl4d9vjf.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_PROJECT_ID = "spendsplif-000001"
 
 # Custom variables
 
