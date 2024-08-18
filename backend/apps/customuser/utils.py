@@ -37,17 +37,21 @@ def send_code_for_verify_email(email: str, code: int, flag: str):
             padding: 20px;
         }}
         .code {{
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #FFA800;
             text-align: center;
             margin: 20px 0;
         }}
+        .title {{
+            text-align: center;
+            font-size: 26px;
+        }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to SpendSplif</h1>
+        <div class="title">Welcome to SpendSplif</div>
         <div class="code">{code}</div>
         <p>Dear User,</p>
         <p>Welcome to SpendSplif - your reliable assistant in personal finance management. We are glad that you have joined our community and would like to confirm your account registration.</p>
@@ -82,17 +86,21 @@ def send_code_for_verify_email(email: str, code: int, flag: str):
             padding: 20px;
         }}
         .code {{
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #FFA800;
             text-align: center;
             margin: 20px 0;
         }}
+        .title {{
+            text-align: center;
+            font-size: 26px;
+        }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Email Verification</h1>
+        <div class="title">Email Verification</div>
         <div class="code">{code}</div>
         <p>Please use the code above to verify your email change in the SpendSplif application.</p>
     </div>
