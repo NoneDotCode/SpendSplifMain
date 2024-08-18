@@ -280,11 +280,11 @@ SUBSCRIBES_DATA = {
 }
 
 STRIPE = {
-    "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00L'
-              'MdADPfK',
-    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIr"
-                      "Nxh800O6IQOFEP",
-    "webhook_secret_key": "whsec_1pEYQFoMLQf1OxA12IgZ4M9LUdv4X151"
+    "secret": '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'
+              'djMQqF',
+    "publishableKey": "pk_live_51OaEz8J4gLcb8EJ9itysEpsC4GvCGDycOg2MQHmCn93iZVAfsP3rQ9bqzTqYiDeVsVUUMVjbWV1PY1pIIUnXxc"
+                      "p200k2QBISlL",
+    "webhook_secret_key": "whsec_9mX1SdKRhhSS8vl0GjgiF0AjOZ6I0eum"
 }
 
 EXPO_APP_KEY = "d142c3a6-34df-4c3e-993e-fa14fa88d94f"
