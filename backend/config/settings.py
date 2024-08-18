@@ -270,7 +270,7 @@ MOBILE_APP_ACTUAL_VERSION = "0.0.1"
 
 SUBSCRIBES_DATA = {
     "Standard": {
-        "price": "1€",
+        "price": "10€",
         "period": "Month ~+2 weeks~"
     },
     "Premium": {
