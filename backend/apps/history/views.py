@@ -282,7 +282,11 @@ class HistoryExpenseEditView(APIView):
 
         # Обновляем общий баланс пространства
         space = Space.objects.select_for_update().get(pk=expense.father_space_id)
-        space.totalbalance.balance += old_amount
+        space.totalbalance.balance += convert_currencies(
+            amount=old_amount,
+            from_currency=expense.from_acc["currency"],
+            to_currency=space.currency
+        )
         space.totalbalance.save()
 
         # Удаляем запись о расходе
