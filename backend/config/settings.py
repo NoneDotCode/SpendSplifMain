@@ -14,7 +14,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = "wpx-5^owzo27j^x8mhbrw&57i=*8butq$6_(_n8^9-ifa2^m)j"
-DEBUG = False
+DEBUG = True
 
 
 ALLOWED_HOSTS = ["spendsplif.com", "api.spendsplif.com"]

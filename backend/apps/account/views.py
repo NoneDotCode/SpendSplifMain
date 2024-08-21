@@ -25,7 +25,7 @@ class CreateAccount(generics.CreateAPIView):
         request.data['father_space'] = space_pk
         user_account_counter = Account.objects.filter(father_space=space).count()
         highest_role = self.request.user.roles[0]
-        
+
         if user_account_counter >= 12 and (highest_role == "premium" or highest_role == "premium/pre"):
             return Response("Error: you can't create more than 12 accounts because your role is premium",
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
