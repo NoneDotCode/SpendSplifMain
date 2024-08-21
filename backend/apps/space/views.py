@@ -184,7 +184,7 @@ class AddMemberToSpace(generics.GenericAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Add user to the space.
-        space.members.add(user, through_defaults=True)
+        space.members.add(user)
 
         notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
         notification = Notification.objects.create(message=notif_message, importance="Medium")
