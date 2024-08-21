@@ -6,8 +6,9 @@ from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions, SpaceBackup
-from backend.apps.space.serializers import SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer, MemberPermissionsSerializer
-from backend.apps.space.permissions import (IsSpaceOwner, IsSpaceMember, CanAddMembers, CanRemoveMembers,
+from backend.apps.space.serializers import (SpaceSerializer, SpaceListSerializer, AddAndRemoveMemberSerializer,
+                                            MemberPermissionsSerializer)
+from backend.apps.space.permissions import (CanAddMembers, CanRemoveMembers,
                                             CanEditMembers, UserRolePermision)
 from backend.apps.account import permissions
 from rest_framework.response import Response
@@ -40,7 +41,8 @@ class CreateSpace(generics.CreateAPIView):
         user_space_counter = Space.objects.filter(members=self.request.user).count()
         highest_role = self.request.user.roles[0]
         if highest_role == "free" or highest_role == "standard":
-            return Response("Error: you can't create spaces because your role is free or standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response("Error: you can't create spaces because your role is free or standard",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         if user_space_counter >= 5:
             return Response("Error: you can't create more than 5 spaces", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
@@ -137,9 +139,9 @@ class EditSpace(generics.RetrieveUpdateAPIView):
             category.save()
         total_balance = TotalBalance.objects.get(father_space=instance)
         if total_balance:
-            total_balance.balance=convert_currencies(amount=total_balance.balance,
-                                                     from_currency=instance.currency,
-                                                     to_currency=currency)
+            total_balance.balance = convert_currencies(amount=total_balance.balance,
+                                                       from_currency=instance.currency,
+                                                       to_currency=currency)
             total_balance.save()
         for goal in Goal.objects.filter(father_space=instance):
             goal.collected = convert_currencies(amount=goal.collected,
@@ -182,10 +184,11 @@ class AddMemberToSpace(generics.GenericAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Add user to the space.
-        space.members.add(user)
+        space.members.add(user, through_defaults=True)
 
         notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
-        Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Medium")
+        notification = Notification.objects.create(message=notif_message, importance="Medium")
+        notification.who_can_view.set(space.members.all())
 
         # Return success answer
         return Response({"success": "User successfully added to the space."}, status=status.HTTP_200_OK)
@@ -197,9 +200,8 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
 
     @staticmethod
     def put(request, *args, **kwargs):
-        space_pk = kwargs.get("pk")
         user_email = request.data.get("user_email", )
-        space = Space.objects.get(pk=space_pk)
+        space = Space.objects.get(pk=kwargs.get("pk"))
 
         try:
             user = CustomUser.objects.get(email=user_email)
@@ -371,9 +373,10 @@ class SpaceBackupListView(APIView):
 class SpaceBackupSimulatorView(APIView):
     permission_classes = (IsSpaceMemberAcc,)
 
-    def post(self, request, *args, **kwargs):
+    @staticmethod
+    def post(request, *args, **kwargs):
         space_id = kwargs.get('space_pk')
-        num_backups = request.data.get('num_backups', 7)  # По умолчанию создаем 3 бэкапа
+        num_backups = request.data.get('num_backups', 7)
 
         try:
             space = Space.objects.get(id=space_id)
