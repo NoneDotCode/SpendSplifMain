@@ -39,6 +39,8 @@ class NotificationList(generics.GenericAPIView):
         for notification in all_notifications:
             if type(notification["seen"]) is int:
                 seen = (notification["seen"],)
+            elif type(notification["seen"]) is None:
+                seen = []
             else:
                 seen = notification["seen"]
 
@@ -50,7 +52,7 @@ class NotificationList(generics.GenericAPIView):
                     'date': date_format(notification['created_at'], format="d F"),
                     'time': date_format(notification['created_at'], format="H:i"),
                     'type': notification['type'],
-                    'seen': True if (notification['seen']) and (user in seen) else False
+                    'seen': user in seen
                 }
                 for notification in all_notifications
             ]
