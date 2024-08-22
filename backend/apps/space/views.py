@@ -398,3 +398,17 @@ class SpaceBackupSimulatorView(APIView):
             "message": f"Successfully created {num_backups} backups",
             "backups": created_backups
         }, status=status.HTTP_201_CREATED)
+
+
+class LeaveFromSpaceView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        space_id = kwargs.get('pk')
+        space = Space.objects.get(id=space_id)
+        if request.user == space.members.get(owner=True):
+            return Response({"message": "You cannot leave space you are owning"},
+                            status=status.HTTP_403_FORBIDDEN)
+        space.members.remove(request.user)
+        return Response({"message": "You have successfully left the space"}, status=status.HTTP_204_NO_CONTENT)

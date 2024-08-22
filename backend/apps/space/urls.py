@@ -2,7 +2,7 @@ from django.urls import path
 
 from backend.apps.space.views import (ListOfSpaces, CreateSpace, EditSpace, DeleteSpace, AddMemberToSpace,
                                       RemoveMemberFromSpace, MemberPermissionsEdit, ListOfUsersInSpace,
-                                      SpaceBackupListView, SpaceBackupSimulatorView)
+                                      SpaceBackupListView, SpaceBackupSimulatorView, LeaveFromSpaceView)
 
 urlpatterns = [
     path("create_space/", CreateSpace.as_view(), name="create_space"),
@@ -15,6 +15,7 @@ urlpatterns = [
          name='member-permissions-edit'),
     path("my_spaces/<int:space_pk>/members/", ListOfUsersInSpace.as_view(), name="info-about-space-users"),
     path('my_spaces/<int:space_pk>/backups/', SpaceBackupListView.as_view(), name='space-backups-list'),
-    path('my_spaces/<int:space_pk>/simulate-backups/', SpaceBackupSimulatorView.as_view(), name='space-backups-simulate'),
-
+    path('my_spaces/<int:space_pk>/simulate-backups/', SpaceBackupSimulatorView.as_view(),
+         name='space-backups-simulate'),
+    path('my_spaces/<int:pk>/leave/', LeaveFromSpaceView.as_view(), name='leave-from-space')
 ]
