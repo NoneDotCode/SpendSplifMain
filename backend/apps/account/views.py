@@ -27,13 +27,13 @@ class CreateAccount(generics.CreateAPIView):
         highest_role = self.request.user.roles[0]
         
         if user_account_counter >= 12 and (highest_role == "premium" or highest_role == "premium/pre"):
-            return Response("Error: you can't create more than 12 accounts because your role is premium",
+            return Response({"Error": "You can't create more than 12 accounts because your role is premium"},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif user_account_counter >= 6 and (highest_role == "standard" or highest_role == "standard/pre"):
-            return Response("Error: you can't create more than 6 accounts because your role is standard",
+            return Response({"Error": "You can't create more than 6 accounts because your role is standard"},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif user_account_counter >= 3 and highest_role == "free":
-            return Response("Error: you can't create more than 3 accounts because your role is free",
+            return Response({"Error": "You can't create more than 3 accounts because your role is free"},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         try:
