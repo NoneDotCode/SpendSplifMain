@@ -1,4 +1,6 @@
 import ast
+import os
+import sys
 
 from django_celery_beat.models import PeriodicTask, CrontabSchedule
 
@@ -28,6 +30,8 @@ import json
 import inflect
 
 p = inflect.engine()
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 class SpendView(generics.GenericAPIView):
