@@ -20,10 +20,10 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
-        
+
         password = data.get("password")
         if password:
-        
+
             if not 8 <= len(password) <= 24:
                 raise serializers.ValidationError("the password should be at least 8 characters long")
 
@@ -43,12 +43,13 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
 
     def update(self, instance, validated_data):
         if (instance.email != validated_data.get("email", instance.email) and
-                validated_data.get("email", instance.email) is not None):
+                validated_data.get("email") is not None):
+            print("email:", validated_data.get("email"))
             instance.new_email = validated_data.get('email', instance.email)
         if (instance.username != validated_data.get("username", instance.username) and
-                validated_data.get("username", instance.username) is not None):
+                validated_data.get("username") is not None):
             instance.username = validated_data.get('username', instance.username)
-        if validated_data.get('password', instance.password) is not None:
+        if validated_data.get('password') is not None:
             instance.set_password(validated_data.get('password', instance.password))
         instance.save()
         return instance
