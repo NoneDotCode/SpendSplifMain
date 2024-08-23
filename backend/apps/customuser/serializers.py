@@ -21,7 +21,7 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
 
     def validate(self, data):
         
-        password = data.get ("password")
+        password = data.get("password")
         if password:
         
             if not 8 <= len(password) <= 24:
@@ -41,12 +41,15 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
 
         return data
 
-
     def update(self, instance, validated_data):
-        if instance.email != validated_data.get("email", instance.email):
+        if (instance.email != validated_data.get("email", instance.email) and
+                validated_data.get("email", instance.email) is not None):
             instance.new_email = validated_data.get('email', instance.email)
-        instance.username = validated_data.get('username', instance.username)
-        instance.set_password(validated_data.get('password', instance.password))
+        if (instance.username != validated_data.get("username", instance.username) and
+                validated_data.get("username", instance.username) is not None):
+            instance.username = validated_data.get('username', instance.username)
+        if validated_data.get('password', instance.password) is not None:
+            instance.set_password(validated_data.get('password', instance.password))
         instance.save()
         return instance
 
@@ -63,7 +66,8 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "email"
     username = None
 
-    def get_username(self, user):
+    @staticmethod
+    def get_username(user):
         return user.email
 
     def validate(self, attrs):
