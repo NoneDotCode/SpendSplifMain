@@ -24,8 +24,6 @@ from backend.apps.total_balance.models import TotalBalance
 
 from backend.apps.space.models import Space
 
-import datetime
-
 import json
 import inflect
 
@@ -111,7 +109,7 @@ class SpendView(generics.GenericAPIView):
 class PeriodicSpendCreateView(generics.GenericAPIView):
     serializer_class = PeriodicSpendCreateSerializer
     permission_classes = (IsSpaceMember, CanCreatePeriodicSpends)
-    
+
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -125,39 +123,48 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         day_of_week = serializer.validated_data.get("day_of_week")
         day_of_month = serializer.validated_data.get("day_of_month")
         month_of_year = serializer.validated_data.get("month_of_year")
-        space = Space.objects.get(pk=kwargs["space_pk"])
-        
-        periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
-        highest_role = self.request.user.roles[0]
+        space_pk = kwargs.get("space_pk")
 
-        if periodic_spends_count >= 20 and highest_role == "premium":
-            return Response("Error: you can't create more than 20 periodic spends because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif periodic_spends_count >= 10 and highest_role == "standard":
-            return Response("Error: you can't create more than 10 periodic spends because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif periodic_spends_count >= 5 and highest_role == "free":
-            return Response("Error: you can't create more than 5 periodic spends because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        
+        try:
+            space = Space.objects.get(pk=space_pk)
+        except Space.DoesNotExist:
+            return Response({"error": "Space does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+        periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
+        highest_role = request.user.roles[0]
+
+        if (highest_role == "premium" or highest_role == "premium/pre") and periodic_spends_count >= 20:
+            return Response({"error": "You can't create more than 20 periodic spends with a premium role."},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif (highest_role == "standard" or highest_role == "standard/pre") and periodic_spends_count >= 10:
+            return Response({"error": "You can't create more than 10 periodic spends with a standard role."},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        elif highest_role == "free" and periodic_spends_count >= 5:
+            return Response({"error": "You can't create more than 5 periodic spends with a free role."},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        if amount <= 0:
+            return Response({"error": "The amount must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
                                                                   day_of_week=day_of_week,
                                                                   day_of_month=day_of_month,
                                                                   month_of_year=month_of_year)
+
         try:
-            1 / amount
-        except ZeroDivisionError:
-            return Response({"error": "You should put out amount much than 0."})
-        try:
-            PeriodicTask.objects.create(crontab=schedule, name=f"periodic_spend_{request.user.id}_{title}",
-                                        task="apps.spend.tasks.periodic_spend",
-                                        args=json.dumps((account_pk,
-                                                         category_pk,
-                                                         kwargs.get("space_pk"),
-                                                         amount,
-                                                         title,
-                                                         space.currency)))
-        except ValidationError:
-            return Response({"error": "Title must be unique."}, status=status.HTTP_400_BAD_REQUEST)
+            PeriodicTask.objects.create(
+                crontab=schedule,
+                name=f"periodic_spend_{request.user.id}_{title}",
+                task="apps.spend.tasks.periodic_spend",
+                args=json.dumps([account_pk, category_pk, space_pk, float(amount), title, space.currency])
+            )
+        except ValidationError as e:
+            return Response({"error": f"Failed to create task: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"An unexpected error occurred: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         PeriodicSpendCounter.objects.create(user=request.user, father_space=space, title=title)
         return Response({"success": "Periodic task successfully created."}, status=status.HTTP_200_OK)
 
@@ -169,8 +176,6 @@ class PeriodicSpendDeleteView(generics.GenericAPIView):
     def delete(request, *args, **kwargs):
         periodic_spend_pk = kwargs.get("pk")
         task = PeriodicTask.objects.get(pk=periodic_spend_pk)
-        task_args = ast.literal_eval(task.args)
-        space = Space.objects.get(pk=task_args[2])
         task.delete()
         return Response({"success": "Periodic spend successfully deleted."}, status=status.HTTP_200_OK)
 
