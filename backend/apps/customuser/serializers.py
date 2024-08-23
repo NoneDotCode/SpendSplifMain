@@ -43,15 +43,13 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
 
     def update(self, instance, validated_data):
         if (instance.email != validated_data.get("email", instance.email) and
-                validated_data.get("email", instance.email) is not None):
+                validated_data.get("email") is not None):
             print("email:", validated_data.get("email"))
             instance.new_email = validated_data.get('email', instance.email)
         if (instance.username != validated_data.get("username", instance.username) and
-                validated_data.get("username", instance.username) is not None):
-            print("username:", validated_data.get("username"))
+                validated_data.get("username") is not None):
             instance.username = validated_data.get('username', instance.username)
-        if validated_data.get('password', instance.password) is not None:
-            print("password:", validated_data.get("password"))
+        if validated_data.get('password') is not None:
             instance.set_password(validated_data.get('password', instance.password))
         instance.save()
         return instance
