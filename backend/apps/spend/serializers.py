@@ -16,7 +16,7 @@ class PeriodicSpendCreateSerializer(serializers.Serializer):
     amount = serializers.FloatField(required=True)
     title = serializers.CharField(required=True)
     hour = serializers.CharField(required=False, default="14")
-    minute = serializers.CharField(required=False, default="00")
+    minute = serializers.CharField(required=False, default="05")
     day_of_week = serializers.CharField(required=False, default="*")
     day_of_month = serializers.CharField(required=False, default="*")
     month_of_year = serializers.CharField(required=False, default="*")
