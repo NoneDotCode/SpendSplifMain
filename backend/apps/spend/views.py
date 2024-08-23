@@ -156,7 +156,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
             PeriodicTask.objects.create(
                 crontab=schedule,
                 name=f"periodic_spend_{request.user.id}_{title}",
-                task="apps.spend.tasks.periodic_spend",
+                task="backend.apps.spend.tasks.periodic_spend",
                 args=json.dumps([account_pk, category_pk, space_pk, float(amount), title, space.currency])
             )
         except ValidationError as e:
