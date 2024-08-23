@@ -410,5 +410,5 @@ class LeaveFromSpaceView(generics.GenericAPIView):
         if request.user == space.members.get(owner=True):
             return Response({"message": "You cannot leave space you are owning"},
                             status=status.HTTP_403_FORBIDDEN)
-        space.members.remove(request.user)
+        MemberPermissions.objects.get(space=space, member=request.user).delete()
         return Response({"message": "You have successfully left the space"}, status=status.HTTP_204_NO_CONTENT)
