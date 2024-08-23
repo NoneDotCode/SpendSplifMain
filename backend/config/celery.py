@@ -23,7 +23,7 @@ app.conf.beat_schedule = {
         "task": "backend.apps.category.tasks.clear_all_spent",
         "schedule": crontab(hour="00", minute="00", day_of_month="01")
     },
-    "delete_not_verify_users_every_day":{
+    "delete_not_verify_users_every_day": {
         "task": "beckend.apps.account.tasks.delete_not_verify_users",
         "schedule": crontab(hour="00", minute="00"),
     },
