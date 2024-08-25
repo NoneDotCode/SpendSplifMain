@@ -407,7 +407,7 @@ class LeaveFromSpaceView(generics.GenericAPIView):
     def post(request, *args, **kwargs):
         space_id = kwargs.get('pk')
         space = Space.objects.get(id=space_id)
-        if request.user == space.members.get(owner=True):
+        if space.members.get(space__memberpermissions__owner=True, space__memberpermissions__member=request.user):
             return Response({"message": "You cannot leave space you are owning"},
                             status=status.HTTP_403_FORBIDDEN)
         MemberPermissions.objects.get(space=space, member=request.user).delete()
