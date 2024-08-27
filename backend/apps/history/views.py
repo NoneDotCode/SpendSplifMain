@@ -804,7 +804,6 @@ class GoalTransferStatisticView(generics.ListAPIView):
         return sorted_summary
 
     def _update_summary(self, summary: Dict[str, Dict[str, str]], transfer: HistoryTransfer, currency: str) -> None:
-        print(transfer)
         goal = transfer.to_goal
         goal_amount = transfer.goal_amount
         collected = transfer.amount_in_default_currency
@@ -897,6 +896,7 @@ class GeneralView(generics.GenericAPIView):
     permission_classes = (IsSpaceMember,)
 
     def get(self, request, space_pk, *args, **kwargs):
+        currency = Space.objects.get(pk=space_pk).currency
         data = {
             "Week": self.get_data_and_percentages(6, space_pk),
             "Month": self.get_data_and_percentages(29, space_pk),
@@ -909,7 +909,7 @@ class GeneralView(generics.GenericAPIView):
 
         # Добавление текстового анализа
         for period in data:
-            data[period]["analysis"] = self.get_analysis_message(data[period], period)
+            data[period]["analysis"] = self.get_analysis_message(data[period], period, currency=currency)
 
         return Response(data)
 
@@ -1025,7 +1025,7 @@ class GeneralView(generics.GenericAPIView):
             percentages[date] = f"{round(percentage, 2)}%"
         return percentages
 
-    def get_analysis_message(self, period_data, period):
+    def get_analysis_message(self, period_data, period, currency):
         balances = period_data.get('balance', {})
         if not balances:
             return f"No data available for the {period.lower()}."
@@ -1037,9 +1037,9 @@ class GeneralView(generics.GenericAPIView):
         difference = end_balance - start_balance
 
         if difference > 0:
-            return f"You have {difference} USD more this {period.lower()}."
+            return f"You have {difference} {currency} more this {period.lower()}."
         elif difference < 0:
-            return f"You have {abs(difference)} USD less this {period.lower()}."
+            return f"You have {abs(difference)} {currency} less this {period.lower()}."
         else:
             return f"Your balance remained the same this {period.lower()}."
 
