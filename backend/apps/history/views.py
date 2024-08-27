@@ -160,7 +160,7 @@ class HistoryExpenseEditView(APIView):
                 new_category_id = old_category_id
 
             if 'comment' in request.data:
-                expense.comment = request.data['comment']
+                expense.comment = request.data.get('comment', '')
 
             # Обновляем баланс счетов только если они существуют и изменились
             if old_account_id != new_account_id or old_amount != new_amount:
@@ -237,9 +237,11 @@ class HistoryExpenseEditView(APIView):
 
             # Обновляем new_balance
             expense.new_balance = space.totalbalance.balance
+            expense.amount = new_amount
 
             # Сохраняем изменения в расходе
             expense.save()
+            print(expense.to_cat)
 
             return Response({"message": "Expense has been updated successfully"}, status=status.HTTP_200_OK)
         else:
