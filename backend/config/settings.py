@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.messenger",
     "apps.Dowt",
     "apps.notifications",
+    'apps.banners'
 ]
 
 # Custom user model auth
@@ -279,3 +280,12 @@ GOOGLE_PROJECT_ID = "spendsplif-421713"
 
 BASE_BACKEND_URL = 'http://localhost:8000'
 FRONTEND_URL = 'http://localhost:5173'
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dndbcpkkp',
+    'API_KEY': '661874973379638',
+    'API_SECRET': '0mcl0rqwITiivvjy0Wj8AxoMp2w'
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

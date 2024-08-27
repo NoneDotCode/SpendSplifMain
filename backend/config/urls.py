@@ -3,6 +3,8 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import TokenVerifyView
 
 from backend.apps.customuser.views import CustomTokenObtainPairView, CustomTokenRefreshView
+from django.conf import settings
+from django.conf.urls.static import static
 
 base_space_url = "api/v1/my_spaces/<int:space_pk>/"
 
@@ -14,6 +16,7 @@ urlpatterns = [
     path("api/v1/", include("apps.cryptocurrency.urls")),
     path("api/v1/", include("apps.converter.urls")),
     path("api/v1/", include("apps.messenger.urls")),
+    path('api/v1/', include('apps.banners.urls')),
     path(base_space_url, include("apps.account.urls")),
     path(base_space_url, include("apps.category.urls")),
     path(base_space_url, include("apps.history.urls")),
