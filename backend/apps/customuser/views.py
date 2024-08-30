@@ -498,7 +498,7 @@ class GoogleLoginApiMobileView(APIView):
 
     def get(self, request, *args, **kwargs):
         # Получаем id_token из параметров URL
-        id_token_value = request.GET.get("idToken")
+        id_token_value = request.GET.get("id_token")
 
         if not id_token_value:
             return Response({"error": "Missing id_token in the request."}, status=status.HTTP_400_BAD_REQUEST)
