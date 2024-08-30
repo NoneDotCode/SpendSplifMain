@@ -5,8 +5,8 @@ import re
 
 class UserAgentMiddleware(MiddlewareMixin):
     def process_request(self, request):
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-        secure_key = request.META.get('APP_SECURE_KEY', '')
+        user_agent = request.headers.get('HTTP_USER_AGENT', '')
+        secure_key = request.headers.get('APP_SECURE_KEY', '')
 
         browser_user_agents = [
             'Mozilla',
