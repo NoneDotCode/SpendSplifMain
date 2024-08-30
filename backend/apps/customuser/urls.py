@@ -2,7 +2,7 @@ from django.urls import path
 
 from backend.apps.customuser.views import (CustomUserRegistrationView, ConfirmRegistrationView, CustomUserUpdateAPIView,
                                            ConfirmNewEmailView, UserProfileView, LogoutView, GoogleLoginRedirectApi,
-                                           GoogleLoginApi, CheckAppVersion)
+                                           GoogleLoginApi, CheckAppVersion, GoogleLoginApiMobileView)
 
 app_name = 'customuser'
 
@@ -16,4 +16,5 @@ urlpatterns = [
     path('auth/google/login/', GoogleLoginRedirectApi.as_view(), name='google_login'),
     path('auth/google/callback/', GoogleLoginApi.as_view(), name='google_callback'),
     path('check_version/', CheckAppVersion.as_view(), name='check_app_version'),
+    path('auth/google/mob/callback/', GoogleLoginApiMobileView.as_view(), name='google_mob_callback'),
 ]
