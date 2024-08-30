@@ -230,14 +230,12 @@ class GoogleLoginCredentials:
     client_id: str
     client_secret: str
     project_id: str
-    expo_redirect_uri: str = None  # Добавляем новое поле
 
 
 def google_login_get_credentials() -> GoogleLoginCredentials:
     client_id = settings.GOOGLE_CLIENT_ID
     client_secret = settings.GOOGLE_CLIENT_SECRET
     project_id = settings.GOOGLE_PROJECT_ID
-    expo_redirect_uri = settings.EXPO_REDIRECT_URI  # Добавляем новую настройку
 
     if not client_id:
         raise ImproperlyConfigured("GOOGLE_CLIENT_ID missing in env.")
@@ -251,8 +249,7 @@ def google_login_get_credentials() -> GoogleLoginCredentials:
     credentials = GoogleLoginCredentials(
         client_id=client_id,
         client_secret=client_secret,
-        project_id=project_id,
-        expo_redirect_uri=expo_redirect_uri
+        project_id=project_id
     )
 
     return credentials
@@ -301,13 +298,13 @@ class GoogleLoginFlowService:
     def __init__(self):
         self._credentials = google_login_get_credentials()
 
-    def _get_redirect_uri(self):
-        # Добавляем поддержку Expo URI
-        expo_redirect_uri = self._credentials.expo_redirect_uri
-        if expo_redirect_uri:
-            return expo_redirect_uri
+    @staticmethod
+    def _generate_state_session_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
+        rand = SystemRandom()
+        state = "".join(rand.choice(chars) for _ in range(length))
+        return state
 
-        # Оставляем существующую логику для веб-приложений
+    def _get_redirect_uri(self):
         domain = settings.BASE_BACKEND_URL
         api_uri = self.API_URI
         redirect_uri = f"{domain}{api_uri}"
