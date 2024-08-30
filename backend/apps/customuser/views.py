@@ -38,6 +38,7 @@ import requests
 from attr import define
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from google.oauth2 import id_token
 from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
 
 
@@ -484,6 +485,102 @@ class GoogleLoginApi(APIView):
 
             return response
 
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleLoginApiMobileView(APIView):
+    permission_classes = ()
+
+    def get(self, request, *args, **kwargs):
+        # Получаем id_token из параметров URL
+        id_token_value = request.GET.get("id_token")
+
+        if not id_token_value:
+            return Response({"error": "Missing id_token in the request."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Верификация и декодирование id_token
+            id_info = id_token.verify_oauth2_token(id_token_value, requests.Request(), settings.GOOGLE_CLIENT_ID)
+
+            if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                return Response({"error": "Invalid issuer."}, status=status.HTTP_400_BAD_REQUEST)
+
+            email = id_info["email"]
+            name = id_info.get("name", "")
+            username = email.split('@')[0]
+
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': username,
+                    'is_active': True,
+                    'verify_code': 'verified'
+                }
+            )
+
+            if created:
+                # Если пользователь был создан, создаем связанные объекты
+                user.set_unusable_password()
+                user.save()
+
+                space = Space.objects.create(title="Main", currency="USD")
+
+                MemberPermissions.objects.create(
+                    member=user,
+                    space=space,
+                    owner=True
+                )
+
+                TotalBalance.objects.create(father_space=space, balance=0)
+
+                Category.objects.create(
+                    title="Food",
+                    limit=1000,
+                    spent=0,
+                    father_space=space,
+                    color="#FF9800",
+                    icon="Donut"
+                )
+
+                Category.objects.create(
+                    title="Home",
+                    spent=0,
+                    father_space=space,
+                    color="#FF5050",
+                    icon="Home"
+                )
+
+                Account.objects.create(
+                    title="Main",
+                    balance=0,
+                    currency="USD",
+                    father_space=space
+                )
+
+                action = "registration"
+            else:
+                action = "login"
+
+            refresh = RefreshToken.for_user(user)
+            user_data = CustomUserSerializer(user).data
+
+            notification = Notification.objects.create(
+                importance="standard",
+                message="Welcome, we're glad you're with us. SpendSplif - the best helper for your financial well-being"
+            )
+            notification.who_can_view.set((user,))
+
+            response_data = {
+                "action": action,
+                "user": user_data,
+                "access_token": str(refresh.access_token),
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            return Response({"error": "Invalid id_token."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
