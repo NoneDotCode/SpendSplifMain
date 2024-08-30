@@ -6,7 +6,7 @@ import re
 class UserAgentMiddleware(MiddlewareMixin):
     def process_request(self, request):
         user_agent = request.META.get('HTTP_USER_AGENT', '')
-        expo_app_key = request.META.get('HTTP_EXPO_APP_KEY', '')
+        secure_key = request.META.get('APP_SECURE_KEY', '')
 
         browser_user_agents = [
             'Mozilla',
@@ -18,7 +18,7 @@ class UserAgentMiddleware(MiddlewareMixin):
         ]
 
         if 'okhttp' in user_agent:
-            if expo_app_key == 'd142c3a6-34df-4c3e-993e-fa14fa88d94f':
+            if secure_key == '60o3rRQfk*A{Ccnwc~%krywuvJp6lcJwvLw@~{DC6R2C#dRHOr':
                 return None
             else:
                 return JsonResponse({'error': 'Forbidden'}, status=403)
