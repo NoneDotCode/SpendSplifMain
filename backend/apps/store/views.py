@@ -112,3 +112,8 @@ class SubscribeCancel(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         return Response({'status': 'Your subscribe will end when you will die.'},
                         status=status.HTTP_200_OK)
+
+
+class PublishableKeyView(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        return Response({"key": settings.STRIPE["publishableKey"]}, status=status.HTTP_200_OK)
