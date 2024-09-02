@@ -1,5 +1,5 @@
 from django.urls import path
-from apps.banners.views import BannerUploadView, RandomBannerView, BannerClickView
+from backend.apps.banners.views import BannerUploadView, RandomBannerView, BannerClickView
 
 urlpatterns = [
     path('upload-banner/', BannerUploadView.as_view(), name='upload-banner'),
