@@ -25,9 +25,14 @@ class CombinedHistorySerializer(serializers.Serializer):
 
 class HistoryExpenseEditSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
-    category = serializers.ModelField(Category, required=False)
-    account = serializers.ModelField(Account, required=False)
-    comment = serializers.CharField(required=False)
+    account = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all(), required=False)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False, allow_null=True)
+    comment = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
 
 
 class HistoryIncomeEditSerializer(serializers.Serializer):

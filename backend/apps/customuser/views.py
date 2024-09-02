@@ -1,15 +1,12 @@
-from random import SystemRandom
 from typing import Dict
 
 import jwt
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
+from rest_framework import generics, permissions
 from rest_framework.generics import GenericAPIView
 
 
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-import google_auth_oauthlib.flow
 from random import SystemRandom
 from urllib.parse import urlencode
 
@@ -21,11 +18,12 @@ from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import (
     CustomUserSerializer,
-    CustomTokenRefreshSerializer,
+    CustomTokenRefreshSerializer, CheckAppVersionSerializer,
 )
 from backend.apps.customuser.utils import cookie_response_payload_handler
 from rest_framework.exceptions import APIException
 
+from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions
 from rest_framework import serializers, status
 from django.urls import reverse_lazy
@@ -35,14 +33,12 @@ from datetime import datetime
 
 from backend.apps.total_balance.models import TotalBalance
 from rest_framework.response import Response
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
-from backend.apps.customuser.serializers import GoogleAuthSerializer
 import requests
 from attr import define
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from google.oauth2 import id_token
 from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
 
 
@@ -106,7 +102,7 @@ class LogoutView(APIView):
 class CustomTokenRefreshView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = CustomTokenRefreshSerializer
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'])
 
         if refresh_token is None:
@@ -132,6 +128,7 @@ class CustomTokenRefreshView(GenericAPIView):
                     httponly=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('httponly', True),
                     samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
                     secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
+                    domain=settings.SIMPLE_JWT.get('AUTH_COOKIE_DOMAIN', None),
                 )
                 return response
             else:
@@ -186,6 +183,11 @@ class ConfirmRegistrationView(APIView):
                 father_space=space
             )
 
+            notification = Notification.objects.create(importance="standard",
+                                                       message="Welcome, we're glad you're with us. SpendSplif - the "
+                                                               "best helper for your financial well-being")
+            notification.who_can_view.set((user,))
+
             return Response({'detail': 'Registration verified.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -232,12 +234,14 @@ class GoogleLoginCredentials:
     client_id: str
     client_secret: str
     project_id: str
+    expo_redirect_uri: str = None  # Добавляем новое поле
 
 
 def google_login_get_credentials() -> GoogleLoginCredentials:
     client_id = settings.GOOGLE_CLIENT_ID
     client_secret = settings.GOOGLE_CLIENT_SECRET
     project_id = settings.GOOGLE_PROJECT_ID
+    expo_redirect_uri = settings.EXPO_REDIRECT_URI  # Добавляем новую настройку
 
     if not client_id:
         raise ImproperlyConfigured("GOOGLE_CLIENT_ID missing in env.")
@@ -251,7 +255,8 @@ def google_login_get_credentials() -> GoogleLoginCredentials:
     credentials = GoogleLoginCredentials(
         client_id=client_id,
         client_secret=client_secret,
-        project_id=project_id
+        project_id=project_id,
+        expo_redirect_uri=expo_redirect_uri
     )
 
     return credentials
@@ -300,13 +305,13 @@ class GoogleLoginFlowService:
     def __init__(self):
         self._credentials = google_login_get_credentials()
 
-    @staticmethod
-    def _generate_state_session_token(length=30, chars=UNICODE_ASCII_CHARACTER_SET):
-        rand = SystemRandom()
-        state = "".join(rand.choice(chars) for _ in range(length))
-        return state
-
     def _get_redirect_uri(self):
+        # Добавляем поддержку Expo URI
+        expo_redirect_uri = self._credentials.expo_redirect_uri
+        if expo_redirect_uri:
+            return expo_redirect_uri
+
+        # Оставляем существующую логику для веб-приложений
         domain = settings.BASE_BACKEND_URL
         api_uri = self.API_URI
         redirect_uri = f"{domain}{api_uri}"
@@ -467,6 +472,11 @@ class GoogleLoginApi(APIView):
             refresh = RefreshToken.for_user(user)
             user_data = CustomUserSerializer(user).data
 
+            notification = Notification.objects.create(importance="standard",
+                                                       message="Welcome, we're glad you're with us. SpendSplif - the "
+                                                               "best helper for your financial well-being")
+            notification.who_can_view.set((user,))
+
             response = redirect(settings.FRONTEND_URL)
 
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
@@ -484,3 +494,110 @@ class GoogleLoginApi(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleLoginApiMobileView(APIView):
+    permission_classes = ()
+
+    def get(self, request, *args, **kwargs):
+        # Получаем id_token из параметров URL
+        id_token_value = request.GET.get("id_token")
+
+        if not id_token_value:
+            return Response({"error": "Missing id_token in the request."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Верификация и декодирование id_token
+            id_info = id_token.verify_oauth2_token(id_token_value, requests.Request(), settings.GOOGLE_CLIENT_ID)
+
+            if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                return Response({"error": "Invalid issuer."}, status=status.HTTP_400_BAD_REQUEST)
+
+            email = id_info["email"]
+            name = id_info.get("name", "")
+            username = email.split('@')[0]
+
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': username,
+                    'is_active': True,
+                    'verify_code': 'verified'
+                }
+            )
+
+            if created:
+                # Если пользователь был создан, создаем связанные объекты
+                user.set_unusable_password()
+                user.save()
+
+                space = Space.objects.create(title="Main", currency="USD")
+
+                MemberPermissions.objects.create(
+                    member=user,
+                    space=space,
+                    owner=True
+                )
+
+                TotalBalance.objects.create(father_space=space, balance=0)
+
+                Category.objects.create(
+                    title="Food",
+                    limit=1000,
+                    spent=0,
+                    father_space=space,
+                    color="#FF9800",
+                    icon="Donut"
+                )
+
+                Category.objects.create(
+                    title="Home",
+                    spent=0,
+                    father_space=space,
+                    color="#FF5050",
+                    icon="Home"
+                )
+
+                Account.objects.create(
+                    title="Main",
+                    balance=0,
+                    currency="USD",
+                    father_space=space
+                )
+
+                action = "registration"
+            else:
+                action = "login"
+
+            refresh = RefreshToken.for_user(user)
+            user_data = CustomUserSerializer(user).data
+
+            notification = Notification.objects.create(
+                importance="standard",
+                message="Welcome, we're glad you're with us. SpendSplif - the best helper for your financial well-being"
+            )
+            notification.who_can_view.set((user,))
+
+            response_data = {
+                "action": action,
+                "user": user_data,
+                "access_token": str(refresh.access_token),
+            }
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            return Response({"error": "Invalid id_token."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CheckAppVersion(generics.GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = CheckAppVersionSerializer
+
+    def post(self, request, *args, **kwargs):
+        actual_version = settings.MOBILE_APP_ACTUAL_VERSION
+        if actual_version != request.data['version']:
+            return Response({"status": False}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"status": True}, status=status.HTTP_200_OK)

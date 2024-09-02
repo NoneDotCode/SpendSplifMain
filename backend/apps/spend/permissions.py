@@ -23,21 +23,17 @@ class SpendPermission(permissions.BasePermission):
             account = Account.objects.get(pk=account_pk)
             space = Space.objects.get(pk=space_pk)
         except (Account.DoesNotExist, Space.DoesNotExist):
-            print("huy1")
             return False
 
         if category_pk:
             try:
                 category = Category.objects.get(pk=category_pk)
             except Category.DoesNotExist:
-                print("huy2")
                 return False
             if category.father_space != space:
-                print("huy3")
                 return False
 
         if account.father_space != space:
-            print("huy4")
             return False
 
         return (IsSpaceOwner().has_permission(request, view) or
@@ -71,14 +67,10 @@ class CanDeletePeriodicSpends(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         space_pk = view.kwargs.get("space_pk")
-        account_pk = request.data.get("account_pk")
-        category_pk = request.data.get("category_pk")
         periodic_spend_pk = view.kwargs.get("pk")
 
         try:
             task = PeriodicTask.objects.get(pk=periodic_spend_pk)
-            account = Account.objects.get(pk=account_pk)
-            category = Category.objects.get(pk=category_pk)
             space = Space.objects.get(pk=space_pk)
         except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist, PeriodicTask.DoesNotExist):
             return False
@@ -86,7 +78,7 @@ class CanDeletePeriodicSpends(permissions.BasePermission):
         task_args = ast.literal_eval(task.args)
         father_space = Space.objects.get(pk=task_args[2])
 
-        if account.father_space != space or category.fater_space != space or father_space.pk != space_pk:
+        if father_space != space:
             return False
 
         return (IsSpaceOwner().has_permission(request, view) or
@@ -98,22 +90,18 @@ class CanEditPeriodicSpends(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         space_pk = view.kwargs.get("space_pk")
-        account_pk = request.data.get("account_pk")
-        category_pk = request.data.get("category_pk")
         periodic_spend_pk = view.kwargs.get("pk")
 
         try:
             task = PeriodicTask.objects.get(pk=periodic_spend_pk)
-            account = Account.objects.get(pk=account_pk)
-            category = Category.objects.get(pk=category_pk)
             space = Space.objects.get(pk=space_pk)
-        except (Account.DoesNotExist, Category.DoesNotExist, Space.DoesNotExist, PeriodicTask.DoesNotExist):
+        except (Space.DoesNotExist, PeriodicTask.DoesNotExist):
             return False
 
         task_args = ast.literal_eval(task.args)
         father_space = Space.objects.get(pk=task_args[2])
 
-        if account.father_space != space or category.father_space != space or father_space.pk != space_pk:
+        if father_space.pk != space_pk:
             return False
 
         return (IsSpaceOwner().has_permission(request, view) or

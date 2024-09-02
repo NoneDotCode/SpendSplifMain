@@ -21,7 +21,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = (
-            "id", "username", "email", "password", "language", "tag", "roles", 
+            "id", "username", "email", "password", "language", "tag", "roles",
             "sponsor", "company", "number"
         )
         extra_kwargs = {"password": {"write_only": True}}
@@ -33,6 +33,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         number = attrs.get('number')
 
         if password:
+
             if not 8 <= len(password) <= 24:
                 raise serializers.ValidationError("The password should be at least 8 characters long")
 
@@ -70,15 +71,20 @@ class CustomUserSerializer(serializers.ModelSerializer):
             user.roles.append('sponsor')
 
         user.save()
-        
+
         return user
-        
+
 
     def update(self, instance, validated_data):
-        if instance.email != validated_data.get("email", instance.email):
+        if (instance.email != validated_data.get("email", instance.email) and
+                validated_data.get("email") is not None):
+            print("email:", validated_data.get("email"))
             instance.new_email = validated_data.get('email', instance.email)
-        instance.username = validated_data.get('username', instance.username)
-        instance.set_password(validated_data.get('password', instance.password))
+        if (instance.username != validated_data.get("username", instance.username) and
+                validated_data.get("username") is not None):
+            instance.username = validated_data.get('username', instance.username)
+        if validated_data.get('password') is not None:
+            instance.set_password(validated_data.get('password', instance.password))
         instance.save()
         return instance
 
@@ -95,7 +101,8 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = "email"
     username = None
 
-    def get_username(self, user):
+    @staticmethod
+    def get_username(user):
         return user.email
 
     def validate(self, attrs):
@@ -163,3 +170,7 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         self.request.user.save()
 
         return data
+
+
+class CheckAppVersionSerializer(serializers.Serializer):
+    version = serializers.CharField()

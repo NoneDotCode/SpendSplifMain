@@ -1,13 +1,29 @@
 from django.http import JsonResponse
+from django.utils.deprecation import MiddlewareMixin
+import re
 
 
-class CheckHostMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
+class UserAgentMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        secure_key = request.META.get('APP_SECURE_KEY', '')
 
-    def __call__(self, request):
-        host = request.get_host()
-        print(host)
+        browser_user_agents = [
+            'Mozilla',
+            'Chrome',
+            'Safari',
+            'Firefox',
+            'Edge',
+            'Opera'
+        ]
 
-        response = self.get_response(request)
-        return response
+        if 'okhttp' in user_agent:
+            if secure_key == '60o3rRQfk*A{Ccnwc~%krywuvJp6lcJwvLw@~{DC6R2C#dRHOr':
+                return None
+            else:
+                return JsonResponse({'error': 'Forbidden'}, status=403)
+
+        if any(re.search(agent, user_agent) for agent in browser_user_agents):
+            return None
+
+        return JsonResponse({'error': 'Forbidden'}, status=403)

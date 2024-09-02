@@ -34,24 +34,23 @@ class NotificationList(generics.GenericAPIView):
 
         all_notifications = all_notifications[:count]
 
-        for notification in all_notifications:
-            if type(notification["seen"]) is int:
-                seen = (notification["seen"],)
-            else:
-                seen = notification["seen"]
+        formatted_notifications = []
 
-            formatted_notifications = [
-                {
-                    'id': notification['id'],
-                    'message': notification['message'],
-                    'importance': notification['importance'].upper(),
-                    'date': date_format(notification['created_at'], format="d F"),
-                    'time': date_format(notification['created_at'], format="H:i"),
-                    'type': notification['type'],
-                    'seen': True if (notification['seen']) and (user in seen) else False
-                }
-                for notification in all_notifications
-            ]
+        for notification in all_notifications:
+            seen = notification["seen"]
+            if seen is None:
+                seen = []
+            elif isinstance(seen, int):
+                seen = [seen]
+            formatted_notifications.append({
+                'id': notification['id'],
+                'message': notification['message'],
+                'importance': notification['importance'].upper(),
+                'date': date_format(notification['created_at'], format="d F"),
+                'time': date_format(notification['created_at'], format="H:i"),
+                'type': notification['type'],
+                'seen': user in seen
+            })
 
         return Response(formatted_notifications)
 
@@ -113,7 +112,8 @@ class AllSeen(generics.ListAPIView):
             notification.seen.add(user)
             notification.save()
 
-        return Response({'Result:': "All notifications have been marked as seen successfully!"}, status=status.HTTP_200_OK)
+        return Response({'Result:': "All notifications have been marked as seen successfully!"},
+                        status=status.HTTP_200_OK)
 
 
 class SimulateNotification(generics.GenericAPIView):

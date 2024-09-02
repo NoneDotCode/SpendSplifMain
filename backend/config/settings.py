@@ -58,7 +58,8 @@ INSTALLED_APPS = [
     "apps.messenger",
     "apps.Dowt",
     "apps.notifications",
-    'apps.banners'
+    'apps.banners',
+    "apps.store",
 ]
 
 # Custom user model auth
@@ -75,7 +76,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "backend.config.middleware.CheckHostMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -210,8 +210,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5473",
     "http://127.0.0.1:8000",
-    "exp://bw-wbvi.anonymous.8081.exp.direct",
-    "https://ee76-88-103-194-16.ngrok-free.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
@@ -221,8 +219,6 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5473",
     "http://localhost:3000",
     "http://127.0.0.1:8000",
-    "exp://bw-wbvi.anonymous.8081.exp.direct",
-    "https://ee76-88-103-194-16.ngrok-free.app",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
@@ -237,8 +233,6 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:5173",
     "http://localhost:5473",
     "http://127.0.0.1:8000",
-    "exp://bw-wbvi.anonymous.8081.exp.direct",
-    "https://ee76-88-103-194-16.ngrok-free.app",
 ]
 
 # Celery
@@ -277,9 +271,29 @@ GOOGLE_CLIENT_ID = "902312829636-l04tkdlapql3jjblg7q0vlf76k7v9dlj.apps.googleuse
 GOOGLE_CLIENT_SECRET = "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"
 GOOGLE_PROJECT_ID = "spendsplif-421713"
 
+# Custom variables
 
 BASE_BACKEND_URL = 'http://localhost:8000'
 FRONTEND_URL = 'http://localhost:5173'
+MOBILE_APP_ACTUAL_VERSION = "0.0.1"
+
+SUBSCRIBES_DATA = {
+    "Standard": {
+        "price": "10€",
+        "period": "1 month ~+2 weeks~"
+    },
+    "Premium": {
+        "price": "20€",
+        "period": "1 month ~+2 weeks~"
+    }
+}
+
+STRIPE = {
+    "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00LMdADPfK',
+    "payment_callback_url": "localhost:8000/api/v1/store/payment/callback/",
+    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIrNxh800O6IQOFEP",
+    "webhook_secret_key": "whsec_1pEYQFoMLQf1OxA12IgZ4M9LUdv4X151"
+}
 
 
 CLOUDINARY_STORAGE = {

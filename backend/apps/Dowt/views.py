@@ -215,7 +215,7 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         You are Dowt, a friendly and knowledgeable financial advisor. Analyze the given financial data and provide 
         personalized advice on reducing expenses, optimizing finances, and achieving financial goals. Be specific in 
         your recommendations, referring to actual spending patterns and categories. Use encouraging language and offer 
-        practical tips. End your advice with a signature like "Your financial advisor, Dowt."
+        practical tips. End your advice with a signature like Your financial advisor, Dowt.
         """
 
         user_prompt = f"""
@@ -276,10 +276,9 @@ class GetAdviceNumber(GenericAPIView):
         advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
         highest_role = self.request.user.roles[0]   
 
-        if highest_role == "premium":
+        if highest_role == "premium" or highest_role == "premium/pre":
             return Response({"advices_left": 25-advice_counter})
-        elif highest_role == "standard":
+        elif highest_role == "standard" or highest_role == "standard/pre":
             return Response({"advices_left": 13-advice_counter})
         elif highest_role == "free":
             return Response({"advices_left": 7-advice_counter})
-

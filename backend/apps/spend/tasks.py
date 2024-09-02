@@ -13,38 +13,54 @@ from backend.apps.total_balance.models import TotalBalance
 
 @shared_task(bind=True)
 def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_currency):
-    space = Space.objects.get(pk=space_pk)
+    try:
+        space = Space.objects.get(pk=space_pk)
+    except Space.DoesNotExist:
+        return "Space does not exist"
+
     try:
         account = Account.objects.get(pk=account_pk)
     except Account.DoesNotExist:
-        notif_message = f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because account was deleted."
+        notif_message = (f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because account "
+                         f"was deleted.")
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
         return "Expense did not complete successfully"
+
     try:
         category = Category.objects.get(pk=category_pk)
     except Category.DoesNotExist:
-        notif_message = f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because category was deleted."
+        notif_message = (f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because category was "
+                         f"deleted.")
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
         return "Expense did not complete successfully"
-    if amount > int(account.balance):
-        notif_message = (f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because you have not enough"
-                         f"money on the balance ~{account.title}~.")
+
+    if Decimal(amount) > account.balance:
+        notif_message = (f"Recurring spend ~{title}~ in space ~{space.title}~ was not completed because there is "
+                         f"not enough money on the balance ~{account.title}~.")
         Notification.objects.create(message=notif_message, who_can_view=space.members.all(), importance="Important")
-        return f"It is not enough money on the balance for {title} spend."
+        return f"Not enough money on the balance for '{title}' spend."
+
+    # Обновляем баланс аккаунта
     account.balance -= Decimal(amount)
     account.save()
-    category.spent += convert_currencies(amount=amount,
+
+    # Конвертируем и обновляем категорию
+    category.spent += convert_currencies(amount=float(amount),
                                          from_currency=account.currency,
                                          to_currency=to_currency)
     category.save()
-    total_balance = TotalBalance.objects.filter(father_space_id=space_pk)
+
+    # Обновляем общий баланс
+    total_balance = TotalBalance.objects.filter(father_space_id=space_pk).first()
     if total_balance:
-        total_balance[0].balance -= convert_currencies(amount=amount,
-                                                       from_currency=account.currency,
-                                                       to_currency=to_currency)
-        total_balance[0].save()
+        total_balance.balance -= convert_currencies(amount=float(amount),
+                                                    from_currency=account.currency,
+                                                    to_currency=to_currency)
+        total_balance.save()
+
     comment = title
 
+    # Подготовка данных для записи истории
     from_acc_data = {
         'id': account.id,
         'title': account.title,
@@ -65,17 +81,17 @@ def periodic_spend(self, account_pk, category_pk, space_pk, amount, title, to_cu
     }
 
     HistoryExpense.objects.create(
-        amount=amount,
+        amount=Decimal(amount),
         currency=account.currency,
         amount_in_default_currency=convert_currencies(from_currency=account.currency,
-                                                      amount=amount,
+                                                      amount=float(amount),
                                                       to_currency=to_currency),
         comment=comment,
         from_acc=from_acc_data,
         to_cat=to_cat_data,
         periodic_expense=True,
         father_space_id=space_pk,
-        new_balance=total_balance[0].balance if total_balance else 0
+        new_balance=total_balance.balance if total_balance else 0
     )
 
     return "Expense successfully completed."

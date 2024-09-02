@@ -53,7 +53,7 @@ def convert_number_to_letter(number: Union[int, float, Decimal]) -> str:
                 parts = formatted.split('.')
                 if len(parts) > 1 and parts[1] != '00':
                     formatted = f"{parts[0]}.{parts[1][:1]}"
-                formatted = formatted.rstrip('.0')  # Удаляем '.0' в конце, если оно есть
+                formatted = formatted.rstrip('0').rstrip('.')
                 return f"{formatted}{suffixes[key]}"
 
     # Если число меньше 1000 или равно 100
