@@ -118,4 +118,4 @@ class SubscribeCancel(generics.GenericAPIView):
 class PublishableKeyView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
     def get(self, request, *args, **kwargs):
-        return Response({"key": settings.STRIPE["publishableKey"]}, status=status.HTTP_200_OK)
+        return Response({"publishableKey": settings.STRIPE["publishableKey"]}, status=status.HTTP_200_OK)

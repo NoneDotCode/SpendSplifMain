@@ -7,5 +7,5 @@ urlpatterns = [
     path('create_checkout_session/', CreatePaymentSessionView.as_view(), name='create-checkout-session'),
     path('stripe_webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
     path('subscribe_cancel/', SubscribeCancel.as_view(), name='subscribe-cancel'),
-    path('publishablekey/', PublishableKeyView.as_view(), name='publishablekey')
+    path('publishablekey', PublishableKeyView.as_view(), name='publishablekey')
 ]
