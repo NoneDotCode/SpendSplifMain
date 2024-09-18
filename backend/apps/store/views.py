@@ -65,7 +65,9 @@ class CreatePaymentSessionView(generics.GenericAPIView):
 
 class StripeWebhookView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
-    def post(self, request, *args, **kwargs):
+
+    @staticmethod
+    def post(request, *args, **kwargs):
         payload = request.body
         sig_header = request.META['HTTP_STRIPE_SIGNATURE']
         endpoint_secret = settings.STRIPE["webhook_secret_key"]
@@ -110,12 +112,15 @@ class StripeWebhookView(generics.GenericAPIView):
 
 
 class SubscribeCancel(generics.GenericAPIView):
-    def post(self, request, *args, **kwargs):
+    @staticmethod
+    def post(request, *args, **kwargs):
         return Response({'status': 'Your subscribe will end when you will die.'},
                         status=status.HTTP_200_OK)
 
 
 class PublishableKeyView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
-    def get(self, request, *args, **kwargs):
+
+    @staticmethod
+    def get(request, *args, **kwargs):
         return Response({"publishableKey": settings.STRIPE["publishableKey"]}, status=status.HTTP_200_OK)

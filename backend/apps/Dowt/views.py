@@ -26,18 +26,19 @@ class FinancialAdviceView(GenericAPIView):
 
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
-        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(
+            created__range=[start_of_week, today]).count()
         highest_role = self.request.user.roles[0]
-        
 
         if advice_counter >= 25 and highest_role == "premium":
-            return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response("Error: you can't get more than 25 advices because your role is premium",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif advice_counter >= 13 and highest_role == "standard":
-            return Response("Error: you can't get more than 13 advices because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response("Error: you can't get more than 13 advices because your role is standard",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif advice_counter >= 7 and highest_role == "free":
-            return Response("Error: you can't get more than 7 advices because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        
-
+            return Response("Error: you can't get more than 7 advices because your role is free",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         try:
             space = self.get_object()
@@ -101,7 +102,7 @@ class FinancialAdviceView(GenericAPIView):
         """
 
         user_prompt = f"""
-        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else 
+        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else
         'current month to date'}:
         Monthly Income: ${result['income']}
         Total Monthly Expenses: ${result['expenses']}
@@ -161,14 +162,18 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
 
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
-        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
-        highest_role = self.request.user.roles[0]   
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(
+            created__range=[start_of_week, today]).count()
+        highest_role = self.request.user.roles[0]
         if advice_counter >= 25 and highest_role == "premium":
-            return Response("Error: you can't get more than 25 advices because your role is premium", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response("Error: you can't get more than 25 advices because your role is premium",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif advice_counter >= 13 and highest_role == "standard":
-            return Response("Error: you can't get more than 13 advices because your role is standard", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response("Error: you can't get more than 13 advices because your role is standard",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         elif advice_counter >= 7 and highest_role == "free":
-            return Response("Error: you can't get more than 7 advices because your role is free", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response("Error: you can't get more than 7 advices because your role is free",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         # Получаем полную историю трат
         expenses = HistoryExpense.objects.filter(
@@ -219,7 +224,7 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
         """
 
         user_prompt = f"""
-        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else 
+        Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else
         'current month to date'}:
         Total Income: ${result['total_income']}
         Total Expenses: ${result['total_expenses']}
@@ -269,17 +274,18 @@ class FinancialAdviceFromHistoryView(GenericAPIView):
 
 class GetAdviceNumber(GenericAPIView):
     permission_classes = (IsSpaceMember,)
-    
+
     def get(self, request, *args, **kwargs):
 
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
-        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(created__range=[start_of_week, today]).count()
-        highest_role = self.request.user.roles[0]   
+        advice_counter = AdviceCounter.objects.filter(user=request.user).filter(
+            created__range=[start_of_week, today]).count()
+        highest_role = self.request.user.roles[0]
 
         if highest_role == "premium" or highest_role == "premium/pre":
-            return Response({"advices_left": 25-advice_counter})
+            return Response({"advices_left": 25 - advice_counter})
         elif highest_role == "standard" or highest_role == "standard/pre":
-            return Response({"advices_left": 13-advice_counter})
+            return Response({"advices_left": 13 - advice_counter})
         elif highest_role == "free":
-            return Response({"advices_left": 7-advice_counter})
+            return Response({"advices_left": 7 - advice_counter})
