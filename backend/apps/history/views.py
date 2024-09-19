@@ -47,8 +47,8 @@ class HistoryView(APIView):
         # Получаем временную зону, установленную middleware
         user_timezone = timezone.get_current_timezone()
 
-        # Получаем лимит из тела JSON-запроса, по умолчанию возвращаем все записи
-        limit = request.data.get('limit')
+        # Получаем лимит из URL-параметров
+        limit = request.query_params.get('limit')
         try:
             limit = int(limit) if limit else None
         except ValueError:
