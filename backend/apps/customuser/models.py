@@ -70,11 +70,12 @@ class CustomUser(AbstractUser):
         )
 
     new_email = models.EmailField(null=True, blank=True)
+    new_password = models.CharField(max_length=24, null=True, blank=True)
 
     verify_code = models.CharField(max_length=12, blank=True, null=True)
     code_from_new_email = models.CharField(max_length=12, blank=True, null=True)
 
-    password_reset_code = models.PositiveIntegerField(blank=True, null=True)
+    password_reset_code = models.CharField(max_length=12, blank=True, null=True)
 
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
@@ -88,7 +89,20 @@ class CustomUser(AbstractUser):
             raise ValueError(f"Role {role} is not a valide one.")
         if role != self.roles[0]:
             self.roles[0] = role
-            self.save() 
+            self.save()
+
+    def send_password_reset_code(self):
+        reset_code = get_random_string(length=8)
+        self.password_reset_code = reset_code
+        self.save()
+
+        send_mail(
+            'Password Reset Code',
+            f'Your password reset code is: {reset_code}',
+            'noreply@yourapp.com',
+            [self.email],
+            fail_silently=False,
+        )
 
     def save(self, *args, **kwargs):
         """

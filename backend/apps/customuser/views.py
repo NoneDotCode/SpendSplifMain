@@ -206,24 +206,22 @@ class ConfirmNewEmailView(APIView):
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomUserUpdateAPIView(generics.UpdateAPIView):
+class CustomUserUpdateAPIView(generics.GenericAPIView):
     serializer_class = CustomUserSerializer
 
     def get_object(self):
         return self.request.user
 
-    def update(self, request, *args, **kwargs):
-        partial = True
+    def put(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            instance = self.get_object()
-            serializer = self.get_serializer(instance)
+        serializer.save()
 
         return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        return self.put(request, *args, **kwargs)
 
 
 @define
@@ -594,3 +592,22 @@ class CheckAppVersion(generics.GenericAPIView):
         if actual_version != request.data['version']:
             return Response({"status": False}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"status": True}, status=status.HTTP_200_OK)
+
+
+class ConfirmNewPasswordView(GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        reset_code = request.data.get('reset_code')
+        if not reset_code:
+            return Response({'detail': 'Reset code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+
+        if user.password_reset_code == reset_code:
+            user.set_password(user.new_password)
+            user.new_password = None
+            user.password_reset_code = None
+            user.save()
+
+            return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Invalid or expired reset code.'}, status=status.HTTP_400_BAD_REQUEST)
