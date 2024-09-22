@@ -490,7 +490,7 @@ class GoogleLoginApi(APIView):
 class GoogleLoginApiMobileView(APIView):
     permission_classes = ()
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         # Получаем id_token из параметров URL
         id_token_value = request.data.get('idToken')
 
