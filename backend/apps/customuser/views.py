@@ -34,7 +34,7 @@ from datetime import datetime
 from backend.apps.total_balance.models import TotalBalance
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-import requests
+from google.auth.transport import requests
 from attr import define
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -487,18 +487,17 @@ class GoogleLoginApi(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class GoogleLoginApiMobileView(APIView):
-    permission_classes = ()
+class GoogleLoginApiMobileView(GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
-        # Получаем id_token из параметров URL
-        id_token_value = request.data.get('idToken')
+        id_token_value = request.data.get("idToken")  # Важно использовать get() для извлечения значения
 
         if not id_token_value:
             return Response({"error": "Missing id_token in the request."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Верификация и декодирование id_token
+            # Используем requests.Request() из google.auth.transport
             id_info = id_token.verify_oauth2_token(id_token_value, requests.Request(), settings.GOOGLE_CLIENT_ID)
 
             if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
@@ -518,7 +517,6 @@ class GoogleLoginApiMobileView(APIView):
             )
 
             if created:
-                # Если пользователь был создан, создаем связанные объекты
                 user.set_unusable_password()
                 user.save()
 
