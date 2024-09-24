@@ -40,6 +40,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from google.oauth2 import id_token
 from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
+import requests as requestss
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -491,14 +492,20 @@ class GoogleLoginApiMobileView(GenericAPIView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
-        id_token_value = request.data.get("idToken")  # Важно использовать get() для извлечения значения
+        access_token_value = request.data.get("accessToken")  # Получаем access_token
 
-        if not id_token_value:
-            return Response({"error": "Missing id_token in the request."}, status=status.HTTP_400_BAD_REQUEST)
+        if not access_token_value:
+            return Response({"error": "Missing access_token in the request."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Используем requests.Request() из google.auth.transport
-            id_info = id_token.verify_oauth2_token(id_token_value, requests.Request(), settings.GOOGLE_CLIENT_ID)
+            # Используем запрос к Google API для валидации и получения данных по access_token
+            token_info_url = f"https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token={access_token_value}"
+            token_info_response = requestss.get(token_info_url)
+
+            if token_info_response.status_code != 200:
+                return Response({"error": "Invalid access_token."}, status=status.HTTP_400_BAD_REQUEST)
+
+            id_info = token_info_response.json()
 
             email = id_info["email"]
             name = id_info.get("name", "")
@@ -571,8 +578,8 @@ class GoogleLoginApiMobileView(GenericAPIView):
 
             return Response(response_data, status=status.HTTP_200_OK)
 
-        except ValueError as e:
-            return Response({"error": "Invalid id_token."}, status=status.HTTP_400_BAD_REQUEST)
+        except requestss.exceptions.RequestException as e:
+            return Response({"error": "Error validating access_token."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
