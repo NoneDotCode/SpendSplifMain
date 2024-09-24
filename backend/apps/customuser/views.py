@@ -500,9 +500,6 @@ class GoogleLoginApiMobileView(GenericAPIView):
             # Используем requests.Request() из google.auth.transport
             id_info = id_token.verify_oauth2_token(id_token_value, requests.Request(), settings.GOOGLE_CLIENT_ID)
 
-            if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-                return Response({"error": "Invalid issuer."}, status=status.HTTP_400_BAD_REQUEST)
-
             email = id_info["email"]
             name = id_info.get("name", "")
             username = email.split('@')[0]
