@@ -33,11 +33,8 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
             if len(re.findall(r'[a-zA-Z]', password)) < 4:
                 raise serializers.ValidationError("the password should have more than four letters")
 
-            if len(re.findall(r'\d', password)) < 3:
+            if len(re.findall(r'\d', password)) < 1:
                 raise serializers.ValidationError("the password should have more than 3 numbers")
-
-            if len(re.findall(r'[!@#$%^&*()_+{}\[\]:;<>,.?/~`]', password)) < 1:
-                raise serializers.ValidationError("the password must contain at least 1 special character")
 
         return data
 

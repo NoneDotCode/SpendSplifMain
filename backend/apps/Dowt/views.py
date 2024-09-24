@@ -104,11 +104,11 @@ class FinancialAdviceView(GenericAPIView):
         user_prompt = f"""
         Based on the following financial data for the {'last 30 days' if result['time_range'] == '30_days' else
         'current month to date'}:
-        Monthly Income: ${result['income']}
-        Total Monthly Expenses: ${result['expenses']}
-        Amount spent on categories (e.g., food, home, medicine, education): ${result['categories']}
-        Amount spent on recurring payments (e.g., subscriptions): ${result['recurring_payments']}
-        Amount saved for financial goals (e.g., new MacBook, better housing): ${result['goals']}
+        Monthly Income: {result['income']}{space.currency}
+        Total Monthly Expenses: {result['expenses']}{space.currency}
+        Amount spent on categories (e.g., food, home, medicine, education): {result['categories']}{space.currency}
+        Amount spent on recurring payments (e.g., subscriptions): {result['recurring_payments']}{space.currency}
+        Amount saved for financial goals (e.g., new MacBook, better housing): {result['goals']}{space.currency}
         Note: The total expenses include categories, recurring payments, and additional spending.
         Please provide advice on:
         1. Budgeting and expenditure management
