@@ -342,7 +342,7 @@ class GoogleLoginFlowService:
             "grant_type": "authorization_code",
         }
 
-        response = requests.post(self.GOOGLE_ACCESS_TOKEN_OBTAIN_URL, data=data)
+        response = requestss.post(self.GOOGLE_ACCESS_TOKEN_OBTAIN_URL, data=data)
 
         if not response.ok:
             raise APIException("Failed to obtain access token from Google.")
@@ -358,7 +358,7 @@ class GoogleLoginFlowService:
     def get_user_info(self, *, google_tokens: GoogleAccessTokens):
         access_token = google_tokens.access_token
 
-        response = requests.get(
+        response = requestss.get(
             self.GOOGLE_USER_INFO_URL,
             params={"access_token": access_token}
         )
