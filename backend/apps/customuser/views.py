@@ -576,7 +576,20 @@ class GoogleLoginApiMobileView(GenericAPIView):
                 "access_token": str(refresh.access_token),
             }
 
-            return Response(response_data, status=status.HTTP_200_OK)
+            response = Response(response_data, status=status.HTTP_200_OK)
+
+            refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
+
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
+                value=str(refresh),
+                expires=refresh_token_expiration,
+                httponly=True,
+                samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
+                secure=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('secure', True),
+            )
+
+            return response
 
         except requestss.exceptions.RequestException as e:
             return Response({"error": "Error validating access_token."}, status=status.HTTP_400_BAD_REQUEST)
