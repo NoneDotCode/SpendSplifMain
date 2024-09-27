@@ -202,6 +202,11 @@ class ConfirmNewEmailView(APIView):
             request.user.email = request.user.new_email
             request.user.new_email = None
             request.user.save()
+            if request.user.new_password:
+                request.user.set_password(request.user.new_password)
+                request.user.new_password = None
+                request.user.password_reset_code = None
+                request.user.save()
             return Response({'detail': 'Email verified.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Unknown code.'}, status=status.HTTP_400_BAD_REQUEST)
