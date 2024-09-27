@@ -427,7 +427,10 @@ class GoogleLoginApi(APIView):
                 }
             )
 
+            response = redirect(settings.FRONTEND_URL)
+
             if created:
+                response = redirect(settings.FRONTEND_URL + "/google/choose_currency")
                 user.set_unusable_password()
                 user.save()
 
@@ -473,8 +476,6 @@ class GoogleLoginApi(APIView):
 
             refresh = RefreshToken.for_user(user)
             user_data = CustomUserSerializer(user).data
-
-            response = redirect(settings.FRONTEND_URL)
 
             refresh_token_expiration = datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
 
