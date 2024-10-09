@@ -39,19 +39,29 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
         return data
 
     def update(self, instance, validated_data):
-        if (instance.email != validated_data.get("email", instance.email) and
-                validated_data.get("email") is not None) and validated_data.get('password') is not None:
+        email_changed = instance.email != validated_data.get("email", instance.email) and validated_data.get(
+            "email") is not None
+        password_changed = validated_data.get('password') is not None
+
+        # Обновляем почту и пароль одновременно
+        if email_changed and password_changed:
             instance.new_email = validated_data.get('email', instance.email)
             instance.new_password = validated_data.get('password')
-        elif validated_data.get('password') is not None:
+
+        # Только обновление пароля
+        elif password_changed:
             instance.send_password_reset_code()
             instance.new_password = validated_data.get('password')
-        elif (instance.email != validated_data.get("email", instance.email) and
-                validated_data.get("email") is not None):
+
+        # Только обновление почты
+        elif email_changed:
             instance.new_email = validated_data.get('email', instance.email)
-        if (instance.username != validated_data.get("username", instance.username) and
-                validated_data.get("username") is not None):
+
+        # Обновляем имя пользователя
+        if instance.username != validated_data.get("username", instance.username) and validated_data.get(
+                "username") is not None:
             instance.username = validated_data.get('username', instance.username)
+
         instance.save()
         return instance
 

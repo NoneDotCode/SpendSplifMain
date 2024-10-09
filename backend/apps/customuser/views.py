@@ -192,6 +192,8 @@ class ConfirmRegistrationView(APIView):
 
 
 class ConfirmNewEmailView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
     def post(self, request, *args, **kwargs):
         verify_code = request.data.get('verify_code')
         code_from_new_email = request.data.get('code_from_new_email')
