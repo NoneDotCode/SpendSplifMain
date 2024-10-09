@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "apps.Dowt",
     "apps.notifications",
     "apps.store",
+    "apps.community",
 ]
 
 # Custom user model auth

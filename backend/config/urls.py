@@ -24,6 +24,7 @@ urlpatterns = [
     path(base_space_url, include("apps.Dowt.urls")),
     path("api/v1/", include("apps.notifications.urls")),
     path("api/v1/store/", include("apps.store.urls")),
+    path("api/v1/community/", include("apps.community.urls")),
 
     # JWT
     path("api/v1/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
