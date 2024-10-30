@@ -888,6 +888,11 @@ class GoalTransferStatisticView(generics.ListAPIView):
             analysis_message = self.analyze(summary, currency)
             result[f"Analyze_{period}"] = analysis_message
 
+        # Переименовываем ключ "three_month" на "three month"
+        result["three month"] = result.pop("three_month")
+        result["three month_Percent"] = result.pop("three_month_Percent")
+        result["Analyze_three month"] = result.pop("Analyze_three_month")
+
         serializer = self.get_serializer(result)
         return Response(serializer.data)
 
