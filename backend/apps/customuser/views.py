@@ -227,7 +227,7 @@ class CustomUserUpdateAPIView(generics.GenericAPIView):
             instance.username = request.data['username']
             instance.save()
             return Response({'username': instance.username})
-        
+
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
