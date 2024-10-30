@@ -68,18 +68,18 @@ class ExpensesViewSerializer(serializers.Serializer):
 
 
 class GoalTransferStatisticSerializer(serializers.Serializer):
-    week = serializers.DictField()
-    week_Percent = serializers.DictField()
-    Analyze_week = serializers.CharField()
-    month = serializers.DictField()
-    month_Percent = serializers.DictField()
-    Analyze_month = serializers.CharField()
-    three_month = serializers.DictField()
-    three_month_Percent = serializers.DictField()
-    Analyze_three_month = serializers.CharField()
-    year = serializers.DictField()
-    year_Percent = serializers.DictField()
-    Analyze_year = serializers.CharField()
+    Week = serializers.DictField()
+    Week_Percent = serializers.DictField()
+    Analyze_Week = serializers.CharField()
+    Month = serializers.DictField()
+    Month_Percent = serializers.DictField()
+    Analyze_Month = serializers.CharField()
+    Three_month = serializers.DictField()
+    Three_month_Percent = serializers.DictField()
+    Analyze_Three_month = serializers.CharField()
+    Year = serializers.DictField()
+    Year_Percent = serializers.DictField()
+    Analyze_Year = serializers.CharField()
 
 
 class RecurringPaymentsStatisticSerializer(serializers.Serializer):
