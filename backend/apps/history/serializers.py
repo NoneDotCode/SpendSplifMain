@@ -67,19 +67,30 @@ class ExpensesViewSerializer(serializers.Serializer):
     Analyze_Year = serializers.CharField()
 
 
+class GoalTransferStatisticEntrySerializer(serializers.Serializer):
+    Goal_amount = serializers.CharField()
+    Collected = serializers.CharField()
+
+class GoalTransferStatisticPercentageSerializer(serializers.Serializer):
+    Collected = serializers.CharField()
+
+
 class GoalTransferStatisticSerializer(serializers.Serializer):
-    Week = serializers.DictField()
-    Week_Percent = serializers.DictField()
-    Analyze_Week = serializers.CharField()
-    Month = serializers.DictField()
-    Month_Percent = serializers.DictField()
-    Analyze_Month = serializers.CharField()
-    Three_month = serializers.DictField()
-    Three_month_Percent = serializers.DictField()
-    Analyze_Three_month = serializers.CharField()
-    Year = serializers.DictField()
-    Year_Percent = serializers.DictField()
-    Analyze_Year = serializers.CharField()
+    week = serializers.DictField(child=GoalTransferStatisticEntrySerializer())
+    week_Percent = serializers.DictField(child=GoalTransferStatisticPercentageSerializer())
+    Analyze_week = serializers.CharField()
+
+    month = serializers.DictField(child=GoalTransferStatisticEntrySerializer())
+    month_Percent = serializers.DictField(child=GoalTransferStatisticPercentageSerializer())
+    Analyze_month = serializers.CharField()
+
+    three_month = serializers.DictField(child=GoalTransferStatisticEntrySerializer())
+    three_month_Percent = serializers.DictField(child=GoalTransferStatisticPercentageSerializer())
+    Analyze_three_month = serializers.CharField()
+
+    year = serializers.DictField(child=GoalTransferStatisticEntrySerializer())
+    year_Percent = serializers.DictField(child=GoalTransferStatisticPercentageSerializer())
+    Analyze_year = serializers.CharField()
 
 
 class RecurringPaymentsStatisticSerializer(serializers.Serializer):
