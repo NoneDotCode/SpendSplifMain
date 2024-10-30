@@ -558,7 +558,7 @@ class IncomeStatisticView(generics.ListAPIView):
         periods = {
             'week': [],
             'month': [],
-            'three_month': [],
+            'three month': [],
             'year': [],
         }
 
@@ -567,7 +567,7 @@ class IncomeStatisticView(generics.ListAPIView):
             if days_since_creation < 365:
                 periods['year'].append(income)
             if days_since_creation < 90:
-                periods['three_month'].append(income)
+                periods['three month'].append(income)
             if days_since_creation < 30:
                 periods['month'].append(income)
             if days_since_creation < 7:
@@ -646,21 +646,21 @@ class ExpensesStatisticView(generics.ListAPIView):
     def get_periods(expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
         now = timezone.now()
         periods = {
-            'Week': [],
-            'Month': [],
-            'Three_month': [],
-            'Year': [],
+            'week': [],
+            'month': [],
+            'three month': [],
+            'year': [],
         }
         for expense in expenses:
             days_since_creation = (now - expense.created).days
             if days_since_creation < 365:
-                periods['Year'].append(expense)
+                periods['year'].append(expense)
             if days_since_creation < 90:
-                periods['Three_month'].append(expense)
+                periods['three month'].append(expense)
             if days_since_creation < 30:
-                periods['Month'].append(expense)
+                periods['month'].append(expense)
             if days_since_creation < 7:
-                periods['Week'].append(expense)
+                periods['week'].append(expense)
         return periods
 
     @staticmethod
@@ -762,10 +762,10 @@ class GoalTransferStatisticView(generics.ListAPIView):
     @staticmethod
     def _init_periods() -> Dict[str, List[HistoryTransfer]]:
         return {
-            'Week': [],
-            'Month': [],
-            'Three_month': [],
-            'Year': [],
+            'week': [],
+            'month': [],
+            'three month': [],
+            'year': [],
         }
 
     @staticmethod
@@ -781,19 +781,19 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def _add_to_periods(periods: Dict[str, List[HistoryTransfer]], transfer: HistoryTransfer,
                         days_since_creation: int) -> None:
         if days_since_creation < 7:
-            periods['Week'].append(transfer)
-            periods['Month'].append(transfer)
-            periods['Three_month'].append(transfer)
-            periods['Year'].append(transfer)
+            periods['week'].append(transfer)
+            periods['month'].append(transfer)
+            periods['three month'].append(transfer)
+            periods['year'].append(transfer)
         elif days_since_creation < 30:
-            periods['Month'].append(transfer)
-            periods['Three_month'].append(transfer)
-            periods['Year'].append(transfer)
+            periods['month'].append(transfer)
+            periods['three month'].append(transfer)
+            periods['year'].append(transfer)
         elif days_since_creation < 90:
-            periods['Three_month'].append(transfer)
-            periods['Year'].append(transfer)
+            periods['three month'].append(transfer)
+            periods['year'].append(transfer)
         else:
-            periods['Year'].append(transfer)
+            periods['year'].append(transfer)
 
     def get_summary(self, transfers: List[HistoryTransfer], currency: str) -> Dict[str, Dict[str, str]]:
         summary = {}
@@ -898,10 +898,10 @@ class GeneralView(generics.GenericAPIView):
     def get(self, request, space_pk, *args, **kwargs):
         currency = Space.objects.get(pk=space_pk).currency
         data = {
-            "Week": self.get_data_and_percentages(6, space_pk),
-            "Month": self.get_data_and_percentages(29, space_pk),
-            "Three_month": self.get_data_and_percentages(89, space_pk),
-            "Year": self.get_data_and_percentages(364, space_pk)
+            "week": self.get_data_and_percentages(6, space_pk),
+            "month": self.get_data_and_percentages(29, space_pk),
+            "three month": self.get_data_and_percentages(89, space_pk),
+            "year": self.get_data_and_percentages(364, space_pk)
         }
 
         # Удаление пустых записей
@@ -1051,7 +1051,7 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
         queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'],
                                                                               periodic_expense=True)
-        periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
+        periods = [(7, "week"), (30, "month"), (90, "three month"), (365, "year")]
         return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
     @staticmethod

@@ -222,6 +222,12 @@ class CustomUserUpdateAPIView(generics.GenericAPIView):
 
     def put(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        if len(request.data) == 1 and 'username' in request.data:
+            instance.username = request.data['username']
+            instance.save()
+            return Response({'username': instance.username})
+        
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
