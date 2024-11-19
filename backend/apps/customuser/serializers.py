@@ -13,17 +13,15 @@ class GoogleAuthSerializer(serializers.Serializer):
     currency = serializers.CharField(max_length=3, required=False)
 
 
-class CustomUserSerializer(serializers.ModelSerializer, ):
+class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ("id", "username", "email", "password", "language", "tag", "roles")
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
-
         password = data.get("password")
         if password:
-
             if not 8 <= len(password) <= 24:
                 raise serializers.ValidationError("the password should be at least 8 characters long")
 
@@ -36,12 +34,19 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
             if len(re.findall(r'\d', password)) < 1:
                 raise serializers.ValidationError("the password should have more than 3 numbers")
 
+        language = data.get("language", "").lower()
+        if language == 'cs':
+            data['language'] = 'CZECH'
+        else:
+            data['language'] = 'ENGLISH'
+
         return data
 
     def update(self, instance, validated_data):
         email_changed = instance.email != validated_data.get("email", instance.email) and validated_data.get(
             "email") is not None
         password_changed = validated_data.get('password') is not None
+        language_changed = validated_data.get('language') is not None
 
         # Обновляем почту и пароль одновременно
         if email_changed and password_changed:
@@ -52,6 +57,15 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
         elif password_changed:
             instance.send_password_reset_code()
             instance.new_password = validated_data.get('password')
+
+        # Обновление языка
+        elif language_changed:
+            # Применяем логику для языка
+            language = validated_data.get('language', '').lower()
+            if language == 'cs':
+                instance.language = 'CZECH'
+            else:
+                instance.language = 'ENGLISH'
 
         # Только обновление почты
         elif email_changed:

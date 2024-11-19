@@ -41,6 +41,7 @@ from django.core.exceptions import ImproperlyConfigured
 from google.oauth2 import id_token
 from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
 import requests as requestss
+from django.utils.translation import get_language_from_request
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -222,6 +223,7 @@ class CustomUserUpdateAPIView(generics.GenericAPIView):
 
     def put(self, request, *args, **kwargs):
         instance = self.get_object()
+        print(request.data)
 
         if len(request.data) == 1 and 'username' in request.data:
             instance.username = request.data['username']
