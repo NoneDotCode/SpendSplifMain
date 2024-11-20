@@ -7,6 +7,9 @@ from backend.apps.space.models import Space
 class TinkUser(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     user_tink_id = models.CharField(unique=True)
+    access_token = models.TextField(blank=True)
+    refresh_token = models.TextField(blank=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
 
 
 class TinkAccount(models.Model):

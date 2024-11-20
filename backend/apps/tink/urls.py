@@ -1,6 +1,9 @@
 from django.urls import path
 
-from backend.apps.tink.views import AuthorizeAppView, CreateUserView, GenerateAuthorizationCodeView, GrantUserAccessView, BuildTinkURLView, GetAuthorizationCodeView, GetUserAccessTokenView, ListTransactionsView
+from backend.apps.tink.views import (AuthorizeAppView, CreateUserView, GenerateAuthorizationCodeView,
+                                     GrantUserAccessView, BuildTinkURLView, GetAuthorizationCodeView,
+                                     GetUserAccessTokenView, ListTransactionsView, AddAccountsView,
+                                     ListTinkAccountsView)
 
 urlpatterns = [
     path("authorize/", AuthorizeAppView.as_view(), name="tink_authorize"),
@@ -10,5 +13,7 @@ urlpatterns = [
     path('build_tink_url/', BuildTinkURLView.as_view(), name='build-tink-url'),
     path('get_authorization_code/', GetAuthorizationCodeView.as_view(), name='get_authorization_code'),
     path('get_user_access_token/', GetUserAccessTokenView.as_view(), name='get_user_access_token'),
-    path('list_transactions/', ListTransactionsView.as_view(), name='list_transactions')
+    path('list_transactions/', ListTransactionsView.as_view(), name='list_transactions'),
+    path('my_spaces/<int:space_pk>/add_accounts/', AddAccountsView.as_view(), name='add_accounts'),
+    path('my_spaces/<int:space_pk>/list_accounts/', ListTinkAccountsView.as_view(), name='list_accounts')
 ]
