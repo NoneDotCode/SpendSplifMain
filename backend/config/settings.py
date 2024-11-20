@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.store",
     "apps.community",
+    "apps.tink",
 ]
 
 # Custom user model auth
@@ -297,3 +298,10 @@ STRIPE = {
 }
 
 EXPO_APP_KEY = "d142c3a6-34df-4c3e-993e-fa14fa88d94f"
+
+# For Tink sync
+
+TINK = {
+    "CLIENT_ID": "df402ff180c743fe988144ac9623c0dd",
+    "CLIENT_SECRET": "52e1e6441ecf4e50ba1f0fa92fe586fe"
+}
