@@ -3,7 +3,7 @@ from django.urls import path
 from backend.apps.tink.views import (AuthorizeAppView, CreateUserView, GenerateAuthorizationCodeView,
                                      GrantUserAccessView, BuildTinkURLView, GetAuthorizationCodeView,
                                      GetUserAccessTokenView, ListTransactionsView, AddAccountsView,
-                                     ListTinkAccountsView)
+                                     ListTinkAccountsView, FullIntegrationView)
 
 urlpatterns = [
     path("authorize/", AuthorizeAppView.as_view(), name="tink_authorize"),
@@ -15,5 +15,6 @@ urlpatterns = [
     path('get_user_access_token/', GetUserAccessTokenView.as_view(), name='get_user_access_token'),
     path('list_transactions/', ListTransactionsView.as_view(), name='list_transactions'),
     path('my_spaces/<int:space_pk>/add_accounts/', AddAccountsView.as_view(), name='add_accounts'),
-    path('my_spaces/<int:space_pk>/list_accounts/', ListTinkAccountsView.as_view(), name='list_accounts')
+    path('my_spaces/<int:space_pk>/list_accounts/', ListTinkAccountsView.as_view(), name='list_accounts'),
+    path('my_spaces/<int:space_pk>/full_integration/', FullIntegrationView.as_view(), name='full_integration_tink')
 ]

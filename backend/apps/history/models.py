@@ -8,6 +8,7 @@ from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.goal.models import Goal
 from backend.apps.customuser.constants import Currency
+from backend.apps.tink.models import TinkAccount
 
 from backend.apps.category.constants import Icons
 
@@ -17,11 +18,13 @@ class HistoryExpense(models.Model):
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=12, decimal_places=2)
     comment = models.CharField(max_length=300, null=True, blank=True)
-    from_acc = models.JSONField(verbose_name="from_acc", null=False)
+    from_acc = models.JSONField(verbose_name='account', null=True, blank=True)
     to_cat = models.JSONField(verbose_name='to_cat', null=True)
     periodic_expense = models.BooleanField(default=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
+    tink_id = models.CharField(blank=True, null=True)
+    tink_account = models.OneToOneField(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
     created = models.DateTimeField(default=datetime.now)
 
 
@@ -30,9 +33,11 @@ class HistoryIncome(models.Model):
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=20, decimal_places=2)
     comment = models.CharField(max_length=300, blank=True)
-    account = models.JSONField(verbose_name='account', null=False)
+    account = models.JSONField(verbose_name='account', null=True, blank=True)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
+    tink_id = models.CharField(blank=True, null=True)
+    tink_account = models.OneToOneField(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
     created = models.DateTimeField(default=datetime.now)
 
 

@@ -5,7 +5,7 @@ from backend.apps.space.models import Space
 
 
 class TinkUser(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    space = models.OneToOneField(Space, on_delete=models.CASCADE)
     user_tink_id = models.CharField(unique=True)
     access_token = models.TextField(blank=True)
     refresh_token = models.TextField(blank=True)
@@ -13,7 +13,7 @@ class TinkUser(models.Model):
 
 
 class TinkAccount(models.Model):
-    space = models.ForeignKey(Space, on_delete=models.CASCADE, related_name='tink_accounts')
+    user = models.ForeignKey(TinkUser, on_delete=models.CASCADE, related_name='tink_accounts')
     account_id = models.CharField(max_length=100, unique=True)
     account_name = models.CharField(max_length=100)
     account_type = models.CharField(max_length=50)
