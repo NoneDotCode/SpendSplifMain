@@ -183,7 +183,7 @@ class UpdateAccountsAndTransactions(generics.GenericAPIView):
             if not TinkAccount.objects.filter(account_id=account_id).exists():
                 # Создаём аккаунт, если его нет
                 tink_account = TinkAccount.objects.create(
-                    space=space,
+                    user=tink_user,
                     account_id=account_id,
                     account_name=account_name,
                     account_type=account_type,
