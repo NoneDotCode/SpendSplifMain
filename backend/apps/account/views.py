@@ -11,8 +11,10 @@ from backend.apps.account.serializers import AccountSerializer, IncomeSerializer
 from backend.apps.converter.utils import convert_currencies
 from backend.apps.history.models import HistoryIncome
 from backend.apps.space.models import Space
+from backend.apps.tink.models import TinkUser, TinkAccount
 from backend.apps.total_balance.models import TotalBalance
 from backend.apps.total_balance.serializers import TotalBalanceSerializer
+from backend.apps.tink.serializers import TinkAccountSerializer
 
 
 class CreateAccount(generics.CreateAPIView):
@@ -63,6 +65,12 @@ class ViewAccounts(ObjectMultipleModelAPIView):
 
     def get_querylist(self):
         space_pk = self.kwargs.get("space_pk")
+        tink_user = TinkUser.objects.filter(space_id=space_pk)
+        if tink_user:
+            tink_user = tink_user[0]
+            queryset_tink = TinkAccount.objects.filter(user=tink_user)
+        else:
+            queryset_tink = []
         return [
             {
                 "queryset": Account.objects.filter(father_space_id=space_pk).order_by("id"),
@@ -71,6 +79,10 @@ class ViewAccounts(ObjectMultipleModelAPIView):
             {
                 "queryset": TotalBalance.objects.filter(father_space_id=space_pk),
                 "serializer_class": TotalBalanceSerializer
+            },
+            {
+                "queryset": queryset_tink,
+                "serializer_class": TinkAccountSerializer
             }
         ]
 
