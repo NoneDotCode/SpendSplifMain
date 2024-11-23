@@ -9,6 +9,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from random import SystemRandom
 from urllib.parse import urlencode
+import random
 
 from django.shortcuts import redirect
 from rest_framework.views import APIView
@@ -19,6 +20,7 @@ from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import (
     CustomUserSerializer,
     CustomTokenRefreshSerializer, CheckAppVersionSerializer,
+    ForgotPasswordSerializer, ConfirmValidationSerializer
 )
 from backend.apps.customuser.utils import cookie_response_payload_handler
 from rest_framework.exceptions import APIException
@@ -42,7 +44,8 @@ from google.oauth2 import id_token
 from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
 import requests as requestss
 from django.utils.translation import get_language_from_request
-
+from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
 
 class CustomUserRegistrationView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
@@ -641,3 +644,37 @@ class ConfirmNewPasswordView(GenericAPIView):
             return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Invalid or expired reset code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+class ForgotPasswordView(GenericAPIView):
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            verify_code = str(random.randint(1000,9999))
+            user = get_object_or_404(CustomUser, email=email)
+            user.verify_new_password = verify_code
+            user.save()
+
+            
+            send_mail(
+                subject="Password Reset Code",
+                message=f"Your password reset code is: {verify_code}",
+                from_email="spendsplif@gmail.com",
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return Response({"message": "Verification code sent to your email."}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ConfirmValidationPasswordView(GenericAPIView):
+    
+    def post(self, request, *args, **kwargs):
+        serializer = ConfirmValidationSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
