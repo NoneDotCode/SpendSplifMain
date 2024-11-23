@@ -19,6 +19,6 @@ urlpatterns = [
     path('check_version/', CheckAppVersion.as_view(), name='check_app_version'),
     path('auth/google/mob/callback/', GoogleLoginApiMobileView.as_view(), name='google_mob_callback'),
     path('me/profile/edit/verify_new_password/', ConfirmNewPasswordView.as_view(), name='edit_new_password'),
-    path('profile/forgot_pass/', ForgotPasswordView.as_view(), name='forgot_password'),
-    path('profile/forgot_pass/confirm/', ConfirmValidationPasswordView.as_view(), name='confirm_password')
+    path('forgot_pass/', ForgotPasswordView.as_view(), name='forgot_password'),
+    path('forgot_pass/confirm/', ConfirmValidationPasswordView.as_view(), name='confirm_password')
 ]

@@ -65,12 +65,10 @@ class ViewAccounts(ObjectMultipleModelAPIView):
 
     def get_querylist(self):
         space_pk = self.kwargs.get("space_pk")
-        tink_user = TinkUser.objects.filter(space_id=space_pk)
-        if tink_user:
-            tink_user = tink_user[0]
-            queryset_tink = TinkAccount.objects.filter(user=tink_user)
-        else:
-            queryset_tink = []
+        tink_user = TinkUser.objects.filter(
+            space_id=space_pk).first()
+        queryset_tink = TinkAccount.objects.filter(user=tink_user) if tink_user else TinkAccount.objects.none()
+
         return [
             {
                 "queryset": Account.objects.filter(father_space_id=space_pk).order_by("id"),

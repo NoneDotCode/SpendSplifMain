@@ -3,6 +3,7 @@ from typing import Dict
 import jwt
 from rest_framework import generics, permissions
 from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import AllowAny
 
 
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
@@ -645,14 +646,16 @@ class ConfirmNewPasswordView(GenericAPIView):
         else:
             return Response({'detail': 'Invalid or expired reset code.'}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ForgotPasswordView(GenericAPIView):
     serializer_class = ForgotPasswordSerializer
+    permission_classes = (AllowAny,)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
-            verify_code = str(random.randint(1000,9999))
+            verify_code = str(random.randint(1000, 9999))
             user = get_object_or_404(CustomUser, email=email)
             user.verify_new_password = verify_code
             user.save()
@@ -670,11 +673,17 @@ class ForgotPasswordView(GenericAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ConfirmValidationPasswordView(GenericAPIView):
-    
+    serializer_class = ConfirmValidationSerializer
+    permission_classes = (permissions.AllowAny,)
+
     def post(self, request, *args, **kwargs):
-        serializer = ConfirmValidationSerializer(data=request.data, context={'request': request})
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            code = serializer.validated_data['verify_new_password']
+            user = get_object_or_404(CustomUser, verify_new_password=code)
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
             return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

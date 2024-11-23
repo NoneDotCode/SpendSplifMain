@@ -166,32 +166,11 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
 class CheckAppVersionSerializer(serializers.Serializer):
     version = serializers.CharField()
 
+
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-class ConfirmValidationSerializer(serializers.ModelSerializer):
+
+class ConfirmValidationSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True, min_length=4)
     verify_new_password = serializers.CharField(write_only=True)
-
-    class Meta:
-        model = CustomUser
-        fields = ('verify_new_password', 'new_password')
-
-    def validate(self, validated_data):
-        request = self.context.get('request')
-        if not request:
-            raise serializers.ValidationError("Request context is missing.")
-        
-        user = request.user
-
-        if user.verify_new_password != validated_data['verify_new_password']:
-            raise serializers.ValidationError({"verify_new_password": "Invalid verification code."})
-
-        return validated_data
-
-    def save(self, **kwargs):
-        user = self.context.get('request').user
-        user.set_password(self.validated_data['new_password'])
-        user.verify_new_password = None 
-        user.save()
-        return user
