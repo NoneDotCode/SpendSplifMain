@@ -21,11 +21,11 @@ class HistoryExpense(models.Model):
     from_acc = models.JSONField(verbose_name='account', null=True, blank=True)
     to_cat = models.JSONField(verbose_name='to_cat', null=True)
     periodic_expense = models.BooleanField(default=False)
-    new_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    tink_id = models.CharField(blank=True, null=True)
-    tink_account = models.OneToOneField(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
-    created = models.DateTimeField(default=datetime.now)
+    tink_id = models.CharField(blank=True, null=True, unique=True)
+    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
+    created = models.DateTimeField(auto_created=True)
 
 
 class HistoryIncome(models.Model):
@@ -34,11 +34,11 @@ class HistoryIncome(models.Model):
     amount_in_default_currency = models.DecimalField(max_digits=20, decimal_places=2)
     comment = models.CharField(max_length=300, blank=True)
     account = models.JSONField(verbose_name='account', null=True, blank=True)
-    new_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    tink_id = models.CharField(blank=True, null=True)
-    tink_account = models.OneToOneField(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
-    created = models.DateTimeField(default=datetime.now)
+    tink_id = models.CharField(blank=True, null=True, unique=True)
+    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
+    created = models.DateTimeField(auto_created=True)
 
 
 class HistoryTransfer(models.Model):
@@ -53,4 +53,4 @@ class HistoryTransfer(models.Model):
     goal_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     collected = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    created = models.DateTimeField(auto_created=True)

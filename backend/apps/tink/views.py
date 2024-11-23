@@ -31,7 +31,7 @@ class FullIntegrationView(generics.GenericAPIView):
     def post(self, request, space_pk):
 
         # Authorize app
-        market = request.data.get("market", "GB"),
+        market = request.data.get("market", "GB")
         locale = request.data.get("locale", "en_US")
         app_auth_data = {
             "client_id": settings.TINK["CLIENT_ID"],
@@ -41,7 +41,6 @@ class FullIntegrationView(generics.GenericAPIView):
         }
         app_response = requests.post("https://api.tink.com/api/v1/oauth/token", data=app_auth_data)
         if app_response.status_code != 200:
-            print("0")
             return Response(app_response.json(), status=app_response.status_code)
 
         app_access_token = app_response.json().get("access_token")
@@ -58,7 +57,6 @@ class FullIntegrationView(generics.GenericAPIView):
             headers = {"Authorization": f"Bearer {app_access_token}"}
             user_response = requests.post("https://api.tink.com/api/v1/user/create", json=user_data, headers=headers)
             if user_response.status_code != 200:
-                print("1")
                 return Response(user_response.json(), status=user_response.status_code)
 
             tink_user_id = user_response.json().get("user_id")
@@ -182,7 +180,7 @@ class UpdateAccountsAndTransactions(generics.GenericAPIView):
             # Проверяем, существует ли уже аккаунт
             if not TinkAccount.objects.filter(account_id=account_id).exists():
                 # Создаём аккаунт, если его нет
-                tink_account = TinkAccount.objects.create(
+                TinkAccount.objects.create(
                     user=tink_user,
                     account_id=account_id,
                     account_name=account_name,
@@ -191,67 +189,75 @@ class UpdateAccountsAndTransactions(generics.GenericAPIView):
                     currency=currency,
                 )
 
-            # headers = {'Authorization': f'Bearer {user_access_token}'}
-            # params = {}
-            # pending = request.data.get('pending')
-            # page_size = request.data.get('page_size')
-            # page_token = request.data.get('page_token')
-            # if account_id:
-            #     params['accountIdIn'] = account_id
-            # if pending:
-            #     params['pending'] = pending
-            # if page_size:
-            #     params['pageSize'] = page_size
-            # if page_token:
-            #     params['pageToken'] = page_token
-            #
-            # response = requests.get('https://api.tink.com/data/v2/transactions', headers=headers, params=params)
-            #
-            # if response.status_code != 200:
-            #     return Response(response.json(), status=response.status_code)
-            #
-            # transactions = response.json().get('transactions', [])
-            # for transaction in transactions:
-            #     amount = transaction.get('amount', {}).get('value')
-            #     scale = transaction.get('amount', {}).get('scale')
-            #     amount = decimal.Decimal(amount) * (decimal.Decimal(10) ** scale)
-            #     description = transaction.get('description')
-            #     currency = transaction.get('currencyCode')
-            #     account_id = transaction.get('accountId')
-            #     transaction_date = transaction.get('dates', {}).get('booked')
-            #     is_expense = amount < 0
-            #
-            #     account = TinkAccount.objects.filter(account_id=account_id).first()
-            #     if not account:
-            #         continue
-            #
-            #     # Создание записи в истории
-            #     if is_expense:
-            #         HistoryExpense.objects.create(
-            #             amount=abs(amount),
-            #             currency=currency,
-            #             amount_in_default_currency=convert_currencies(from_currency=currency,
-            #                                                           to_currency=space.currency,
-            #                                                           amount=amount),
-            #             comment=description,
-            #             to_cat=None,  # Можно настроить на основе анализа описания
-            #             tink_id=transaction.get('id'),
-            #
-            #             periodic_expense=False,
-            #             father_space=space,
-            #         )
-            #     else:
-            #         HistoryIncome.objects.create(
-            #             amount=amount,
-            #             currency=currency,
-            #             amount_in_default_currency=convert_currencies(from_currency=currency,
-            #                                                           to_currency=space.currency,
-            #                                                           amount=amount),
-            #             comment=description,
-            #             account={"title": account.account_name, "balance": account.balance},
-            #             new_balance=account.balance + amount,
-            #             father_space=space,
-            #         )
+            headers = {'Authorization': f'Bearer {user_access_token}'}
+            params = {}
+            pending = request.data.get('pending')
+            page_size = request.data.get('page_size')
+            page_token = request.data.get('page_token')
+            if account_id:
+                params['accountIdIn'] = account_id
+            if pending:
+                params['pending'] = pending
+            if page_size:
+                params['pageSize'] = page_size
+            if page_token:
+                params['pageToken'] = page_token
+
+            response = requests.get('https://api.tink.com/data/v2/transactions', headers=headers, params=params)
+
+            if response.status_code != 200:
+                print("0")
+                return Response(response.json(), status=response.status_code)
+
+            transactions = response.json().get('transactions', [])
+            for transaction in transactions:
+
+                if HistoryExpense.objects.filter(tink_id=transaction.get('id')) or HistoryIncome.objects.filter(
+                        tink_id=transaction.get('id')):
+                    continue
+
+                amount = transaction.get('amount', {}).get('value').get('unscaledValue')
+                scale = transaction.get('amount', {}).get('value').get('scale')
+                amount = decimal.Decimal(amount) * (decimal.Decimal(10) ** int(scale))
+                description = transaction.get('descriptions').get('display')
+                currency = transaction.get('amount')['currencyCode']
+                account_id = transaction.get('accountId')
+                transaction_date = transaction.get('dates', {}).get('booked')
+                is_expense = amount < 0
+
+                account = TinkAccount.objects.filter(account_id=account_id).first()
+                if not account:
+                    continue
+
+                # Создание записи в истории
+                if is_expense:
+                    HistoryExpense.objects.create(
+                        amount=abs(amount ** scale),
+                        currency=currency,
+                        amount_in_default_currency=convert_currencies(from_currency=currency,
+                                                                      to_currency=space.currency,
+                                                                      amount=amount),
+                        comment=description,
+                        to_cat=None,  # Можно настроить на основе анализа описания
+                        tink_id=transaction.get('id'),
+                        tink_account=account,
+                        periodic_expense=False,
+                        father_space=space,
+                        created=transaction_date
+                    )
+                else:
+                    HistoryIncome.objects.create(
+                        amount=(amount ** scale),
+                        currency=currency,
+                        amount_in_default_currency=convert_currencies(from_currency=currency,
+                                                                      to_currency=space.currency,
+                                                                      amount=amount),
+                        comment=description,
+                        tink_id=transaction.get('id'),
+                        tink_account=account,
+                        father_space=space,
+                        created=transaction_date
+                    )
 
         return Response({"detail": "Accounts and transactions updated successfully."}, status=status.HTTP_200_OK)
 
@@ -263,34 +269,3 @@ class ListTinkAccountsView(generics.GenericAPIView):
         queryset = TinkAccount.objects.filter(space_id=space_pk)
         serializer = TinkAccountSerializer(queryset, many=True)
         return Response(serializer.data)
-
-
-class ListTransactionsView(generics.GenericAPIView):
-    def get(self, request):
-        user_access_token = request.data.get('user_access_token')
-        account_id = request.data.get('account_id')
-        pending = request.data.get('pending')
-        page_size = request.data.get('page_size')
-        page_token = request.data.get('page_token')
-
-        headers = {
-            'Authorization': f'Bearer {user_access_token}'
-        }
-
-        params = {}
-        if account_id:
-            params['accountIdIn'] = account_id
-        if pending:
-            params['pending'] = pending
-        if page_size:
-            params['pageSize'] = page_size
-        if page_token:
-            params['pageToken'] = page_token
-
-        response = requests.get('https://api.tink.com/data/v2/transactions', headers=headers, params=params)
-
-        if response.status_code == 200:
-            transactions = response.json()
-            return Response(transactions)
-        else:
-            return Response(response.json(), status=response.status_code)
