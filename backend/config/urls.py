@@ -11,6 +11,7 @@ urlpatterns = [
     path("api/v1/", include("apps.customuser.urls")),
     path("api/v1/", include("apps.space.urls")),
     path("api/v1/", include("apps.api_stocks.urls")),
+    path('api/v1/', include('apps.adminpanel.urls')),
     path("api/v1/", include("apps.cryptocurrency.urls")),
     path("api/v1/", include("apps.converter.urls")),
     path("api/v1/", include("apps.messenger.urls")),

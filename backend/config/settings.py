@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.store",
     "apps.community",
     "apps.tink",
+    'apps.adminpanel'
 ]
 
 # Custom user model auth
