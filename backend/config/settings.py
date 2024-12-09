@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.store",
     "apps.community",
     "apps.tink",
+    "apps.excel",
 ]
 
 # Custom user model auth

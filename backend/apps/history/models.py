@@ -24,8 +24,8 @@ class HistoryExpense(models.Model):
     new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     tink_id = models.CharField(blank=True, null=True, unique=True)
-    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
-    created = models.DateTimeField(auto_created=True)
+    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING, null=True)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class HistoryIncome(models.Model):
@@ -37,8 +37,8 @@ class HistoryIncome(models.Model):
     new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     tink_id = models.CharField(blank=True, null=True, unique=True)
-    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING)
-    created = models.DateTimeField(auto_created=True)
+    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING, null=True)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class HistoryTransfer(models.Model):
