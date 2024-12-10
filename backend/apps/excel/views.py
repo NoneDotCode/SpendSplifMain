@@ -16,7 +16,7 @@ class ExportHistoryView(generics.GenericAPIView):
     permission_classes = (IsSpaceMember,)
 
     @staticmethod
-    def get(request, *args, **kwargs):
+    def post(request, *args, **kwargs):
         space = Space.objects.get(pk=kwargs['space_pk'])
         expenses = HistoryExpense.objects.filter(father_space=space)
         incomes = HistoryIncome.objects.filter(father_space=space)
@@ -38,9 +38,14 @@ class ExportHistoryView(generics.GenericAPIView):
                 expenses = expenses.filter(from_acc__id__in=account_ids)
                 incomes = incomes.filter(account__id__in=account_ids)
 
-        # Обработка полей для экспорта
+        export_type = request.data.get("export_type", "both")
+
+        if export_type == "expenses":
+            incomes = []
+        elif export_type == "incomes":
+            expenses = []
+
         default_headers = {
-            'type': 'Type',
             'amount': 'Amount',
             'comment': 'Comment',
             'date': 'Date & Time',
@@ -48,7 +53,7 @@ class ExportHistoryView(generics.GenericAPIView):
             'category': 'Category'
         }
 
-        fields = request.data.get("fields", list(default_headers.keys()))  # По умолчанию все поля
+        fields = request.data.get("fields", list(default_headers.keys()))
         headers = [default_headers[field] for field in fields if field in default_headers]
 
         wb = openpyxl.Workbook()
@@ -60,12 +65,11 @@ class ExportHistoryView(generics.GenericAPIView):
         for cell in ws[1]:
             cell.font = Font(bold=True)
 
+        # Добавляем расходы
         for expense in expenses:
             row = []
             for field in fields:
-                if field == 'type':
-                    row.append('expense')
-                elif field == 'amount':
+                if field == 'amount':
                     row.append(expense.amount)
                 elif field == 'comment':
                     row.append(expense.comment or '')
@@ -77,12 +81,11 @@ class ExportHistoryView(generics.GenericAPIView):
                     row.append(expense.to_cat.get('title', '') if expense.to_cat else '')
             ws.append(row)
 
+        # Добавляем доходы
         for income in incomes:
             row = []
             for field in fields:
-                if field == 'type':
-                    row.append('income')
-                elif field == 'amount':
+                if field == 'amount':
                     row.append(income.amount)
                 elif field == 'comment':
                     row.append(income.comment or '')
@@ -198,3 +201,57 @@ class ImportHistoryView(generics.GenericAPIView):
                 )
 
         return Response({"message": "Import completed successfully."}, status=status.HTTP_200_OK)
+
+
+class PreviewHistoryView(generics.GenericAPIView):
+    permission_classes = (IsSpaceMember,)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        space = Space.objects.get(pk=kwargs['space_pk'])
+        expenses = HistoryExpense.objects.filter(father_space=space)
+        incomes = HistoryIncome.objects.filter(father_space=space)
+
+        filters = request.data.get("filters", {})
+        if "dates" in filters:
+            tz = pytz.timezone('UTC')
+            start_date = request.data.get("from_date")
+            end_date = request.data.get("to_date")
+            if start_date and end_date:
+                start_date = make_aware(datetime.strptime(start_date, '%Y-%m-%d'), tz)
+                end_date = make_aware(datetime.strptime(end_date, '%Y-%m-%d'), tz)
+                expenses = expenses.filter(created__range=(start_date, end_date))
+                incomes = incomes.filter(created__range=(start_date, end_date))
+
+        if "accounts" in filters:
+            account_ids = request.data.get("account_ids", [])
+            if account_ids:
+                expenses = expenses.filter(from_acc__id__in=account_ids)
+                incomes = incomes.filter(account__id__in=account_ids)
+
+        preview_data = []
+
+        for expense in expenses[:5]:
+            preview_data.append({
+                "type": "expense",
+                "amount": float(expense.amount),
+                "comment": expense.comment or "",
+                "date": localtime(expense.created).strftime('%Y-%m-%d %H:%M:%S'),
+                "account": expense.from_acc.title if expense.from_acc else "",
+                "category": expense.to_cat.title if expense.to_cat else ""
+            })
+
+        for income in incomes[:5]:
+            preview_data.append({
+                "type": "income",
+                "amount": float(income.amount),
+                "comment": income.comment or "",
+                "date": localtime(income.created).strftime('%Y-%m-%d %H:%M:%S'),
+                "account": income.account.title if income.account else "",
+                "category": ""
+            })
+
+        # Ограничиваем общий результат до 10 записей
+        preview_data = preview_data[:10]
+
+        return Response(preview_data, status=200)
