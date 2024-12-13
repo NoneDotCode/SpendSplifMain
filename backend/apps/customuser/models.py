@@ -56,16 +56,16 @@ class CustomUser(AbstractUser):
     
     roles_choices = [
         ("free", "Free"),
-        ("standard", "Standard"),
-        ("premium", "Premium"),
+        ("business_plan", "Business plan"),
+        ("business_lic", "Business license"),
         ("sponsor", "Sponsor"),
         ("employee", "Employee"),
         ("premium/pre", "Premium/Pre"),
         ("standard/pre", "Standard/Pre")
     ]
     roles = ArrayField(
-        models.CharField(max_length=12, choices=roles_choices), 
-        default=["premium"], 
+        models.CharField(max_length=15, choices=roles_choices), 
+        default=["free"], 
         blank=True
         )
 

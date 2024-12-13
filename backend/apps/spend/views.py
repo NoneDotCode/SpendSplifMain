@@ -137,14 +137,14 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
         highest_role = request.user.roles[0]
 
-        if (highest_role == "premium" or highest_role == "premium/pre") and periodic_spends_count >= 20:
-            return Response({"error": "You can't create more than 20 periodic spends with a premium role."},
+        if (highest_role == "business_lic" or highest_role == "premium/pre") and periodic_spends_count >= 150:
+            return Response({"error": "You can't create more than 150 periodic spends with a Business license role."},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif (highest_role == "standard" or highest_role == "standard/pre") and periodic_spends_count >= 10:
-            return Response({"error": "You can't create more than 10 periodic spends with a standard role."},
+        elif (highest_role == "business_plan" or highest_role == "standard/pre") and periodic_spends_count >= 25:
+            return Response({"error": "You can't create more than 25 periodic spends with a Business plan role."},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif highest_role == "free" and periodic_spends_count >= 5:
-            return Response({"error": "You can't create more than 5 periodic spends with a free role."},
+        elif highest_role == "free" and periodic_spends_count >= 1:
+            return Response({"error": "You can't create more than 1 periodic spends with a free role."},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         if amount <= 0:

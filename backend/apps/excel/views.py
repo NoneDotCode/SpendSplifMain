@@ -17,6 +17,10 @@ class ExportHistoryView(generics.GenericAPIView):
 
     @staticmethod
     def post(request, *args, **kwargs):
+        highest_role = request.user.roles[0]
+        if highest_role == 'free':
+            return Response("Error: You are not allowed to export history data with a free role.", status=status.HTTP_403_FORBIDDEN)
+        
         space = Space.objects.get(pk=kwargs['space_pk'])
         expenses = HistoryExpense.objects.filter(father_space=space)
         incomes = HistoryIncome.objects.filter(father_space=space)
@@ -108,6 +112,9 @@ class ImportHistoryView(generics.GenericAPIView):
 
     @staticmethod
     def post(request, *args, **kwargs):
+        highest_role = request.user.roles[0]
+        if highest_role == 'free':
+            return Response("Error: You are not allowed to export history data with a free role.", status=status.HTTP_403_FORBIDDEN)
         space_id = kwargs.get("space_pk")
         try:
             father_space = Space.objects.get(pk=space_id)
