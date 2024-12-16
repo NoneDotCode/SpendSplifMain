@@ -34,12 +34,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
             if len(re.findall(r'\d', password)) < 1:
                 raise serializers.ValidationError("the password should have more than 3 numbers")
 
-        language = data.get("language", "").lower()
-        if language == 'cs':
-            data['language'] = 'CZECH'
-        else:
-            data['language'] = 'ENGLISH'
-
         return data
 
     def update(self, instance, validated_data):
@@ -47,6 +41,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             "email") is not None
         password_changed = validated_data.get('password') is not None
         language_changed = validated_data.get('language') is not None
+
 
         # Обновляем почту и пароль одновременно
         if email_changed and password_changed:
@@ -157,6 +152,19 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         if code != self.request.user.password_reset_code:
             raise serializers.ValidationError("Incorrect code")
 
+        if new_password:
+            if not 8 <= len(new_password) <= 24:
+                raise serializers.ValidationError("the password should be at least 8 characters long")
+
+            if new_password.isdecimal():
+                raise serializers.ValidationError("the password cannot be all numeric")
+
+            if len(re.findall(r'[a-zA-Z]', new_password)) < 4:
+                raise serializers.ValidationError("the password should have more than four letters")
+
+            if len(re.findall(r'\d', new_password)) < 1:
+                raise serializers.ValidationError("the password should have more than 3 numbers")
+
         self.request.user.set_password(new_password)
         self.request.user.save()
 
@@ -172,5 +180,6 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 
 class ConfirmValidationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
     new_password = serializers.CharField(write_only=True, min_length=4)
     verify_new_password = serializers.CharField(write_only=True)

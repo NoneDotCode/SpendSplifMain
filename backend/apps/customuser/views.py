@@ -47,6 +47,8 @@ import requests as requestss
 from django.utils.translation import get_language_from_request
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
+from backend.apps.customuser import translate
+
 
 class CustomUserRegistrationView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
@@ -92,13 +94,14 @@ class LogoutView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
+        language = str(request.user.language)
         response = Response()
         response.delete_cookie(
             key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
             path=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('path', '/'),
             samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
         )
-        response.data = {"message": "Logout successful."}
+        response.data = translate.logout_success[language.lower()]
         return response
 
 
@@ -227,7 +230,6 @@ class CustomUserUpdateAPIView(generics.GenericAPIView):
 
     def put(self, request, *args, **kwargs):
         instance = self.get_object()
-        print(request.data)
 
         if len(request.data) == 1 and 'username' in request.data:
             instance.username = request.data['username']
@@ -660,7 +662,6 @@ class ForgotPasswordView(GenericAPIView):
             user.verify_new_password = verify_code
             user.save()
 
-            
             send_mail(
                 subject="Password Reset Code",
                 message=f"Your password reset code is: {verify_code}",
@@ -682,7 +683,7 @@ class ConfirmValidationPasswordView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             code = serializer.validated_data['verify_new_password']
-            user = get_object_or_404(CustomUser, verify_new_password=code)
+            user = get_object_or_404(CustomUser, verify_new_password=code, email=request.data['email'])
             user.set_password(serializer.validated_data['new_password'])
             user.save()
             return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
