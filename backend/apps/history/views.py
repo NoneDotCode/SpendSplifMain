@@ -516,21 +516,21 @@ class CategoryStatisticView(generics.ListAPIView):
         formatted_result = {}
         for period, period_expenses in expenses.items():
             if not period_expenses:
-                formatted_result[period.capitalize()] = {}
-                formatted_result[f"{period.capitalize()}_Percent"] = {}
+                formatted_result[period] = {}
+                formatted_result[f"{period}_Percent"] = {}
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"You didn't make any category expenditures this {period}"
+                    f"Analyze_{period}"] = f"You didn't make any category expenditures this {period}"
             else:
                 space = Space.objects.get(pk=self.kwargs.get("space_pk"))
                 summary, percentages = self.get_summary_and_percentages(period_expenses)
-                formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
-                formatted_result[f"{period.capitalize()}_Percent"] = percentages
+                formatted_result[period] = self.add_currency(summary, space.currency)
+                formatted_result[f"{period}_Percent"] = percentages
                 if summary:
                     max_spending_category = max(summary, key=summary.get)
                 else:
                     max_spending_category = "No categories"
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"This {period}, you spend most on {max_spending_category} category"
+                    f"Analyze_{period}"] = f"This {period}, you spend most on {max_spending_category} category"
         return formatted_result
 
     def list(self, request, *args, **kwargs) -> Response:
@@ -558,7 +558,7 @@ class IncomeStatisticView(generics.ListAPIView):
         periods = {
             'week': [],
             'month': [],
-            'three month': [],
+            'three_month': [],
             'year': [],
         }
 
@@ -567,7 +567,7 @@ class IncomeStatisticView(generics.ListAPIView):
             if days_since_creation < 365:
                 periods['year'].append(income)
             if days_since_creation < 90:
-                periods['three month'].append(income)
+                periods['three_month'].append(income)
             if days_since_creation < 30:
                 periods['month'].append(income)
             if days_since_creation < 7:
@@ -615,17 +615,17 @@ class IncomeStatisticView(generics.ListAPIView):
 
         for period, period_incomes in periods.items():
             summary, percentages = self.get_summary_and_percentages(period_incomes)
-            formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
-            formatted_result[f"{period.capitalize()}_Percent"] = percentages
+            formatted_result[period] = self.add_currency(summary, space.currency)
+            formatted_result[f"{period}_Percent"] = percentages
 
             if summary:
                 max_income_date = max(summary, key=summary.get)
                 max_income_value = summary[max_income_date]
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {space.currency} you earned on {max_income_date}"
+                    f"Analyze_{period}"] = f"For this {period} the most {max_income_value} {space.currency} you earned on {max_income_date}"
             else:
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"For this {period} you did not receive any income."
+                    f"Analyze_{period}"] = f"For this {period} you did not receive any income."
 
         return formatted_result
 
@@ -648,7 +648,7 @@ class ExpensesStatisticView(generics.ListAPIView):
         periods = {
             'week': [],
             'month': [],
-            'three month': [],
+            'three_month': [],
             'year': [],
         }
         for expense in expenses:
@@ -656,7 +656,7 @@ class ExpensesStatisticView(generics.ListAPIView):
             if days_since_creation < 365:
                 periods['year'].append(expense)
             if days_since_creation < 90:
-                periods['three month'].append(expense)
+                periods['three_month'].append(expense)
             if days_since_creation < 30:
                 periods['month'].append(expense)
             if days_since_creation < 7:
@@ -764,7 +764,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
         return {
             'week': [],
             'month': [],
-            'three month': [],
+            'three_month': [],
             'year': [],
         }
 
@@ -783,14 +783,14 @@ class GoalTransferStatisticView(generics.ListAPIView):
         if days_since_creation < 7:
             periods['week'].append(transfer)
             periods['month'].append(transfer)
-            periods['three month'].append(transfer)
+            periods['three_month'].append(transfer)
             periods['year'].append(transfer)
         elif days_since_creation < 30:
             periods['month'].append(transfer)
-            periods['three month'].append(transfer)
+            periods['three_month'].append(transfer)
             periods['year'].append(transfer)
         elif days_since_creation < 90:
-            periods['three month'].append(transfer)
+            periods['three_month'].append(transfer)
             periods['year'].append(transfer)
         else:
             periods['year'].append(transfer)
@@ -900,7 +900,7 @@ class GeneralView(generics.GenericAPIView):
         data = {
             "week": self.get_data_and_percentages(6, space_pk),
             "month": self.get_data_and_percentages(29, space_pk),
-            "three month": self.get_data_and_percentages(89, space_pk),
+            "three_month": self.get_data_and_percentages(89, space_pk),
             "year": self.get_data_and_percentages(364, space_pk)
         }
 
@@ -1051,7 +1051,7 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
     def get_queryset(self) -> Dict[str, List[HistoryExpense]]:
         queryset = HistoryExpense.objects.exclude(to_cat__isnull=True).filter(father_space=self.kwargs['space_pk'],
                                                                               periodic_expense=True)
-        periods = [(7, "week"), (30, "month"), (90, "three month"), (365, "year")]
+        periods = [(7, "week"), (30, "month"), (90, "three_month"), (365, "year")]
         return {period: self.get_expenses_for_period(queryset, days) for days, period in periods}
 
     @staticmethod
@@ -1101,9 +1101,9 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
         for period, period_expenses in expenses.items():
             summary, percentages = self.get_summary_and_percentages(period_expenses)
             period_sum = sum(summary.values())
-            formatted_result[period.capitalize()] = self.add_currency(summary, currency)
-            formatted_result[f"{period.capitalize()}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
-            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, currency, period)
+            formatted_result[period] = self.add_currency(summary, currency)
+            formatted_result[f"{period}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
+            formatted_result[f"Analyze_{period}"] = self.get_analysis_message(summary, currency, period)
         return formatted_result
 
     @staticmethod
