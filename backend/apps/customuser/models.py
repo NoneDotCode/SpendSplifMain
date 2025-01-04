@@ -124,7 +124,7 @@ class CustomUser(AbstractUser):
             verify_code = get_random_string(length=8)
             self.verify_code = verify_code
             self.is_active = False
-            send_code_for_verify_email(email=self.email, code=verify_code, flag="registration")
+            send_code_for_verify_email(email=self.email, code=verify_code, flag="registration", language=self.language)
 
         if self.new_email:
             verify_code = get_random_string(length=8)

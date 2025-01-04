@@ -51,6 +51,8 @@ class SpendView(generics.GenericAPIView):
         category_pk = request.data.get("category_pk")
         if amount > int(account.balance):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
+        if amount > 99000000000:
+            return Response({"error": "Amount cannot exceed 99 billion."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
 
@@ -149,6 +151,7 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
 
         if amount <= 0:
             return Response({"error": "The amount must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,
