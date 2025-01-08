@@ -1,8 +1,11 @@
 from rest_framework import generics, permissions, status
 import stripe
 from django.conf import settings
+from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
+from backend.apps.store.models import Subscription
 from backend.apps.customuser.models import CustomUser
 
 
@@ -23,44 +26,62 @@ stripe.api_key = settings.STRIPE["secret"]
 
 class CreatePaymentSessionView(generics.GenericAPIView):
     def post(self, request):
-        plan = request.data.get('plan')
+        user = request.user
+        try:
+            # Создаем Stripe Customer, если его еще нет
+            customer = stripe.Customer.create(
+                email=user.email,
+                metadata={"user_id": user.id},
+            )
 
-        # Здесь вы должны определить цену в зависимости от плана
-        if plan == 'standard':
-            price = int(settings.SUBSCRIBES_DATA['Standard']['price'].replace("€", "")) * 100
-        elif plan == 'premium':
-            price = int(settings.SUBSCRIBES_DATA['Premium']['price'].replace("€", "")) * 100
-        else:
-            return Response({'error': 'Invalid plan'}, status=status.HTTP_400_BAD_REQUEST)
+            # Создаем Checkout Session
+            checkout_session = stripe.checkout.Session.create(
+                customer=customer.id,
+                payment_method_types=["card"],  # Способы оплаты
+                line_items=[
+                    {
+                        "price": settings.STRIPE_BUSINESS_PLAN_PRICE_ID,
+                        "quantity": 1,
+                    }
+                ],
+                mode="subscription",
+                success_url=f"{settings.FRONTEND_URL}/success?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{settings.FRONTEND_URL}/cancel",
+            )
+
+            print(checkout_session.id)
+            return Response({"session_id": checkout_session.id}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print("error", str(e))
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WebhookAPIView(generics.GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        payload = request.body
+        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+        webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
         try:
-            # Создаем или получаем существующего клиента Stripe
-            customer = stripe.Customer.create(email=request.user.email)
-
-            # Создаем Ephemeral Key
-            ephemeral_key = stripe.EphemeralKey.create(
-                customer=customer.id,
-                stripe_version=stripe.api_version,
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, webhook_secret
             )
+        except ValueError as e:
+            return Response({"error": "Invalid payload"}, status=status.HTTP_400_BAD_REQUEST)
+        except stripe.error.SignatureVerificationError as e:
+            return Response({"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Создаем PaymentIntent
-            payment_intent = stripe.PaymentIntent.create(
-                amount=price,
-                currency='eur',
-                customer=customer.id,
-                automatic_payment_methods={
-                    'enabled': True,
-                },
-            )
+        # Обработка события
+        if event['type'] == 'invoice.payment_succeeded':
+            subscription = event['data']['object']
+            # Логика подтверждения оплаты подписки
+            print(f"Subscription {subscription['id']} was paid successfully.")
+        elif event['type'] == 'invoice.payment_failed':
+            print("Payment failed for subscription.")
 
-            return Response({
-                'paymentIntent': payment_intent.client_secret,
-                'ephemeralKey': ephemeral_key.secret,
-                'customer': customer.id,
-                'publishableKey': settings.STRIPE["publishableKey"]
-            })
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_200_OK)
 
 
 class StripeWebhookView(generics.GenericAPIView):
@@ -93,8 +114,8 @@ class StripeWebhookView(generics.GenericAPIView):
             price_premium = int(settings.SUBSCRIBES_DATA['Premium']['price'].replace("€", "")) * 100
             price_standard = int(settings.SUBSCRIBES_DATA['Standard']['price'].replace("€", "")) * 100
             if payment_intent['amount'] == price_standard:
-                if "premium/pre" in user.roles:
-                    user.roles.remove("premium/pre")
+                if "free" in user.roles:
+                    user.roles.remove("free")
                 elif "premium" in user.roles:
                     user.roles.remove("premium")
                 user.roles = ["standard/pre"]
@@ -116,11 +137,3 @@ class SubscribeCancel(generics.GenericAPIView):
     def post(request, *args, **kwargs):
         return Response({'status': 'Your subscribe will end when you will die.'},
                         status=status.HTTP_200_OK)
-
-
-class PublishableKeyView(generics.GenericAPIView):
-    permission_classes = (permissions.AllowAny,)
-
-    @staticmethod
-    def get(request, *args, **kwargs):
-        return Response({"publishableKey": settings.STRIPE["publishableKey"]}, status=status.HTTP_200_OK)
