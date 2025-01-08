@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from urllib3 import request
 
 from backend.apps.tickets.serializers import CreateTicketSerializer, TicketSerializer, TicketMessageSerializer
 from backend.apps.tickets.permissions import IsEmployee, IsBusiness, IsMemeberOfChat
@@ -102,44 +103,33 @@ class CloseTicket(APIView):
 class TicketChatView(APIView):
     permission_classes = (IsMemeberOfChat,IsAuthenticated)
 
-    def get(self, request, owner_1_id, owner_2_id):
+    def get(self, request, chat_id):
         """Get all unsee messanges"""
-        try: 
-            user_1 = CustomUser.objects.get(id=owner_1_id)
-            user_2 = CustomUser.objects.get(id=owner_2_id)
+        chat = TicketChat.objects.get(id=chat_id)
+        messages = TicketMessage.objects.filter(father_chat=chat, seen=False)
+        response = [
+            {
+                "sender":message.sender.username,
+                "text":message.text
+            } for message in messages]
 
-            # finding who of owners is employee
-            if "employee" in user_1.roles:
-                employee = user_1
-                user = user_2
-            user = user_1
-            employee = user_2
+        for message in messages:
+            message.seen = True
+            message.save()
 
-            chat = TicketChat.objects.get(user=user, employee=employee)
-            messages = TicketMessage.objects.filter(father_chat=chat, seen=False)
-            response = [
-                {
-                    "sender":message.sender.username, 
-                    "text":message.text
-                } for message in messages]
-            
-            for message in messages:
-                message.seen = True
-                message.save()
+        return Response(response, status=status.HTTP_200_OK)
 
-            return Response(response, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-    def post(self, request, owner_1_id, owner_2_id, *args, **kwargs):
+    def post(self, request, chat_id, *args, **kwargs):
         """Send message"""
         try:
-            chat = TicketChat.objects.filter(user_id=owner_1_id, employee_id=owner_2_id).first()
+            chat = TicketChat.objects.get(id=chat_id)
+            ticket = Ticket.objects.get(chat=chat)
             sender = request.user
 
-            if sender.id == owner_1_id:
-                reciver = CustomUser.objects.get(id=owner_2_id)
-            reciver = CustomUser.objects.get(id=owner_1_id)
+            if sender.id == ticket.user:
+                reciver = ticket.employee
+            else:
+                reciver = ticket.user
 
             serializer = TicketMessageSerializer(data=request.data)
             if serializer.is_valid():
@@ -155,4 +145,14 @@ class TicketChatView(APIView):
 
         except Exception as e:
             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+
+class GetMyTickets(generics.GenericAPIView):
+    serializer_class = TicketSerializer
+
+    def get(self, request, *args, **kwargs):
+        queryset1 = Ticket.objects.filter(user=request.user)
+        queryset2 = Ticket.objects.filter(employee=request.user)
+        queryset = queryset1 | queryset2
+        serializer = TicketSerializer(queryset, many=True)
+        return Response(serializer.data)

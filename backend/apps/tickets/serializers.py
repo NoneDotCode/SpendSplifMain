@@ -3,7 +3,6 @@ from backend.apps.tickets.models import Ticket, TicketMessage
 
 class CreateTicketSerializer(serializers.ModelSerializer):
     space_pk = serializers.IntegerField(required=False)
-
     class Meta:
         model = Ticket
         fields = ("id", "help_in_space","space_pk", "message")
