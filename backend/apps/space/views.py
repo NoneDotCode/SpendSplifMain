@@ -165,33 +165,49 @@ class DeleteSpace(generics.RetrieveDestroyAPIView):
 class AddMemberToSpace(generics.GenericAPIView):
     serializer_class = AddAndRemoveMemberSerializer
     permission_classes = (IsSpaceMember & (IsSpaceOwner | CanAddMembers),)
-
+    
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
-        user_email = request.data.get("user_email", )
+        user_email = request.data.get("user_email")
         space = Space.objects.get(pk=space_pk)
-
+        
         try:
             user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
-            return Response({"error": "User not found."},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        # Check if user is not yet member of the space.
+            return Response(
+                {"error": "User not found."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Check if user is not yet member of the space
         if user in space.members.all():
-            return Response({"error": "User is member of the space already."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Add user to the space.
+            return Response(
+                {"error": "User is member of the space already."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Check if adding a new member would exceed the slots limit
+        current_members_count = space.members.count()
+        if space.members_slots is not None and current_members_count >= space.members_slots:
+            return Response(
+                {"error": f"Cannot add more members. Space is limited to {space.members_slots} members."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Add user to the space
         space.members.add(user)
-
+        
+        # Create notification
         notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
         notification = Notification.objects.create(message=notif_message, importance="Medium")
         notification.who_can_view.set(space.members.all())
-
+        
         # Return success answer
-        return Response({"success": "User successfully added to the space."}, status=status.HTTP_200_OK)
+        return Response(
+            {"success": "User successfully added to the space."}, 
+            status=status.HTTP_200_OK
+        )
 
 
 class RemoveMemberFromSpace(generics.GenericAPIView):
