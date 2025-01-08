@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.messenger",
     "apps.Dowt",
     "apps.notifications",
+    "apps.tickets",
     "apps.store",
     "apps.community",
     "apps.tink",

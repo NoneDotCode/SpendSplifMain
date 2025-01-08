@@ -4,7 +4,7 @@ from backend.apps.space.models import Space
 
 class UserRolePermision(BasePermission):
     def has_permission(self, request, view):
-        highest_role = request.user.roles[0]
+        highest_role = request.user.roles[0]  
         if "free" == highest_role or "standard" == highest_role:
             return False
         return True
