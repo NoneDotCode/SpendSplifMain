@@ -18,7 +18,6 @@ environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG")
 
-
 ALLOWED_HOSTS = ["*"]
 
 
@@ -221,7 +220,7 @@ CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5473",
-    "http://localhost:3000",
+    "http://3000",
     "http://127.0.0.1:8000",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
@@ -238,6 +237,22 @@ CORS_ORIGIN_WHITELIST = [
     "http://localhost:5473",
     "http://127.0.0.1:8000",
 ]
+
+# Security headers
+SESSION_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+X_FRAME_OPTIONS = "DENY"  # Prevent clickjacking
+
+# Rate limiting (e.g., using Django Ratelimit or DRF extensions)
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+    'rest_framework.throttling.UserRateThrottle',
+]
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+    'user': '8000/day',
+}
+
+# SQL Injection prevention is handled by Django ORM automatically.
 
 # Celery
 
