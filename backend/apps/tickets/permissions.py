@@ -13,15 +13,26 @@ class IsBusiness(BasePermission):
     def has_permission(self, request, *args, **kwargs):
         return "business" in request.user.roles
     
-class IsMemeberOfChat(BasePermission):
+class IsMemberOfChat(BasePermission):
     def has_permission(self, request, view):
         try:
-            owner_1 = CustomUser.objects.get(id=view.kwargs.get('owner_1_id'))
-            owner_2 = CustomUser.objects.get(id=view.kwargs.get('owner_2_id'))
-            chat =  TicketChat.objects.get(user=owner_1, employee_id=owner_2)
-            owners = (owner_1, owner_2)
-            if not chat or request.user not in owners:
+            chat_id = view.kwargs.get('chat_id')
+            if not chat_id:
                 return False
+                
+            chat = TicketChat.objects.get(id=chat_id)
+            user = request.user
+            
+            # Check if the requesting user is either the user or employee in the chat
+            return user == chat.user or user == chat.employee
+            
         except ObjectDoesNotExist:
             return False
-        return True 
+        except AttributeError:
+            return False
+
+    def has_object_permission(self, request, view, obj):
+        # Additional object-level permission check if needed
+        user = request.user
+        return user == obj.user or user == obj.employee
+    

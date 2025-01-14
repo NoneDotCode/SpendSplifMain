@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from urllib3 import request
 
 from backend.apps.tickets.serializers import CreateTicketSerializer, TicketSerializer, TicketMessageSerializer
-from backend.apps.tickets.permissions import IsEmployee, IsBusiness, IsMemeberOfChat
+from backend.apps.tickets.permissions import IsEmployee, IsBusiness, IsMemberOfChat
 from backend.apps.tickets.models import Ticket, TicketChat, TicketMessage
 
 from backend.apps.customuser.models import CustomUser
@@ -101,7 +101,7 @@ class CloseTicket(APIView):
             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 class TicketChatView(APIView):
-    permission_classes = (IsMemeberOfChat,IsAuthenticated)
+    permission_classes = (IsMemberOfChat, IsAuthenticated)
 
     def get(self, request, chat_id):
         """Get all unsee messanges"""
