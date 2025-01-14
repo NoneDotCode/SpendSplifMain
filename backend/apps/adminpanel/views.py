@@ -100,7 +100,7 @@ class ProjectOverviewView(APIView):
                                 Category.objects.filter(father_space_id=space_pk).count() +
                                 Goal.objects.filter(father_space_id=space_pk).count() +
                                 PeriodicSpendCounter.objects.filter(father_space_id=space_pk).count())
-                    new_price = new_data * 0.03
+                    new_price = new_data * 0.05
                 elif record.assets == "Storage data":
                     new_data = (
                                 HistoryExpense.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count() +
@@ -142,7 +142,7 @@ class TotalDeposits(generics.ListAPIView):
     def get_queryset(self):
         space_id = self.kwargs.get('space_pk')
 
-        return PaymentHistory.objects.filter(space_id=space_id).order_by('id')
+        return PaymentHistory.objects.filter(father_space=space_id).order_by('id')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -155,7 +155,7 @@ class ServiceStatistic(generics.ListAPIView):
 
     def get_queryset(self):
         space_id = self.kwargs['space_pk']
-        return PaymentHistory.objects.filter(space_id=space_id, payment_category='service')
+        return PaymentHistory.objects.filter(father_space=space_id, payment_category='service')
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

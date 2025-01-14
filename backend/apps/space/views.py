@@ -97,6 +97,25 @@ class ListOfSpaces(generics.ListAPIView):
         return context
 
 
+class ActiveSpace(generics.RetrieveAPIView):
+    serializer_class = SpaceListSerializer
+
+    def get_object(self):
+        # Попробуем найти первый спейс с заполненными member_slots
+        space = Space.objects.filter(
+            members=self.request.user, 
+            members_slots__isnull=False
+        ).first()
+        
+        # Если не найдено, вернем просто первый спейс пользователя
+        if not space:
+            space = Space.objects.filter(
+                members=self.request.user
+            ).first()
+        
+        return space
+
+
 class ListOfUsersInSpace(generics.ListAPIView):
     permission_classes = (permissions.IsSpaceMember,)
     serializer_class = CustomUserSerializer
@@ -198,6 +217,17 @@ class AddMemberToSpace(generics.GenericAPIView):
         # Add user to the space
         space.members.add(user)
         
+        # Change user role from 'free' to 'business_member'
+        try:
+            if user.roles and 'free' in user.roles:
+                user.roles = ['business_member']
+                user.save()
+                print(f"User role updated to 'business_member' for user {user.username}")
+            else:
+                print(f"User {user.username} already has a non-free role or no roles set.")
+        except Exception as e:
+            print(f"Error updating user role: {str(e)}")
+        
         # Create notification
         notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
         notification = Notification.objects.create(message=notif_message, importance="Medium")
@@ -231,6 +261,16 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
             return Response({"error": "You cannot remove this member from the space"})
 
         space.members.remove(user)
+
+        try:
+            if user.roles and 'business_member' in user.roles:
+                user.roles = ['free']
+                user.save()
+                print(f"User role updated to 'free' for user {user.username}")
+            else:
+                print(f"User {user.username} already has a non-free role or no roles set.")
+        except Exception as e:
+            print(f"Error updating user role: {str(e)}")
 
         return Response({"success": "User successfully removed from the space."}, status=status.HTTP_200_OK)
 

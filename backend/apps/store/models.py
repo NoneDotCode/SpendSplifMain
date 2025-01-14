@@ -1,9 +1,10 @@
 from django.db import models
 from django.conf import settings
 from backend.apps.customuser.models import CustomUser
+from backend.apps.space.models import Space
 
 class PaymentHistory(models.Model):
-    space_id = models.IntegerField()
+    father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     payment_category  = models.CharField(max_length=50,) # the value can only be subscription/service/license
     amount = models.DecimalField(max_digits=12, decimal_places=2,)
     date = models.DateTimeField(auto_now=True,)
@@ -14,6 +15,7 @@ class PaymentHistory(models.Model):
 
 class Subscription(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    stripe_user = models.CharField(max_length=255)
     stripe_subscription_id = models.CharField(max_length=255, unique=True)
     plan = models.CharField(max_length=50, choices=[
         ("business_plan", "Business Plan"),
