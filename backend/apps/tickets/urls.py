@@ -8,6 +8,6 @@ urlpatterns = [
     path("tickets/closed/", GetClosedTickets.as_view(), name="get_closed_tickets"),
     path("tickets/took/<int:ticket_pk>/", TookTicket.as_view(), name="took_ticket"),
     path("tickets/close/<int:ticket_pk>/", CloseTicket.as_view(), name="close_ticket"),
-    path('tickets/chat/<int:owner_1_id>/<int:owner_2_id>/', TicketChatView.as_view(), name='ticket_chat'),
+    path('tickets/<int:chat_id>/', TicketChatView.as_view(), name='ticket_chat'),
     path('tickets/my_tickets/', GetMyTickets.as_view(), name='my_tickets'),
 ]
