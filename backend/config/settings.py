@@ -239,18 +239,18 @@ CORS_ORIGIN_WHITELIST = [
 ]
 
 # Security headers
-SESSION_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-X_FRAME_OPTIONS = "DENY"  # Prevent clickjacking
+# SESSION_COOKIE_SECURE = True
+# SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
+# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# X_FRAME_OPTIONS = "DENY"  # Prevent clickjacking
 
-# Rate limiting (e.g., using Django Ratelimit or DRF extensions)
-REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
-    'rest_framework.throttling.UserRateThrottle',
-]
-REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
-    'user': '8000/day',
-}
+# # Rate limiting (e.g., using Django Ratelimit or DRF extensions)
+# REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+#     'rest_framework.throttling.UserRateThrottle',
+# ]
+# REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+#     'user': '8000/day',
+# }
 
 # SQL Injection prevention is handled by Django ORM automatically.
 
