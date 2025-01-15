@@ -15,7 +15,7 @@ class TicketChat(models.Model):
 
 class TicketMessage(models.Model):
     sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="sender")
-    text = models.CharField(max_length=255)
+    text = models.CharField(max_length=800)
     seen = models.BooleanField(default=False, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     father_chat = models.ForeignKey(TicketChat, on_delete=models.CASCADE)
@@ -32,7 +32,8 @@ class Ticket(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="user_that_needs_help")
     help_in_space = models.BooleanField(default=False, blank=True)
     space_pk = models.IntegerField(blank=True, null=True) #optional
-    message = models.TextField()
+    title = models.TextField(max_length=40)
+    message = models.TextField(max_length=800)
     status = models.CharField(max_length=10, choices=TICKET_STATUS_CHOICES, default="waiting")
     chat = models.ForeignKey(TicketChat, on_delete=models.CASCADE, blank=True, null=True)
     employee = models.ForeignKey(CustomUser, on_delete=models.CASCADE, blank=True, null=True) #optional

@@ -99,7 +99,8 @@ class CloseTicket(APIView):
         
         except Exception as e:
             return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+
 class TicketChatView(APIView):
     permission_classes = (IsMemberOfChat, IsAuthenticated)
 
@@ -108,11 +109,12 @@ class TicketChatView(APIView):
         chat = TicketChat.objects.get(id=chat_id)
         messages = TicketMessage.objects.filter(father_chat=chat, seen=False)
         response = [
-            {
-                "sender":message.sender.username,
-                "email":message.sender.email,
-                "text":message.text
-            } for message in messages]
+        {
+            "sender": message.sender.username,
+            "email": message.sender.email,
+            "text": message.text,
+            "created_at": message.created_at.strftime("%H:%M")
+        }]
 
         for message in messages:
             message.seen = True

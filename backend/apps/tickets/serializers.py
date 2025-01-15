@@ -5,7 +5,7 @@ class CreateTicketSerializer(serializers.ModelSerializer):
     space_pk = serializers.IntegerField(required=False)
     class Meta:
         model = Ticket
-        fields = ("id", "help_in_space","space_pk", "message")
+        fields = ("id", "help_in_space","space_pk", "message", "title")
     def save(self, validated_data):
         user = self.context['request'].user 
 
@@ -14,6 +14,7 @@ class CreateTicketSerializer(serializers.ModelSerializer):
             user=user,
             help_in_space=validated_data.get("help_in_space", False),
             space_pk = validated_data.get("space_pk", None),
+            title = validated_data.get("title"),
             message = validated_data.get("message"),
             chat=None,
         )
