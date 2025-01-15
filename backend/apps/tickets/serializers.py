@@ -19,6 +19,8 @@ class CreateTicketSerializer(serializers.ModelSerializer):
         )
 
 class TicketSerializer(serializers.ModelSerializer):
+    employee = serializers.EmailField(source='employee.email', read_only=True)
+    
     class Meta:
         model = Ticket
         fields = "__all__"

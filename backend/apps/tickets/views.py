@@ -110,6 +110,7 @@ class TicketChatView(APIView):
         response = [
             {
                 "sender":message.sender.username,
+                "email":message.sender.email,
                 "text":message.text
             } for message in messages]
 
