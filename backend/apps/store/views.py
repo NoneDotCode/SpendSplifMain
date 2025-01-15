@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from backend.apps.store.models import Subscription, PaymentHistory
+from backend.apps.adminpanel.views import ProjectOverviewView
 from backend.apps.customuser.models import CustomUser
 from backend.apps.space.models import Space
 from backend.apps.total_balance.models import TotalBalance
@@ -92,6 +93,57 @@ class CreatePaymentSessionView(generics.GenericAPIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CreatePaymentServiceView(generics.GenericAPIView):
+    def get(self, request, space_pk):
+        try:
+            # Получаем данные о стоимости из ProjectOverviewView
+            project_overview = ProjectOverviewView()
+            overview_response = project_overview.get(request, space_pk)
+            overview_data = overview_response.data
+            
+            # Подсчитываем общую сумму
+            total_amount = sum(float(item['price']) for item in overview_data)
+            
+            # Конвертируем в центы для Stripe (умножаем на 100)
+            amount_cents = int(total_amount * 100)
+
+            print(total_amount, amount_cents)
+            
+            # Создаем линейные элементы для детализации счета
+            line_items = [{
+                'price_data': {
+                    'currency': 'usd',
+                    'unit_amount': int(float(item['price']) * 100),
+                    'product_data': {
+                        'name': item['assets'],
+                        'description': f'Usage: {item["data"]}'
+                    },
+                },
+                'quantity': 1,
+            } for item in overview_data]
+            
+            # Создаем Checkout Session
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=line_items,
+                metadata={
+                    'space_pk': space_pk,
+                },
+                mode='payment',
+                success_url=f"{settings.FRONTEND_URL}/shop/success",
+                cancel_url=f"{settings.FRONTEND_URL}/cancel",
+            )
+            
+            return Response({
+                'session_id': checkout_session.id
+            }, status=status.HTTP_200_OK)
+            
+        except stripe.error.StripeError as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
 class WebhookAPIView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
     
@@ -167,7 +219,7 @@ class WebhookAPIView(generics.GenericAPIView):
                     slots = amount / 500
                     payment_category="license"
                     print("Products purchased:", subscription_id, amount, slots, payment_category)
-                if description == "add_license":
+                elif description == "add_license":
                     # Обработка обычной покупки
                     plan="business_lic"
                     subscription_id = session.get('payment_intent')
@@ -176,6 +228,14 @@ class WebhookAPIView(generics.GenericAPIView):
                     slots = amount / 500
                     payment_category="license"
                     print("Products purchased:", subscription_id, amount, slots, payment_category)
+                elif description == "service":
+                    # Обработка обычной покупки
+                    plan="business_lic"
+                    subscription_id = session.get('payment_intent')
+                    amount = session.get('amount_total')
+                    amount = amount / 100
+                    payment_category="service"
+                    print("Products purchased:", subscription_id, amount, payment_category)
             print(existing_spaces.count())
             if existing_spaces.count() == 1:
                 print("one")
