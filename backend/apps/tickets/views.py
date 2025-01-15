@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from collections import defaultdict
 from urllib3 import request
 
 from backend.apps.tickets.serializers import CreateTicketSerializer, TicketSerializer, TicketMessageSerializer
@@ -105,23 +106,34 @@ class TicketChatView(APIView):
     permission_classes = (IsMemberOfChat, IsAuthenticated)
 
     def get(self, request, chat_id):
-        """Get all unsee messanges"""
+        """Get all unseen messages grouped by date"""
         chat = TicketChat.objects.get(id=chat_id)
         messages = TicketMessage.objects.filter(father_chat=chat, seen=False)
-        response = [
-            {
+        
+        # Group messages by date
+        grouped_messages = defaultdict(list)
+        
+        for message in messages:
+            date = message.created_at.strftime("%Y-%m-%d")
+            message_data = {
                 "sender": message.sender.username,
                 "email": message.sender.email,
                 "text": message.text,
                 "created_at": message.created_at.strftime("%H:%M")
             }
-            for message in messages
-        ]
-
+            grouped_messages[date].append(message_data)
+        
+        # Convert to desired format
+        response = {
+            date: messages_list 
+            for date, messages_list in grouped_messages.items()
+        }
+        
+        # Mark messages as seen
         for message in messages:
             message.seen = True
             message.save()
-
+        
         return Response(response, status=status.HTTP_200_OK)
 
     def post(self, request, chat_id, *args, **kwargs):
