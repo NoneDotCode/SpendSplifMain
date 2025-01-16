@@ -108,7 +108,7 @@ class TicketChatView(APIView):
     def get(self, request, chat_id):
         """Get all unseen messages grouped by date"""
         chat = TicketChat.objects.get(id=chat_id)
-        messages = TicketMessage.objects.filter(father_chat=chat, seen=False)
+        messages = TicketMessage.objects.filter(father_chat=chat)
         
         # Group messages by date
         grouped_messages = defaultdict(list)
