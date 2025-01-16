@@ -21,10 +21,32 @@ class CreateTicketSerializer(serializers.ModelSerializer):
 
 class TicketSerializer(serializers.ModelSerializer):
     employee = serializers.EmailField(source='employee.email', read_only=True)
+    unseen = serializers.SerializerMethodField()
     
     class Meta:
         model = Ticket
         fields = "__all__"
+
+    def get_unseen(self, obj):
+        if obj.status != 'in_process' or not obj.chat:
+            return 0
+            
+        request = self.context.get('request')
+        if not request:
+            return 0
+            
+        user = request.user
+        
+        # Подсчитываем количество непросмотренных сообщений (seen=False)
+        # для текущего пользователя (считаем сообщения от другого участника чата)
+        unseen_count = TicketMessage.objects.filter(
+            father_chat=obj.chat,
+            seen=False,
+            sender__in=[obj.user if user == obj.employee else obj.employee]
+        ).count()
+        
+        return unseen_count
+
 
 class TicketMessageSerializer(serializers.ModelSerializer):
     
