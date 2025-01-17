@@ -57,7 +57,8 @@ class CustomUser(AbstractUser):
     roles_choices = [
         ("free", "Free"),
         ("business_plan", "Business plan"),
-        ("business_member", "Business member"),
+        ("business_member_lic", "Business member license"),
+        ("business_member_plan", "Business member plan"),
         ("business_lic", "Business license"),
         ("sponsor", "Sponsor"),
         ("employee", "Employee"),

@@ -26,57 +26,110 @@ class ProjectOverviewView(APIView):
         current_month = timezone.now().month
         current_year = timezone.now().year
 
+        last_payment = PaymentHistory.objects.filter(
+            father_space=space_pk,
+            payment_category='service'
+        ).order_by('-date').first()
+
+        # Вычисляем количество месяцев с последней оплаты
+        months_since_payment = 1
+        if last_payment:
+            current_date = timezone.now().date()
+            last_payment_date = last_payment.date
+            months_since_payment = (
+                (current_date.year - last_payment_date.year) * 12 +
+                current_date.month - last_payment_date.month
+            )
+        
+        # Проверяем наличие оплаты за текущий месяц
+        has_payment = PaymentHistory.objects.filter(
+            father_space=space_pk,
+            payment_category='service',
+            date__year=current_year,
+            date__month=current_month
+        ).exists()
+
+        cards_count = TinkAccount.objects.filter(user_id=tink_user).count()
+        accounts_count = TinkAccount.objects.filter(user_id=tink_user).count()
+        categories_count = Category.objects.filter(father_space_id=space_pk).count() 
+        goals_count = Goal.objects.filter(father_space_id=space_pk).count()
+        periods_count = PeriodicSpendCounter.objects.filter(father_space_id=space_pk).count()
+        incomes = HistoryExpense.objects.filter(
+            father_space_id=space_pk,
+            tink_account_id__isnull=False,
+            created__year=current_year,
+            created__month=current_month
+        ).count()
+
+        expenses = HistoryIncome.objects.filter(
+            father_space_id=space_pk,
+            tink_account_id__isnull=False,
+            created__year=current_year,
+            created__month=current_month
+        ).count()
+        ai_count = (incomes + expenses) * 0.001
+
+        structures_count = accounts_count + categories_count + goals_count + periods_count
+
+        storage_data_count = (
+            HistoryExpense.objects.filter(father_space_id=space_pk).count() +
+            HistoryIncome.objects.filter(father_space_id=space_pk).count() +
+            HistoryTransfer.objects.filter(father_space_id=space_pk).count()
+        ) * 0.003
+
+        # Если есть оплата, добавляем updated_date равным дате последней оплаты
+        response_data = [
+            {
+                "assets": "Cards",
+                "data": cards_count,
+                "price": 0
+            },
+            {
+                "assets": "Structures",
+                "data": structures_count,
+                "price": 0,
+            },
+            {
+                "assets": "Storage data",
+                "data": storage_data_count,
+                "price": 0,
+            },
+            {
+                "assets": "AI utilization",
+                "data": ai_count,
+                "price": 0,
+            },
+        ]
+
+        # Если есть оплата, добавляем updated_date
+        if has_payment and last_payment:
+            updated_date = last_payment.date
+            for item in response_data:
+                item["updated_date"] = updated_date
+            return Response(response_data)
+
         if not existing_records.exists():
-
-            cards_count = TinkAccount.objects.filter(user_id=tink_user).count()
-
-            accounts_count = TinkAccount.objects.filter(user_id=tink_user).count()
-            categories_count = Category.objects.filter(father_space_id=space_pk).count() 
-            goals_count = Goal.objects.filter(father_space_id=space_pk).count()
-            periods_count = PeriodicSpendCounter.objects.filter(father_space_id=space_pk).count()
-            incomes = HistoryExpense.objects.filter(
-                father_space_id=space_pk,
-                tink_account_id__isnull=False,
-                created__year=current_year,
-                created__month=current_month
-            ).count()
-
-            expenses = HistoryIncome.objects.filter(
-                father_space_id=space_pk,
-                tink_account_id__isnull=False,
-                created__year=current_year,
-                created__month=current_month
-            ).count()
-            ai_count = (incomes + expenses) * 0.001
-
-            structures_count = accounts_count + categories_count + goals_count + periods_count
-
-            storage_data_count = (
-                HistoryExpense.objects.filter(father_space_id=space_pk).count() +
-                HistoryIncome.objects.filter(father_space_id=space_pk).count() +
-                HistoryTransfer.objects.filter(father_space_id=space_pk).count()
-            ) * 0.003
 
             records = [
                 {
                     "assets": "Cards",
                     "data": cards_count,
-                    "price": cards_count * 0.7,
+                    "price": cards_count * 0.7 * months_since_payment,
                 },
                 {
                     "assets": "Structures",
                     "data": structures_count,
-                    "price": structures_count * 0.03,
+                    "price": structures_count * 0.03 * months_since_payment,
                 },
                 {
                     "assets": "Storage data",
                     "data": storage_data_count,
-                    "price": max(round(storage_data_count, 1), 0.1),
+                    "price": max(round(storage_data_count, 1), 0.1) * months_since_payment,
                 },
                 {
                     "assets": "AI utilization",
                     "data": ai_count,
-                    "price": max(round(ai_count, 1), 0.1),
+                    "price": max(round(ai_count, 1), 0.1) * months_since_payment,
                 },
             ]
             
@@ -94,19 +147,19 @@ class ProjectOverviewView(APIView):
             for record in existing_records:
                 if record.assets == "Cards":
                     new_data = TinkAccount.objects.filter(user_id=tink_user).count()
-                    new_price = new_data * 0.7
+                    new_price = new_data * 0.7 * months_since_payment
                 elif record.assets == "Structures":
                     new_data = (TinkAccount.objects.filter(user_id=space_pk).count() +
                                 Category.objects.filter(father_space_id=space_pk).count() +
                                 Goal.objects.filter(father_space_id=space_pk).count() +
                                 PeriodicSpendCounter.objects.filter(father_space_id=space_pk).count())
-                    new_price = new_data * 0.05
+                    new_price = new_data * 0.05 * months_since_payment
                 elif record.assets == "Storage data":
                     new_data = (
                                 HistoryExpense.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count() +
                                 HistoryIncome.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count()
                     ) * 0.003
-                    new_price = max(round(new_data, 1), 0.1)
+                    new_price = max(round(new_data, 1), 0.1) * months_since_payment
 
                 elif record.assets == "AI utilization":
                     new_data = (
@@ -124,7 +177,7 @@ class ProjectOverviewView(APIView):
                         ).count() +
                         HistoryTransfer.objects.filter(father_space_id=space_pk).count()
                     ) * 0.001
-                    new_price = max(round(new_data, 1), 0.1)
+                    new_price = max(round(new_data, 1), 0.1) * months_since_payment
 
                 if record.data != new_data or record.price != new_price:
                     record.data = new_data
@@ -155,7 +208,12 @@ class ServiceStatistic(generics.ListAPIView):
 
     def get_queryset(self):
         space_id = self.kwargs['space_pk']
-        return PaymentHistory.objects.filter(father_space=space_id, payment_category='service')
+        current_year = timezone.now().year
+        return PaymentHistory.objects.filter(
+            father_space=space_id, 
+            payment_category='service',
+            date__year=current_year
+        )
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()

@@ -3,6 +3,7 @@ from rest_framework import generics
 from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
+from backend.apps.store.models import PaymentHistory
 from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions, SpaceBackup
@@ -31,6 +32,7 @@ from rest_framework.views import APIView
 from backend.apps.space.permissions import IsSpaceMember, IsSpaceOwner
 from backend.apps.account.permissions import IsSpaceMember as IsSpaceMemberAcc
 from backend.apps.converter.utils import convert_number_to_letter
+from dateutil.relativedelta import relativedelta
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -116,6 +118,46 @@ class ActiveSpace(generics.RetrieveAPIView):
         return space
 
 
+class SpaceStatusView(generics.GenericAPIView):
+    permission_classes = (permissions.IsSpaceMember,)
+
+    def get(self, request, *args, **kwargs):
+        # Получаем space_id из параметров запроса
+        space_pk = self.kwargs['space_pk']
+        
+        if not space_pk:
+            return Response(
+                {'error': 'space_id required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = request.user
+            # Проверяем роли пользователя
+            if ('business_plan' in user.roles or 
+                'business_member_plan' in user.roles or 
+                'free' in user.roles):
+                return Response({'active': True})
+            
+            # Получаем последнюю запись оплаты для данного пространства
+            last_payment = PaymentHistory.objects.filter(
+                payment_category='service',
+                father_space=space_pk
+            ).order_by('-date').first()
+            
+            # Проверяем, прошло ли больше 12 месяцев с последней оплаты
+            twelve_months_ago = timezone.now() - relativedelta(months=12)
+            is_active = last_payment.date > twelve_months_ago if last_payment else False
+            
+            return Response({'active': is_active})
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class ListOfUsersInSpace(generics.ListAPIView):
     permission_classes = (permissions.IsSpaceMember,)
     serializer_class = CustomUserSerializer
@@ -189,6 +231,7 @@ class AddMemberToSpace(generics.GenericAPIView):
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
         user_email = request.data.get("user_email")
+        highest_role = request.user.roles[0]
         space = Space.objects.get(pk=space_pk)
         
         try:
@@ -220,11 +263,16 @@ class AddMemberToSpace(generics.GenericAPIView):
         # Change user role from 'free' to 'business_member'
         try:
             if user.roles and 'free' in user.roles:
-                user.roles = ['business_member']
-                user.save()
-                print(f"User role updated to 'business_member' for user {user.username}")
-            else:
-                print(f"User {user.username} already has a non-free role or no roles set.")
+                if highest_role == "business_lic" or highest_role == "business_member_lic":
+                    user.roles = ['business_member_lic']
+                    user.save()
+                    print(f"User role updated to 'business_member_lic' for user {user.username}")
+                elif highest_role == "business_plan" or highest_role == "business_member_plan":
+                    user.roles = ['business_member_plan']
+                    user.save()
+                    print(f"User role updated to 'business_member_lic' for user {user.username}")
+                else:
+                    print(f"User {user.username} already has a non-free role or no roles set.")
         except Exception as e:
             print(f"Error updating user role: {str(e)}")
         
@@ -263,7 +311,7 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
         space.members.remove(user)
 
         try:
-            if user.roles and 'business_member' in user.roles:
+            if user.roles and 'business_member_plan' in user.roles or 'business_member_lic' in user.roles:
                 user.roles = ['free']
                 user.save()
                 print(f"User role updated to 'free' for user {user.username}")

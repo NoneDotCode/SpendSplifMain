@@ -79,7 +79,7 @@ class CreatePaymentSessionView(generics.GenericAPIView):
                     "quantity": count,
                 }],
                 mode=mode,
-                success_url=f"{settings.FRONTEND_URL}/shop/success",
+                success_url=f"{settings.FRONTEND_URL}/admin-panel" if plan == 'add_license' else f"{settings.FRONTEND_URL}/shop/success",
                 cancel_url=f"{settings.FRONTEND_URL}/cancel",
                 locale="cs",
                 metadata={
@@ -95,6 +95,8 @@ class CreatePaymentSessionView(generics.GenericAPIView):
 
 class CreatePaymentServiceView(generics.GenericAPIView):
     def get(self, request, space_pk):
+        user = request.user
+
         try:
             # Получаем данные о стоимости из ProjectOverviewView
             project_overview = ProjectOverviewView()
@@ -108,11 +110,25 @@ class CreatePaymentServiceView(generics.GenericAPIView):
             amount_cents = int(total_amount * 100)
 
             print(total_amount, amount_cents)
+
+            existing_customers = stripe.Customer.list(email=user.email).data
+
+            if existing_customers:
+                # Если клиент найден, используем первого из списка
+                customer = existing_customers[0]
+                print(f"Existing customer found: {customer['id']}")
+            else:
+                # Если клиента нет, создаём нового
+                customer = stripe.Customer.create(
+                    email=user.email,
+                    metadata={"user_id": user.id},
+                )
+                print(f"New customer created: {customer['id']}")
             
             # Создаем линейные элементы для детализации счета
             line_items = [{
                 'price_data': {
-                    'currency': 'usd',
+                    'currency': 'eur',
                     'unit_amount': int(float(item['price']) * 100),
                     'product_data': {
                         'name': item['assets'],
@@ -124,13 +140,15 @@ class CreatePaymentServiceView(generics.GenericAPIView):
             
             # Создаем Checkout Session
             checkout_session = stripe.checkout.Session.create(
+                customer=customer.id,
                 payment_method_types=['card'],
                 line_items=line_items,
+                locale="cs",
                 metadata={
-                    'space_pk': space_pk,
+                    "description": "service",
                 },
                 mode='payment',
-                success_url=f"{settings.FRONTEND_URL}/shop/success",
+                success_url=f"{settings.FRONTEND_URL}/admin-panel",
                 cancel_url=f"{settings.FRONTEND_URL}/cancel",
             )
             
@@ -146,8 +164,6 @@ class CreatePaymentServiceView(generics.GenericAPIView):
 
 class WebhookAPIView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
-    
-    VALID_ROLES = ["free", "business_plan", "business_lic", "sponsor", "employee"]
 
     def post(self, request):
         payload = request.body
@@ -165,7 +181,6 @@ class WebhookAPIView(generics.GenericAPIView):
             print("error", "Invalid signature")
             return Response({"error": "Invalid signature"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print(event['type'])
         # Обработка события
         if event['type'] == 'checkout.session.completed':
             print("Payment successful.")
@@ -174,6 +189,7 @@ class WebhookAPIView(generics.GenericAPIView):
             session = event['data']['object']
             user_email = session['customer_details']['email']
             mode = session.get('mode')
+            description = session.get('metadata', {}).get('description')
             stripe_user = session.get('customer')
             print("adfadf", mode, stripe_user)
 
@@ -237,47 +253,50 @@ class WebhookAPIView(generics.GenericAPIView):
                     payment_category="service"
                     print("Products purchased:", subscription_id, amount, payment_category)
             print(existing_spaces.count())
-            if existing_spaces.count() == 1:
-                print("one")
-                # Создаём новый объект, так как существует только один такой объект
-                space = Space.objects.create(
-                    title=user.username,
-                    currency=currency,
-                    members_slots=Decimal(slots)
-                )
-                space.members.add(user)
+            if description != "service":
+                if existing_spaces.count() == 1:
+                    print("one")
+                    # Создаём новый объект, так как существует только один такой объект
+                    space = Space.objects.create(
+                        title=user.username,
+                        currency=currency,
+                        members_slots=Decimal(slots)
+                    )
+                    space.members.add(user)
 
-                Category.objects.create(
-                    title="Food",
-                    limit=1000,
-                    spent=0,
-                    father_space=space,
-                    color="#FF9800",
-                    icon="Donut"
-                )
+                    Category.objects.create(
+                        title="Food",
+                        limit=1000,
+                        spent=0,
+                        father_space=space,
+                        color="#FF9800",
+                        icon="Donut"
+                    )
 
-                Category.objects.create(
-                    title="Home",
-                    spent=0,
-                    father_space=space,
-                    color="#FF5050",
-                    icon="Home"
-                )
+                    Category.objects.create(
+                        title="Home",
+                        spent=0,
+                        father_space=space,
+                        color="#FF5050",
+                        icon="Home"
+                    )
 
-                Account.objects.create(
-                    title="Cash",
-                    balance=0,
-                    currency=currency,
-                    father_space=space
-                )
+                    Account.objects.create(
+                        title="Cash",
+                        balance=0,
+                        currency=currency,
+                        father_space=space
+                    )
 
-                TotalBalance.objects.create(balance=0, father_space=space)
-            elif existing_spaces.count() > 1:
-                print("more than one")
-                # Если таких объектов больше одного, обновляем поле members_slots у второго
+                    TotalBalance.objects.create(balance=0, father_space=space)
+                elif existing_spaces.count() > 1:
+                    print("more than one")
+                    # Если таких объектов больше одного, обновляем поле members_slots у второго
+                    space = existing_spaces[1]
+                    space.members_slots += Decimal(slots)
+                    space.save()    
+            else:
                 space = existing_spaces[1]
-                space.members_slots += Decimal(slots)
-                space.save()                          
 
             Subscription.objects.create(
                 user=user,
@@ -340,7 +359,7 @@ class SubscribeCancel(generics.GenericAPIView):
             if existing_project:
                 # Меняем роль у всех членов существующего Space
                 for member in existing_project.members.all():
-                    if any(role in member.roles for role in ['business_member', 'business_lic', 'business_plan']):
+                    if any(role in member.roles for role in ['business_member_plan', 'business_member_lic', 'business_lic', 'business_plan']):
                         member.roles = ['free']
                         member.save()
 
