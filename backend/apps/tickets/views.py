@@ -123,9 +123,13 @@ class TicketChatView(APIView):
             }
             grouped_messages[date].append(message_data)
         
+        # Sort messages by created_at for each date (oldest first)
+        for date in grouped_messages:
+            grouped_messages[date].sort(key=lambda x: x['created_at'])
+        
         # Convert to desired format
         response = {
-            date: messages_list 
+            date: messages_list
             for date, messages_list in grouped_messages.items()
         }
         
