@@ -79,7 +79,7 @@ class CreatePaymentSessionView(generics.GenericAPIView):
                     "quantity": count,
                 }],
                 mode=mode,
-                success_url=f"{settings.FRONTEND_URL}/admin-panel" if plan == 'add_license' else f"{settings.FRONTEND_URL}/shop/success",
+                success_url=f"{settings.FRONTEND_URL}/shop/success",
                 cancel_url=f"{settings.FRONTEND_URL}/cancel",
                 locale="cs",
                 metadata={
@@ -148,7 +148,7 @@ class CreatePaymentServiceView(generics.GenericAPIView):
                     "description": "service",
                 },
                 mode='payment',
-                success_url=f"{settings.FRONTEND_URL}/admin-panel",
+                success_url=f"{settings.FRONTEND_URL}/shop/success",
                 cancel_url=f"{settings.FRONTEND_URL}/cancel",
             )
             
@@ -190,6 +190,7 @@ class WebhookAPIView(generics.GenericAPIView):
             user_email = session['customer_details']['email']
             mode = session.get('mode')
             description = session.get('metadata', {}).get('description')
+            print(description)
             stripe_user = session.get('customer')
             print("adfadf", mode, stripe_user)
 
@@ -216,16 +217,16 @@ class WebhookAPIView(generics.GenericAPIView):
             existing_spaces = Space.objects.filter(members=user)
 
             # Сохраняем подписку в модели Subscription
-            print("session:", session)
             if mode == "subscription":
                 # Обработка подписки
                 subscription_id = session.get('subscription')
                 slots = 10
                 plan="business_plan"
-                payment_category="subscription",
+                amount = session.get('amount_total')
+                amount = amount / 100
+                payment_category="subscription"
                 print("Products purchased:", subscription_id, amount, slots, payment_category)
             elif mode == "payment":
-                description = session.get('metadata', {}).get('description')
                 if description == "premium":
                     # Обработка обычной покупки
                     plan="business_lic"
@@ -289,12 +290,30 @@ class WebhookAPIView(generics.GenericAPIView):
                     )
 
                     TotalBalance.objects.create(balance=0, father_space=space)
+
+                    if description == "premium":
+                        print(description)
+                        PaymentHistory.objects.create(
+                            father_space=space,
+                            amount=0,
+                            payment_category="service",
+                        )   
                 elif existing_spaces.count() > 1:
                     print("more than one")
                     # Если таких объектов больше одного, обновляем поле members_slots у второго
                     space = existing_spaces[1]
+                    if description == "premium":
+                        print(description)
+                        PaymentHistory.objects.create(
+                            father_space=space,
+                            amount=0,
+                            payment_category="service",
+                        )   
+                    # Проверяем, что members_slots не None
+                    if space.members_slots is None:
+                        space.members_slots = Decimal('0')
                     space.members_slots += Decimal(slots)
-                    space.save()    
+                    space.save()
             else:
                 space = existing_spaces[1]
 

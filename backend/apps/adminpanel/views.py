@@ -17,10 +17,20 @@ from backend.apps.store.serializers import PaymentHistorySerializer
 from rest_framework import generics
 from collections import defaultdict
 from django.utils import timezone
+from datetime import datetime
 
 
 class ProjectOverviewView(APIView):
     def get(self, request, space_pk):
+        if hasattr(self, 'request') and self.request:
+            highest_role = (
+                self.request.user.roles[0]
+                if hasattr(self.request, 'user') and self.request.user and self.request.user.roles
+                else 'business_lic'
+            )
+        else:
+            highest_role = 'business_lic'
+
         tink_user = TinkUser.objects.filter(space_id=space_pk).first()
         existing_records = ProjectOverview.objects.filter(space_id=space_pk)
         current_month = timezone.now().month
@@ -68,6 +78,7 @@ class ProjectOverviewView(APIView):
             created__month=current_month
         ).count()
         ai_count = (incomes + expenses) * 0.001
+        print(ai_count)
 
         structures_count = accounts_count + categories_count + goals_count + periods_count
 
@@ -76,6 +87,8 @@ class ProjectOverviewView(APIView):
             HistoryIncome.objects.filter(father_space_id=space_pk).count() +
             HistoryTransfer.objects.filter(father_space_id=space_pk).count()
         ) * 0.003
+
+        print( f"{storage_data_count:.2f}",)
 
         # Если есть оплата, добавляем updated_date равным дате последней оплаты
         response_data = [
@@ -104,8 +117,22 @@ class ProjectOverviewView(APIView):
         # Если есть оплата, добавляем updated_date
         if has_payment and last_payment:
             updated_date = last_payment.date
+            # Преобразуем дату в формат "ГГГГ-ММ-ДД"
+            formatted_date = updated_date.strftime('%Y-%m-%d')
+            
             for item in response_data:
-                item["updated_date"] = updated_date
+                item["updated_date"] = formatted_date
+            
+            return Response(response_data)
+
+        if highest_role == "free":
+            # Получаем текущее время и форматируем его
+            current_time = datetime.now()
+            formatted_date = current_time.strftime('%Y-%m-%d')
+            
+            for item in response_data:
+                item["updated_date"] = formatted_date
+            
             return Response(response_data)
 
         if not existing_records.exists():
@@ -153,13 +180,16 @@ class ProjectOverviewView(APIView):
                                 Category.objects.filter(father_space_id=space_pk).count() +
                                 Goal.objects.filter(father_space_id=space_pk).count() +
                                 PeriodicSpendCounter.objects.filter(father_space_id=space_pk).count())
-                    new_price = new_data * 0.05 * months_since_payment
+                    new_price = new_data * 0.04 * months_since_payment
                 elif record.assets == "Storage data":
                     new_data = (
-                                HistoryExpense.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count() +
-                                HistoryIncome.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count()
+                        HistoryExpense.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count() +
+                        HistoryIncome.objects.filter(father_space_id=space_pk, tink_account_id__isnull=False).count()
                     ) * 0.003
-                    new_price = max(round(new_data, 1), 0.1) * months_since_payment
+
+                    # Округляем до 2 знаков после запятой
+                    new_data = round(new_data, 2)
+                    new_price = max(round(new_data, 1), 0.05) * months_since_payment
 
                 elif record.assets == "AI utilization":
                     new_data = (
@@ -177,7 +207,10 @@ class ProjectOverviewView(APIView):
                         ).count() +
                         HistoryTransfer.objects.filter(father_space_id=space_pk).count()
                     ) * 0.001
-                    new_price = max(round(new_data, 1), 0.1) * months_since_payment
+
+                    new_data = round(new_data, 3)
+
+                    new_price = max(round(new_data, 1), 0.05) * months_since_payment
 
                 if record.data != new_data or record.price != new_price:
                     record.data = new_data

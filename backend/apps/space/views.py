@@ -144,11 +144,13 @@ class SpaceStatusView(generics.GenericAPIView):
                 payment_category='service',
                 father_space=space_pk
             ).order_by('-date').first()
+            print(last_payment)
             
             # Проверяем, прошло ли больше 12 месяцев с последней оплаты
             twelve_months_ago = timezone.now() - relativedelta(months=12)
             is_active = last_payment.date > twelve_months_ago if last_payment else False
-            
+            print(last_payment.date > twelve_months_ago)
+            print(is_active)
             return Response({'active': is_active})
             
         except Exception as e:
