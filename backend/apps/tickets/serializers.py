@@ -29,25 +29,18 @@ class TicketSerializer(serializers.ModelSerializer):
 
     def get_unseen(self, obj):
         if obj.status != 'in_process' or not obj.chat:
-            print("obj.status != 'in_process' or not obj.chat")
             return 0
-            
-        request = self.context.get('request')
-        if not request:
-            print("not request")
-            return 0
-            
-        user = request.user
-        print(user)
+        
+        user = self.context['request'].user 
         
         # Подсчитываем количество непросмотренных сообщений (seen=False)
         # для текущего пользователя (считаем сообщения от другого участника чата)
         unseen_count = TicketMessage.objects.filter(
             father_chat=obj.chat,
-            seen=False
-        ).exclude(sender=user).count()
-        print(unseen_count)
-        print("succesed")
+            seen=False,
+            sender__in=[obj.user if user == obj.employee else obj.employee]
+        ).count()
+        
         return unseen_count
 
 
