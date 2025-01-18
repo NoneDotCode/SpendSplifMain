@@ -133,10 +133,12 @@ class TicketChatView(APIView):
             for date, messages_list in grouped_messages.items()
         }
         
-        # Mark messages as seen
+        # Mark messages as seen only if they were not sent by the current user
+        current_user = request.user  # assuming request.user holds the current user
         for message in messages:
-            message.seen = True
-            message.save()
+            if message.sender != current_user:  # only mark as seen if the sender is not the current user
+                message.seen = True
+                message.save()
         
         return Response(response, status=status.HTTP_200_OK)
 
