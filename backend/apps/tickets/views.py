@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from collections import defaultdict
 from urllib3 import request
 
-from backend.apps.tickets.serializers import CreateTicketSerializer, TicketSerializer, TicketMessageSerializer
+from backend.apps.tickets.serializers import CreateTicketSerializer, TicketSerializer, TicketSerializer2, TicketMessageSerializer
 from backend.apps.tickets.permissions import IsEmployee, IsBusiness, IsMemberOfChat
 from backend.apps.tickets.models import Ticket, TicketChat, TicketMessage
 
@@ -27,12 +27,12 @@ class CreateTicketView(generics.CreateAPIView):
 class GetWaitingTickets(generics.ListAPIView):
     queryset = Ticket.objects.filter(status="waiting")
     permission_classes = (IsEmployee,)
-    serializer_class = TicketSerializer
+    serializer_class = TicketSerializer2
 
 class GetClosedTickets(generics.ListAPIView):
     queryset = Ticket.objects.filter(status="closed")
     permission_classes = (IsEmployee,)
-    serializer_class = TicketSerializer
+    serializer_class = TicketSerializer2
 
 
 class TookTicket(APIView):
@@ -175,5 +175,5 @@ class GetMyTickets(generics.GenericAPIView):
         queryset1 = Ticket.objects.filter(user=request.user)
         queryset2 = Ticket.objects.filter(employee=request.user)
         queryset = queryset1 | queryset2
-        serializer = TicketSerializer(queryset, many=True)
+        serializer = TicketSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)

@@ -42,6 +42,14 @@ class TicketSerializer(serializers.ModelSerializer):
         ).count()
         
         return unseen_count
+    
+
+class TicketSerializer2(serializers.ModelSerializer):
+    employee = serializers.EmailField(source='employee.email', read_only=True)
+    
+    class Meta:
+        model = Ticket
+        fields = "__all__"
 
 
 class TicketMessageSerializer(serializers.ModelSerializer):
