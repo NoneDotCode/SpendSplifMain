@@ -129,7 +129,7 @@ class TicketChatView(APIView):
                 "sender": message.sender.username,
                 "email": message.sender.email,
                 "text": message.text,
-                "created_at": message.created_at.strftime("%H:%M")
+                "created_at": message.created_at.strftime("%H:%M:%S")
             }
             grouped_messages[date].append(message_data)
         
