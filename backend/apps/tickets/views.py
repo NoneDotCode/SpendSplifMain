@@ -11,18 +11,28 @@ from backend.apps.tickets.models import Ticket, TicketChat, TicketMessage
 
 from backend.apps.customuser.models import CustomUser
 from backend.apps.space.models import Space
+from datetime import datetime
+from django.utils import timezone
+
 
 class CreateTicketView(generics.CreateAPIView):
     permission_classes = (IsBusiness,)
+    serializer_class = CreateTicketSerializer
 
     def post(self, request, *args, **kwargs):
-        serializer = CreateTicketSerializer(data=request.data, context={"request":request})
+        serializer = self.get_serializer(data=request.data, context={"request": request})
         
         if serializer.is_valid():
-            serializer.save(serializer.data)
-            return Response({"message":"Ticket successfully created"}, status=status.HTTP_201_CREATED)
-        return Response({"error":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-        
+            serializer.save(serializer.validated_data)
+            return Response(
+                {"message": "Ticket successfully created"},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            {"error": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
 
 class GetWaitingTickets(generics.ListAPIView):
     queryset = Ticket.objects.filter(status="waiting")
@@ -108,7 +118,7 @@ class TicketChatView(APIView):
     def get(self, request, chat_id):
         """Get all unseen messages grouped by date"""
         chat = TicketChat.objects.get(id=chat_id)
-        messages = TicketMessage.objects.filter(father_chat=chat)
+        messages = TicketMessage.objects.filter(father_chat=chat).order_by('created_at')
         
         # Group messages by date
         grouped_messages = defaultdict(list)
@@ -123,36 +133,54 @@ class TicketChatView(APIView):
             }
             grouped_messages[date].append(message_data)
         
-        # Sort messages by created_at for each date (oldest first)
+        # Sort messages by created_at timestamp including seconds
         for date in grouped_messages:
-            grouped_messages[date].sort(key=lambda x: x['created_at'])
+            grouped_messages[date].sort(
+                key=lambda x: datetime.strptime(f"{date} {x['created_at']}", "%Y-%m-%d %H:%M:%S")
+            )
         
         # Convert to desired format
         response = {
             date: messages_list
-            for date, messages_list in grouped_messages.items()
+            for date, messages_list in sorted(grouped_messages.items())
         }
         
         # Mark messages as seen only if they were not sent by the current user
-        current_user = request.user  # assuming request.user holds the current user
+        current_user = request.user
         for message in messages:
-            if message.sender != current_user:  # only mark as seen if the sender is not the current user
+            if message.sender != current_user:
                 message.seen = True
                 message.save()
         
         return Response(response, status=status.HTTP_200_OK)
 
     def post(self, request, chat_id, *args, **kwargs):
-        """Send message"""
+        """Send message with daily limit check"""
         try:
             chat = TicketChat.objects.get(id=chat_id)
             ticket = Ticket.objects.get(chat=chat)
             sender = request.user
 
+            # Get today's date (beginning of day)
+            today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+            # Count messages sent today in this chat
+            messages_today = TicketMessage.objects.filter(
+                father_chat=chat,
+                created_at__gte=today
+            ).count()
+
+            # Check if message limit is reached
+            if messages_today >= 50:
+                return Response(
+                    {"error": "Daily message limit (50) has been reached for this chat. Please try again tomorrow."},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
             if sender.id == ticket.user:
-                reciver = ticket.employee
+                receiver = ticket.employee
             else:
-                reciver = ticket.user
+                receiver = ticket.user
 
             serializer = TicketMessageSerializer(data=request.data)
             if serializer.is_valid():
@@ -162,12 +190,21 @@ class TicketChatView(APIView):
                     text=request.data.get("text"),
                 )
 
-                return Response({"message":f"Your message is send to user with id {reciver.id}"}, status=status.HTTP_201_CREATED)
+                return Response(
+                    {"message": f"Your message is sent to user with id {receiver.id}"},
+                    status=status.HTTP_201_CREATED
+                )
             else:
-                return Response({"error":serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         except Exception as e:
-            return Response({"error":str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class GetMyTickets(generics.GenericAPIView):

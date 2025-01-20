@@ -1,21 +1,40 @@
 from rest_framework import serializers
 from backend.apps.tickets.models import Ticket, TicketMessage
+from django.utils import timezone
 
 class CreateTicketSerializer(serializers.ModelSerializer):
     space_pk = serializers.IntegerField(required=False)
+    
     class Meta:
         model = Ticket
-        fields = ("id", "help_in_space","space_pk", "message", "title")
+        fields = ("id", "help_in_space", "space_pk", "message", "title")
+    
+    def validate(self, attrs):
+        user = self.context['request'].user
+        today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Подсчет количества тикетов, созданных сегодня
+        tickets_today = Ticket.objects.filter(
+            user=user,
+            created_at__gte=today
+        ).count()
+        
+        if tickets_today >= 5:
+            raise serializers.ValidationError(
+                "You have reached the limit of ticket creation for today (5 tickets)."
+            )
+            
+        return attrs
+
     def save(self, validated_data):
         user = self.context['request'].user 
-
-
-        Ticket.objects.create(
+        
+        return Ticket.objects.create(
             user=user,
             help_in_space=validated_data.get("help_in_space", False),
-            space_pk = validated_data.get("space_pk", None),
-            title = validated_data.get("title"),
-            message = validated_data.get("message"),
+            space_pk=validated_data.get("space_pk", None),
+            title=validated_data.get("title"),
+            message=validated_data.get("message"),
             chat=None,
         )
 
