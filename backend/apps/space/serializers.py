@@ -24,7 +24,7 @@ class SpaceListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Space
-        fields = ("id", "title", "currency", "members_count")
+        fields = ("id", "title", "currency", "members_count", "members_slots")
 
     @staticmethod
     def get_members_count(obj):

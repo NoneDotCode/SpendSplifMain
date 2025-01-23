@@ -65,6 +65,13 @@ INSTALLED_APPS = [
     "apps.excel"
 ]
 
+STRIPE_SECRET_KEY = "sk_test_51QeGGjDwblSo7CmztJGGMhVtjXUFXAQddm2xnoTCNE4pObMuv9fIf4jT0CzlDMnFsCqVR6zUw8v5cMusiYPsXmEo00f60bP16T"
+STRIPE_STANDARD_PRICE_ID = "price_1QeHXaDwblSo7CmzsZoyzHOt"
+STRIPE_PREMIUM_PRICE_ID = "price_1QgXA9DwblSo7CmzBnPfDTWj"
+STRIPE_WEBHOOK_SECRET = "whsec_7FewYEUuldAaSSukV6IiF7LdETLmDo8l"
+STRIPE_PUBLISHABLE_KEY = "pk_test_51QeGGjDwblSo7CmzpbLkYjnFrOVggqKbxJiiBeGH0L6gEhmTKdes0TqiZwmEILay5sZ8C6oWFc5aebej4MSY3GG800WNwDAZdI"
+FRONTEND_URL = "http://localhost:5173"
+
 # Custom user model auth
 
 AUTH_USER_MODEL = "customuser.CustomUser"
@@ -309,10 +316,10 @@ SUBSCRIBES_DATA = {
 }
 
 STRIPE = {
-    "secret": 'sk_test_51OaEz8J4gLcb8EJ9VXMBzxR8ShD3GIV7VgDx0fMxJx7Fnos3TbJKID1bSQPJGQMMLjh0SXt3NqCtNdOOOSNHc75k00LMdADPfK',
+    "secret": 'sk_test_51QeGGjDwblSo7CmztJGGMhVtjXUFXAQddm2xnoTCNE4pObMuv9fIf4jT0CzlDMnFsCqVR6zUw8v5cMusiYPsXmEo00f60bP16T',
     "payment_callback_url": "localhost:8000/api/v1/store/payment/callback/",
-    "publishableKey": "pk_test_51OaEz8J4gLcb8EJ9pAxoRfVd7FO61QmZCApJJKnkzwad9IPBXlES7pnOQeOp6el6D2W8inRzmWQkWCR9NNIrNxh800O6IQOFEP",
-    "webhook_secret_key": "whsec_1pEYQFoMLQf1OxA12IgZ4M9LUdv4X151"
+    "publishableKey": "pk_test_51QeGGjDwblSo7CmzpbLkYjnFrOVggqKbxJiiBeGH0L6gEhmTKdes0TqiZwmEILay5sZ8C6oWFc5aebej4MSY3GG800WNwDAZdI",
+    "webhook_secret_key": "whsec_7FewYEUuldAaSSukV6IiF7LdETLmDo8l"
 }
 
 EXPO_APP_KEY = "d142c3a6-34df-4c3e-993e-fa14fa88d94f"
