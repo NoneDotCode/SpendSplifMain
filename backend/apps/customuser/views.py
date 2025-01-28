@@ -685,20 +685,20 @@ class ConfirmValidationPasswordView(GenericAPIView):
             code = serializer.validated_data['verify_new_password']
             email = request.data['email']
 
-            # Ищем пользователя по коду и email
+            # Find the user by code and email
             try:
                 user = CustomUser.objects.get(verify_new_password=code, email=email)
             except CustomUser.DoesNotExist:
-                # Если пользователь не найден, возвращаем 400 с сообщением об ошибке
+                # If the user is not found, return a 400 error with a custom message
                 return Response(
-                    {"error": "Неверный код подтверждения или email."},
+                    {"error": "Invalid verification code or email."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Если пользователь найден, обновляем пароль
+            # If the user is found, update the password
             user.set_password(serializer.validated_data['new_password'])
             user.save()
-            return Response({"message": "Пароль успешно обновлен."}, status=status.HTTP_200_OK)
+            return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
 
-        # Если данные невалидны, возвращаем ошибки сериализатора
+        # If the data is invalid, return serializer errors
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
