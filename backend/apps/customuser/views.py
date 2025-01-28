@@ -657,7 +657,7 @@ class ForgotPasswordView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             email = serializer.validated_data['email']
-            verify_code = str(random.randint(1000, 9999))
+            verify_code = str(random.randint(1000, 99999999))
             user = get_object_or_404(CustomUser, email=email)
             user.verify_new_password = verify_code
             user.save()
@@ -683,8 +683,22 @@ class ConfirmValidationPasswordView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             code = serializer.validated_data['verify_new_password']
-            user = get_object_or_404(CustomUser, verify_new_password=code, email=request.data['email'])
+            email = request.data['email']
+
+            # Ищем пользователя по коду и email
+            try:
+                user = CustomUser.objects.get(verify_new_password=code, email=email)
+            except CustomUser.DoesNotExist:
+                # Если пользователь не найден, возвращаем 400 с сообщением об ошибке
+                return Response(
+                    {"error": "Неверный код подтверждения или email."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Если пользователь найден, обновляем пароль
             user.set_password(serializer.validated_data['new_password'])
             user.save()
-            return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+            return Response({"message": "Пароль успешно обновлен."}, status=status.HTTP_200_OK)
+
+        # Если данные невалидны, возвращаем ошибки сериализатора
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
