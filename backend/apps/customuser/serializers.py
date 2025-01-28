@@ -20,20 +20,25 @@ class CustomUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
+        # Normalize email before checking
+        normalized_email = data.get('email', '').lower()
+        
+        # Check if an account with this normalized email already exists
+        if CustomUser.objects.filter(email__iexact=normalized_email).exists():
+            raise serializers.ValidationError("An account with this email already exists")
+        
+        # Rest of your existing password validation
         password = data.get("password")
         if password:
             if not 8 <= len(password) <= 24:
                 raise serializers.ValidationError("the password should be at least 8 characters long")
-
             if password.isdecimal():
                 raise serializers.ValidationError("the password cannot be all numeric")
-
             if len(re.findall(r'[a-zA-Z]', password)) < 4:
                 raise serializers.ValidationError("the password should have more than four letters")
-
             if len(re.findall(r'\d', password)) < 1:
                 raise serializers.ValidationError("the password should have more than 3 numbers")
-
+        
         return data
 
     def update(self, instance, validated_data):
