@@ -75,6 +75,7 @@ class HistoryView(APIView):
             formatted_time = localized_time.strftime('%H:%M')
 
             if isinstance(item, HistoryIncome):
+                balance_value = float(item.from_acc.get("balance", 0))
                 serialized_data.append({
                     "id": item.id,
                     "type": "income",
@@ -82,11 +83,12 @@ class HistoryView(APIView):
                     "currency": item.currency,
                     "comment": item.comment,
                     "account": item.account["title"],
-                    "account_balance": convert_number_to_letter(item.account["balance"]),
+                    "account_balance": convert_number_to_letter(balance_value),
                     "created_date": formatted_date,
                     "created_time": formatted_time,
                 })
             elif isinstance(item, HistoryExpense):
+                balance_value = float(item.from_acc.get("balance", 0))
                 try:
                     cat_title, cat_icon, history_type = item.to_cat["title"], item.to_cat["icon"], "expense"
                 except TypeError:
@@ -98,7 +100,7 @@ class HistoryView(APIView):
                     "currency": item.currency,
                     "comment": item.comment,
                     "account": item.from_acc["title"],
-                    "account_balance": convert_number_to_letter(item.from_acc["balance"]),
+                    "account_balance": convert_number_to_letter(balance_value),
                     "category_title": cat_title,
                     "category_icon": cat_icon,
                     "periodic_expense": item.periodic_expense,

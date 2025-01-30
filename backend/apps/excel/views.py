@@ -49,6 +49,7 @@ class ExportHistoryView(generics.GenericAPIView):
         elif export_type == "incomes":
             expenses = []
 
+        # Определяем заголовки
         default_headers = {
             'amount': 'Amount',
             'comment': 'Comment',
@@ -56,6 +57,10 @@ class ExportHistoryView(generics.GenericAPIView):
             'account': 'Account',
             'category': 'Category'
         }
+
+        # Если export_type == 'both', добавляем колонку 'type' в начало
+        if export_type == "both":
+            default_headers = {'type': 'Type', **default_headers}
 
         fields = request.data.get("fields", list(default_headers.keys()))
         headers = [default_headers[field] for field in fields if field in default_headers]
@@ -69,11 +74,17 @@ class ExportHistoryView(generics.GenericAPIView):
         for cell in ws[1]:
             cell.font = Font(bold=True)
 
-        # Добавляем расходы
         for expense in expenses:
             row = []
             for field in fields:
-                if field == 'amount':
+                try:
+                    cat_title, cat_icon, history_type = expense.to_cat["title"], expense.to_cat["icon"], "expense"
+                except TypeError:
+                    cat_title, cat_icon, history_type = "", "", "loss"
+                print(history_type)
+                if field == 'type' and export_type == "both":
+                    row.append(history_type)
+                elif field == 'amount':
                     row.append(expense.amount)
                 elif field == 'comment':
                     row.append(expense.comment or '')
@@ -85,11 +96,12 @@ class ExportHistoryView(generics.GenericAPIView):
                     row.append(expense.to_cat.get('title', '') if expense.to_cat else '')
             ws.append(row)
 
-        # Добавляем доходы
         for income in incomes:
             row = []
             for field in fields:
-                if field == 'amount':
+                if field == 'type' and export_type == "both":
+                    row.append('income')
+                elif field == 'amount':
                     row.append(income.amount)
                 elif field == 'comment':
                     row.append(income.comment or '')
@@ -115,6 +127,7 @@ class ImportHistoryView(generics.GenericAPIView):
         highest_role = request.user.roles[0]
         if highest_role == 'free':
             return Response("Error: You are not allowed to export history data with a free role.", status=status.HTTP_403_FORBIDDEN)
+        
         space_id = kwargs.get("space_pk")
         try:
             father_space = Space.objects.get(pk=space_id)
@@ -149,9 +162,10 @@ class ImportHistoryView(generics.GenericAPIView):
             )
 
         try:
-            wb = openpyxl.load_workbook(uploaded_file)
+            # Валидация файла: проверка, что это действительно Excel-файл
+            wb = openpyxl.load_workbook(uploaded_file, read_only=True)
             ws = wb.active
-        except Exception:
+        except Exception as e:
             return Response(
                 {"error": "Invalid file format. Please upload a valid Excel file."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -163,12 +177,36 @@ class ImportHistoryView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Определяем индексы колонок для обязательных полей
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        column_indices = {
+            'amount': None,
+            'created': None
+        }
+
+        for idx, header in enumerate(header_row):
+            if header and isinstance(header, str):
+                header_lower = header.strip().lower()
+                if header_lower == 'amount':
+                    column_indices['amount'] = idx
+                elif header_lower in ['date', 'created']:
+                    column_indices['created'] = idx
+
+        # Проверяем, что обязательные колонки найдены
+        if column_indices['amount'] is None or column_indices['created'] is None:
+            return Response(
+                {"error": "The file must contain 'amount' and 'created' columns."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Импорт данных
         for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             try:
-                amount, comment, created = row[:3]
-            except ValueError:
+                amount = row[column_indices['amount']]
+                created = row[column_indices['created']]
+            except (IndexError, TypeError):
                 return Response(
-                    {"error": f"Invalid data format in row {row_idx}. Expected fields: amount, comment, created."},
+                    {"error": f"Invalid data format in row {row_idx}. Missing required fields."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -179,20 +217,30 @@ class ImportHistoryView(generics.GenericAPIView):
                 )
 
             try:
-                created = make_aware(datetime.strptime(created, '%Y-%m-%d %H:%M:%S'))
+                # Преобразуем дату в формат datetime
+                if isinstance(created, str):
+                    created = make_aware(datetime.strptime(created, '%Y-%m-%d %H:%M:%S'))
+                elif isinstance(created, datetime):
+                    created = make_aware(created)
+                else:
+                    return Response(
+                        {"error": f"Invalid date format in row {row_idx}. Expected 'YYYY-MM-DD HH:MM:SS' or datetime object."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             except ValueError:
                 return Response(
                     {"error": f"Invalid date format in row {row_idx}. Expected 'YYYY-MM-DD HH:MM:SS'."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # Создаем запись в базе данных
             if record_type == "expense":
                 HistoryExpense.objects.create(
                     amount=amount,
                     currency=account.currency,
                     amount_in_default_currency=amount,
-                    comment=comment or '',
-                    from_acc={"id": account.id, "title": account.title},
+                    comment=row[column_indices.get('comment', -1)] or '',
+                    from_acc={"id": account.id, "title": account.title, "balance": str(account.balance)},
                     father_space=father_space,
                     created=created
                 )
@@ -201,8 +249,8 @@ class ImportHistoryView(generics.GenericAPIView):
                     amount=amount,
                     currency=account.currency,
                     amount_in_default_currency=amount,
-                    comment=comment or '',
-                    account={"id": account.id, "title": account.title},
+                    comment=row[column_indices.get('comment', -1)] or '',
+                    account={"id": account.id, "title": account.title, "balance": str(account.balance)},
                     father_space=father_space,
                     created=created
                 )
