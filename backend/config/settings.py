@@ -78,6 +78,7 @@ AUTH_USER_MODEL = "customuser.CustomUser"
 
 
 MIDDLEWARE = [
+    'backend.config.middleware.UpdateSpaceLastModifiedMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",

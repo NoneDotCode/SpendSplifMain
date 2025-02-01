@@ -27,6 +27,9 @@ from rest_framework.permissions import IsAuthenticated
 import random
 from datetime import timedelta
 from decimal import Decimal
+import datetime
+from django.shortcuts import get_object_or_404
+from django.utils.timezone import now
 from django.utils import timezone
 from rest_framework.views import APIView
 from backend.apps.space.permissions import IsSpaceMember, IsSpaceOwner
@@ -519,3 +522,16 @@ class LeaveFromSpaceView(generics.GenericAPIView):
                             status=status.HTTP_403_FORBIDDEN)
         MemberPermissions.objects.get(space=space, member=user).delete()
         return Response({"message": "You have successfully left the space"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class CheckSpaceChangesView(APIView):
+    def get(self, request, space_pk):
+        # Получение объекта Space по переданному ID
+        space = get_object_or_404(Space, id=space_pk)
+
+        # Проверка времени последнего изменения
+        time_diff = now() - space.last_modified
+        if time_diff <= datetime.timedelta(seconds=10):
+            return Response({"message": "There's been a change"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "There's no change"}, status=status.HTTP_200_OK)
