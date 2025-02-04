@@ -75,7 +75,7 @@ class HistoryView(APIView):
             formatted_time = localized_time.strftime('%H:%M')
 
             if isinstance(item, HistoryIncome):
-                balance_value = float(item.from_acc.get("balance", 0))
+                balance_value = float(item.account.get("balance", 0))
                 serialized_data.append({
                     "id": item.id,
                     "type": "income",

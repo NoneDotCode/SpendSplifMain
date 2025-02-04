@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "apps.store",
     "apps.community",
     "apps.tink",
+    "apps.cards",
     'apps.adminpanel',
     "apps.excel"
 ]
@@ -75,6 +76,9 @@ FRONTEND_URL = "http://localhost:5173"
 # Custom user model auth
 
 AUTH_USER_MODEL = "customuser.CustomUser"
+
+FINAPI_CLIENT_ID = 'd637bac7-d3af-4312-b749-f6e2ae468d43'
+FINAPI_CLIENT_SECRET = 'ab045065-2714-4915-bb0f-e99007ec069f'
 
 
 MIDDLEWARE = [
