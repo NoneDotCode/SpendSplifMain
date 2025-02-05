@@ -14,9 +14,21 @@
 
 # class UserSpace(models.Model):
 #     space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
+#     username = models.CharField(max_length=50)
 #     password = models.CharField(max_length=50)
-#     refresh_token = models.CharField(max_length=305)
+#     access_token = models.CharField(max_length=305, null=True, blank=True)
+#     refresh_token = models.CharField(max_length=305, null=True, blank=True)
 #     phone = models.CharField(max_length=255)
+#     updated_at = models.DateTimeField(auto_now_add=True)
 
 #     def __str__(self):
 #         return f"User created for {self.phone}"
+
+
+# class ClientToken(models.Model):
+#     access_token = models.CharField(max_length=305, null=True, blank=True)
+#     refresh_token = models.CharField(max_length=305, null=True, blank=True)
+#     updated_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return f"Tokens have updated {self.updated_at}"

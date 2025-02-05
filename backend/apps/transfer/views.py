@@ -46,7 +46,10 @@ class TransferView(generics.GenericAPIView):
                                                to_acc=account.title,
                                                father_space_id=space_pk,
                                                amount=amount,
-                                               amount_in_default_currency=amount,
+                                               amount_in_default_currency=convert_currencies(
+                                                   from_currency=account.currency,
+                                                   amount=amount,
+                                                   to_currency=to_currency),
                                                currency=from_currency,
                                                goal_amount=goal.goal,
                                                collected=goal.collected,

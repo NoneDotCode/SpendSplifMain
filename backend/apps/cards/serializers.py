@@ -2,10 +2,11 @@
 # from django.conf import settings
 # from backend.apps.space.models import Space
 # from backend.apps.space.models import MemberPermissions
+# from backend.apps.cards.models import UserSpace
 # import requests
 # from django.shortcuts import get_object_or_404
 
-# class FinAPITokenSerializer(serializers.Serializer):
+# class FinAPICreateTokenSerializer(serializers.Serializer):
 #     """
 #     Serializer for handling FinAPI OAuth token requests
 #     """
@@ -56,6 +57,39 @@
 #             return response.json()
 #         except requests.exceptions.RequestException as e:
 #             raise serializers.ValidationError(f"Token request failed: {str(e)}")
+
+
+# class FinAPIRefreshTokenSerializer(serializers.Serializer):
+#     grant_type = serializers.ChoiceField(
+#         choices=['password', 'client_credentials', 'refresh_token']
+#     )
+#     client_id = serializers.CharField(required=True)
+#     client_secret = serializers.CharField(required=True)
+#     refresh_token = serializers.CharField(required=False, allow_null=True)
+
+#     def validate(self, data):
+#         return data
+
+#     def save(self):
+#         try:
+#             response = requests.post(
+#                 'https://sandbox.finapi.io/api/v2/oauth/token',
+#                 data=self.validated_data,
+#                 headers={'Content-Type': 'application/x-www-form-urlencoded'}
+#             )
+#             response.raise_for_status()
+#             token_data = response.json()
+            
+#             # Update UserSpace with new tokens
+#             user_space = UserSpace.objects.get(refresh_token=self.validated_data['refresh_token'])
+#             user_space.access_token = token_data.get('access_token')
+#             user_space.refresh_token = token_data.get('refresh_token')
+#             user_space.save(update_fields=['access_token', 'refresh_token'])
+            
+#             return token_data
+        
+#         except requests.exceptions.RequestException as e:
+#             raise serializers.ValidationError(f"Token refresh failed: {str(e)}")
 
 
 # class UserCreateSerializer(serializers.Serializer):

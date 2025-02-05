@@ -20,6 +20,10 @@ app.conf.beat_schedule = {
         "task": "backend.apps.category.tasks.clear_all_spent",
         "schedule": crontab(hour="00", minute="00", day_of_month="01")
     },
+    "update_finapi_tokens_hourly": {
+        "task": "backend.apps.cards.tasks.update_finapi_tokens",
+        "schedule": crontab(minute="0"),  
+    },
     "delete_not_verify_users_every_day": {
         "task": "backend.apps.account.tasks.delete_not_verify_users",
         "schedule": crontab(hour="00", minute="00"),

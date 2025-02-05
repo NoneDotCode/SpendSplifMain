@@ -165,20 +165,29 @@ class ImportHistoryView(generics.GenericAPIView):
             # Валидация файла: проверка, что это действительно Excel-файл
             wb = openpyxl.load_workbook(uploaded_file, read_only=True)
             ws = wb.active
+            print(ws)
         except Exception as e:
             return Response(
                 {"error": "Invalid file format. Please upload a valid Excel file."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if ws.max_row < 2:
+        if ws.max_row is None:
+            pass
+        elif ws.max_row < 2:
             return Response(
                 {"error": "The file must contain at least one row of data."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         # Определяем индексы колонок для обязательных полей
-        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        try:
+            header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        except StopIteration:
+            return Response(
+                {"error": "The file is empty or does not contain any data."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         column_indices = {
             'amount': None,
             'created': None
