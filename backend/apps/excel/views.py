@@ -10,6 +10,7 @@ import openpyxl
 from datetime import datetime
 import pytz
 from backend.apps.account.models import Account
+from backend.apps.converter.utils import convert_currencies
 
 
 class ExportHistoryView(generics.GenericAPIView):
@@ -247,7 +248,10 @@ class ImportHistoryView(generics.GenericAPIView):
                 HistoryExpense.objects.create(
                     amount=amount,
                     currency=account.currency,
-                    amount_in_default_currency=amount,
+                    amount_in_default_currency=convert_currencies(
+                                                    from_currency=account.currency,
+                                                    amount=amount,
+                                                    to_currency=father_space.currency),
                     comment=row[column_indices.get('comment', -1)] or '',
                     from_acc={"id": account.id, "title": account.title, "balance": str(account.balance)},
                     father_space=father_space,
@@ -257,7 +261,10 @@ class ImportHistoryView(generics.GenericAPIView):
                 HistoryIncome.objects.create(
                     amount=amount,
                     currency=account.currency,
-                    amount_in_default_currency=amount,
+                    amount_in_default_currency=convert_currencies(
+                                                    from_currency=account.currency,
+                                                    amount=amount,
+                                                    to_currency=father_space.currency),
                     comment=row[column_indices.get('comment', -1)] or '',
                     account={"id": account.id, "title": account.title, "balance": str(account.balance)},
                     father_space=father_space,
