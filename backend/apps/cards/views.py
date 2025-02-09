@@ -1,273 +1,228 @@
-# from rest_framework import serializers, status
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from rest_framework.permissions import IsAuthenticated
-# from django.conf import settings
-# from django.shortcuts import get_object_or_404
-# from django.utils import timezone
-# from datetime import timedelta
-# from rest_framework.request import Request
+from rest_framework import serializers, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import timedelta
+from rest_framework.request import Request
 
-# from backend.apps.customuser.models import CustomUser
-# from backend.apps.space.models import Space, MemberPermissions
-# from backend.apps.cards.models import UserSpace, ClientToken
-# from .serializers import FinAPICreateTokenSerializer, UserCreateSerializer, FinAPIRefreshTokenSerializer
+from backend.apps.space.models import Space
+from backend.apps.account.permissions import IsSpaceMember
+from backend.apps.cards.models import UserSpace, ClientToken
+from .serializers import (
+    FinAPICreateTokenSerializer,
+    UserCreateSerializer,
+    FinAPIRefreshTokenSerializer,
+    UserSpaceSerializer,
+    TransactionsRequestSerializer,
+)
 
-# import string
-# import random
-# import uuid
-# import requests
+import string
+import random
+import uuid
+import requests
 
 
-# def generate_secure_password(length=12):
-#     """Генерирует случайный безопасный пароль"""
-#     characters = string.ascii_letters + string.digits + string.punctuation
-#     return ''.join(random.choice(characters) for _ in range(length))
+def generate_secure_password(length=12):
+    """Генерирует случайный безопасный пароль"""
+    characters = string.ascii_letters + string.digits + string.punctuation
+    return ''.join(random.choice(characters) for _ in range(length))
 
-# def get_finapi_token():
-#         """Get the latest FinAPI token from database"""
-#         try:
-#             token_obj = ClientToken.objects.first()
-#             if token_obj and token_obj.access_token:
-#                 return token_obj.access_token
-#             return None
-#         except ClientToken.DoesNotExist:
-#             return None
 
-# class UserAuthView(APIView):
-#     permission_classes = [IsAuthenticated]    
+class FinAPIClient:
+    BASE_URL = "https://sandbox.finapi.io"
 
-#     def post(self, request, space_pk):
-#         serializer = UserCreateSerializer(
-#             data=request.data,
-#             context={'space_pk': space_pk}
-#         )
+    def __init__(self):
+        self.token = self.get_finapi_token()
 
-#         space = Space.objects.filter(pk=space_pk).first()
+    @staticmethod
+    def get_finapi_token():
+        """Получает последний FinAPI токен КЛИЕНТА из базы данных"""
+        token_obj = ClientToken.objects.first()
+        return token_obj.access_token if token_obj else None
 
-#         if UserSpace.objects.filter(space=space).exists():
-#             user_space = UserSpace.objects.get(space=space)
-#             # Проверяем, прошло ли более часа с момента последнего обновления
-#             if user_space.updated_at > timezone.now() - timedelta(hours=1):
-#                 # Если прошло меньше часа, возвращаем текущие токены
-#                 return {
-#                     'access_token': user_space.access_token,
-#                     'refresh_token': user_space.refresh_token
-#                 }
-#             else:
-#                 get_tokens = self.refresh_finapi_tokens(space=space)
-#                 return get_tokens
-        
-#         if serializer.is_valid():
-#             space = serializer.validated_data['space']
-#             member_email = serializer.validated_data['member_email']
-#             generated_password = generate_secure_password()
-            
-#             # Генерируем уникальный ID для пользователя
-#             user_id = f"{space.id},{space.title}"
-            
-#             # Создание пользователя через FinAPI
-#             finapi_user_response = self.create_finapi_user(
-#                 user_id=user_id,
-#                 email=member_email,
-#                 password=generated_password,
-#                 phone=serializer.validated_data['phone']
-#             )
-            
-#             if finapi_user_response.status_code != 201:
-#                 return finapi_user_response
-            
-#             # Получаем данные о созданном пользователе
-#             finapi_user_data = finapi_user_response.json()
-            
-#             # Создаем токены для пользователя
-#             tokens_response = self.create_finapi_tokens(
-#                 username=user_id, 
-#                 password=generated_password, 
-#                 space=space, 
-#                 phone=serializer.validated_data['phone']
-#             )
-            
-#             if tokens_response.status_code != 200:
-#                 return tokens_response
-            
-#             # Токены успешно получены
-#             tokens_data = tokens_response.data
-            
-#             return Response(tokens_data, status=status.HTTP_201_CREATED)
-        
-#         return Response(
-#             serializer.errors,
-#             status=status.HTTP_422_UNPROCESSABLE_ENTITY
-#         )
-    
-#     def create_finapi_user(self, user_id, email, password, phone):
-#         """
-#         Создание пользователя через FinAPI
-#         """
-#         token = get_finapi_token()
-#         if not token:
-#             return Response(
-#                 {'error': 'No valid token found'}, 
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
+    def _request(self, method, endpoint, data=None, params=None, access_token=None):
+        """Базовый метод для выполнения HTTP-запросов к FinAPI"""
+        token = access_token or self.token
+        if not token:
+            return None
 
-#         headers = {
-#             'Authorization': f'Bearer {token}',
-#             'Content-Type': 'application/json',
-#             'X-Request-Id': str(uuid.uuid4())
-#         }
-        
-#         payload = {
-#             'id': user_id,
-#             'email': email,
-#             'password': password,
-#             'phone': phone,
-#             'isAutoUpdateEnabled': False
-#         }
-        
-#         try:
-#             response = requests.post(
-#                 'https://sandbox.finapi.io/api/v2/users',
-#                 json=payload,
-#                 headers=headers
-#             )
-#             return response
-        
-#         except requests.exceptions.RequestException as e:
-#             return Response(
-#                 {'error': str(e)}, 
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-    
-#     def create_finapi_tokens(self, username, password, space, phone):
-#         """
-#         Создание токенов и запись в UserSpace
-#         """
-#         token_serializer = FinAPICreateTokenSerializer(data={
-#             'grant_type': "password",
-#             'client_id': settings.FINAPI_CLIENT_ID,
-#             'client_secret': settings.FINAPI_CLIENT_SECRET,
-#             'username': username,
-#             'password': password,
-#         })
-        
-#         if token_serializer.is_valid():
-#             try:
-#                 response_data = token_serializer.save()
-                
-#                 # Создаем запись в UserSpace
-#                 UserSpace.objects.create(
-#                     username=username,
-#                     space=space,
-#                     password=password,
-#                     refresh_token=response_data.get('refresh_token', ''),
-#                     phone=phone
-#                 )
-                
-#                 return Response(response_data, status=status.HTTP_200_OK)
-            
-#             except Exception as e:
-#                 return Response(
-#                     {'error': str(e)}, 
-#                     status=status.HTTP_400_BAD_REQUEST
-#                 )
-#         return Response(
-#             token_serializer.errors, 
-#             status=status.HTTP_400_BAD_REQUEST
-#         )
-        
-#     def refresh_finapi_tokens(self, space):
-#         """
-#         Refresh FinAPI tokens for a given space
-#         """
-#         try:
-#             userSpace = UserSpace.objects.get(space=space)
-#         except UserSpace.DoesNotExist:
-#             return Response(
-#                 {'error': 'User space not found'}, 
-#                 status=status.HTTP_404_NOT_FOUND
-#             )
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json',
+            'X-Request-Id': str(uuid.uuid4())
+        }
 
-#         token_serializer = FinAPIRefreshTokenSerializer(data={
-#             'grant_type': 'refresh_token',
-#             'client_id': settings.FINAPI_CLIENT_ID,
-#             'client_secret': settings.FINAPI_CLIENT_SECRET,
-#             'refresh_token': userSpace.refresh_token,
-#         })
-        
-#         try:
-#             token_data = token_serializer.save()
-#             return Response(token_data, status=status.HTTP_200_OK)
-        
-#         except serializers.ValidationError as e:
-#             return Response(
-#                 {'error': str(e)}, 
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-        
+        url = f"{self.BASE_URL}{endpoint}"
+        try:
+            response = requests.request(method, url, json=data, params=params, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {'error': str(e)}
 
-# class BankConnectionImportView(APIView):
-#     permission_classes = [IsAuthenticated]
+    def create_user(self, user_id, email, password, phone):
+        """Создаёт пользователя в FinAPI"""
+        payload = {
+            'id': user_id,
+            'email': email,
+            'password': password,
+            'phone': phone,
+            'isAutoUpdateEnabled': False
+        }
+        return self._request("POST", "/api/v2/users", data=payload)
 
-#     def post(self, request, space_pk):
-#         space = Space.objects.filter(pk=space_pk).first()
-#         if not space:
-#             return Response({'error': 'Space not found'}, status=status.HTTP_404_NOT_FOUND)
+    def get_accounts(self, access_token):
+        """Получение списка счетов"""
+        return self._request("GET", "/api/v2/accounts", access_token=access_token)
 
-#         phone = request.data.get('phone')
-#         if not phone:
-#             return Response({'error': 'Phone number is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-#         # Проверка на корректность номера телефона (например, в формате +420123456789 для Чехии)
-#         phone_regex = r'^\+420\d{9}$'
-#         if not re.match(phone_regex, phone):
-#             return Response({'error': 'Invalid phone number format'}, status=status.HTTP_400_BAD_REQUEST)
+    def get_transactions(self, access_token, account_ids, start_date, end_date):
+        """Получение транзакций"""
+        payload = {
+            'accountIds': account_ids,
+            'minBookingDate': start_date,
+            'maxBookingDate': end_date,
+            'includeChildCategories': True,
+            'orderBy': 'bookingDate,desc'
+        }
+        return self._request("POST", "/api/v2/transactions/search", data=payload, access_token=access_token)
 
-#         bank_connection_name = request.data.get('bankConnectionName')
-#         if bank_connection_name:
-#             if len(bank_connection_name) < 1 or len(bank_connection_name) > 64:
-#                 return Response({'error': 'Bank connection name must be between 1 and 64 characters'}, 
-#                                  status=status.HTTP_400_BAD_REQUEST)
-#         else:
-#             return Response({'error': 'Bank connection name is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-#         # Создаём экземпляр UserAuthView и вызываем его метод post
-#         user_auth_view = UserAuthView()
-#         auth_request = Request(
-#             request=request._request,
-#             data={'space': space, 'phone': phone}
-#         )
-#         auth_response = user_auth_view.post(auth_request, space_pk)
+class UserAuthView(APIView):
+    """Представление для аутентификации пользователя и создания токенов доступа."""
+    permission_classes = [IsAuthenticated]
 
-#         if auth_response.status_code != status.HTTP_201_CREATED:
-#             return auth_response
+    def post(self, request, space_pk):
+        """Обрабатывает POST-запрос для создания пользователя и получения токенов."""
+        serializer = UserCreateSerializer(data=request.data, context={'space_pk': space_pk})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-#         tokens_data = auth_response.data.get('access_token')
-#         if not tokens_data:
-#             return Response({'error': 'Failed to retrieve user token'}, status=status.HTTP_400_BAD_REQUEST)
+        space = serializer.validated_data['space']
+        member_email = serializer.validated_data['member_email']
+        phone = serializer.validated_data['phone']
 
-#         payload = {
-#             "bank": {"search": "IBAN"},
-#             "bankConnectionName": request.data.get("bankConnectionName", None),
-#             "maxDaysForDownload": 60,
-#             "allowedInterfaces": ["XS2A"],
-#             "redirectUrl": "https://spendsplif.com/",
-#             "allowTestBank": True
-#         }
+        finapi_client = FinAPIClient()
+        user_space, created = UserSpace.objects.get_or_create(space=space)
 
-#         headers = {
-#             'Authorization': f'Bearer {tokens_data}',
-#             'Content-Type': 'application/json',
-#             'X-Request-Id': str(uuid.uuid4())
-#         }
+        # Если токен был обновлен менее часа назад, возвращаем существующие токены
+        if not created and user_space.updated_at > timezone.now() - timedelta(hours=1):
+            return Response(UserSpaceSerializer(user_space).data, status=status.HTTP_200_OK)
 
-#         try:
-#             response = requests.post(
-#                 'https://sandbox.finapi.io/api/v2/webForms/bankConnectionImport',
-#                 json=payload,
-#                 headers=headers
-#             )
-#             return Response(response.json(), status=response.status_code)
-#         except requests.RequestException as e:
-#             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        generated_password = generate_secure_password()
+        user_id = f"{space.id},{space.title}"
+
+        # Создаем пользователя в FinAPI
+        user_response = finapi_client.create_user(user_id, member_email, generated_password, phone)
+        if 'error' in user_response:
+            return Response(user_response, status=status.HTTP_400_BAD_REQUEST)
+
+        # Получаем токены от FinAPI
+        token_data = {
+            'grant_type': "password",
+            'client_id': settings.FINAPI_CLIENT_ID,
+            'client_secret': settings.FINAPI_CLIENT_SECRET,
+            'username': user_id,
+            'password': generated_password
+        }
+        token_serializer = FinAPICreateTokenSerializer(data=token_data)
+        if not token_serializer.is_valid():
+            return Response(token_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            tokens = token_serializer.save()
+            user_space.access_token = tokens['access_token']
+            user_space.refresh_token = tokens['refresh_token']
+            user_space.password = generated_password
+            user_space.phone = phone
+            user_space.save(update_fields=['access_token', 'refresh_token', 'password', 'phone'])
+
+            return Response(UserSpaceSerializer(user_space).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BankConnectionImportView(APIView):
+    """Представление для импорта банковских подключений."""
+    permission_classes = [IsAuthenticated, IsSpaceMember]
+
+    def _is_valid_phone(self, phone):
+        """Проверяет валидность номера телефона."""
+        return phone and phone.startswith('+')
+
+    def _is_valid_bank_name(self, bank_name):
+        """Проверяет валидность имени банковского подключения."""
+        return bank_name and len(bank_name) > 2
+
+    def post(self, request, space_pk):
+        """Обрабатывает POST-запрос для импорта банковского подключения."""
+        space = get_object_or_404(Space, pk=space_pk)
+
+        phone = request.data.get('phone')
+        if not self._is_valid_phone(phone):
+            return Response({'error': 'Invalid or missing phone number'}, status=status.HTTP_400_BAD_REQUEST)
+
+        bank_connection_name = request.data.get('bankConnectionName')
+        if not self._is_valid_bank_name(bank_connection_name):
+            return Response({'error': 'Invalid or missing bank connection name'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Аутентификация пользователя
+        auth_request = Request(request, data={'space': space, 'phone': phone}, method='POST')
+        auth_response = UserAuthView.as_view()(auth_request, space_pk=space.pk)
+
+        if auth_response.status_code != status.HTTP_201_CREATED:
+            return auth_response
+
+        access_token = auth_response.data.get('access_token')
+        if not access_token:
+            return Response({'error': 'Failed to retrieve user token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Импорт банковского подключения
+        finapi_client = FinAPIClient()
+        response = finapi_client.bank_connection_import(access_token, bank_connection_name)
+
+        if 'error' in response:
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+        return Response(response, status=status.HTTP_200_OK)
+
+
+class TransactionsFetchView(APIView):
+    """Представление для получения транзакций за последние 10 дней."""
+    permission_classes = [IsAuthenticated, IsSpaceMember]
+
+    def get(self, request, space_pk):
+        """Обрабатывает GET-запрос для получения транзакций."""
+        space = Space.objects.filter(pk=space_pk).first()
+        if not space:
+            return Response({'message': 'No transactions available'}, status=status.HTTP_200_OK)
+
+        try:
+            user_space = UserSpace.objects.get(space_id=space_pk)
+        except UserSpace.DoesNotExist:
+            return Response({'message': 'No transactions available'}, status=status.HTTP_200_OK)
+
+        finapi_client = FinAPIClient()
+        access_token = user_space.access_token
+
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=10)
+
+        # Получаем список счетов
+        accounts_response = finapi_client.get_accounts(access_token)
+        if not accounts_response.ok:
+            return Response({'error': 'Failed to fetch accounts'}, status=status.HTTP_400_BAD_REQUEST)
+
+        accounts_data = accounts_response.json()
+        account_ids = [account['id'] for account in accounts_data.get('accounts', [])]
+
+        if not account_ids:
+            return Response({'message': 'No accounts found'}, status=status.HTTP_200_OK)
+
+        # Получаем транзакции
+        transactions_response = finapi_client.get_transactions(access_token, account_ids, start_date, end_date)
+        if not transactions_response.ok:
+            return Response({'error': 'Failed to fetch transactions'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(transactions_response.json(), status=status.HTTP_200_OK)
