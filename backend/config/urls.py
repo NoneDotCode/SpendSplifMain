@@ -16,7 +16,7 @@ urlpatterns = [
     path("api/v1/", include("apps.messenger.urls")),
     path("api/v1/tink/", include("apps.tink.urls")),
     path(base_space_url, include("apps.account.urls")),
-    # path(base_space_url, include("apps.cards.urls")),
+    path(base_space_url, include("apps.cards.urls")),
     path(base_space_url, include("apps.category.urls")),
     path(base_space_url, include("apps.history.urls")),
     path(base_space_url, include("apps.total_balance.urls")),

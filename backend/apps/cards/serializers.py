@@ -31,7 +31,7 @@ class BankConnectionSerializer(serializers.ModelSerializer):
 class UserSpaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserSpace
-        fields = ['space', 'username', 'password', 'access_token', 'refresh_token', 'phone', 'updated_at']
+        fields = ['space', 'access_token', 'refresh_token', 'phone', 'updated_at']
         read_only_fields = ['updated_at'] 
 
     def validate_phone(self, value):
@@ -83,7 +83,6 @@ class FinAPIRefreshTokenSerializer(serializers.Serializer):
 
 # Сериализатор для создания пользователя
 class UserCreateSerializer(serializers.Serializer):
-    space = serializers.PrimaryKeyRelatedField(queryset=Space.objects.all())
     phone = serializers.CharField(max_length=255)
 
     def validate_phone(self, value):
@@ -96,33 +95,16 @@ class UserCreateSerializer(serializers.Serializer):
         if not space_pk:
             raise serializers.ValidationError("space_pk is required")
 
+        # Get the requesting user from context
+        request = self.context.get('request')
+        if not request or not request.user:
+            raise serializers.ValidationError("Authentication required")
+
         space = get_object_or_404(Space, pk=space_pk)
 
-        member = MemberPermissions.objects.filter(
-            space=space,
-            member__roles__contains=['business_plan']
-        ).first()
-
-        if not member:
-            member = MemberPermissions.objects.filter(
-                space=space,
-                member__roles__contains=['business_lic']
-            ).first()
-
-        if not member:
-            raise serializers.ValidationError("No member with required roles found.")
-
-        data['member_email'] = member.member.email
+        data['space'] = space
+        data['user_email'] = request.user.email
         return data
-
-    def create(self, validated_data):
-        user_space = UserSpace.objects.create(
-            space=validated_data['space'],
-            username=validated_data['member_email'],
-            password=generate_secure_password(),  
-            phone=validated_data['phone']
-        )
-        return user_space
 
 
 # Сериализатор для запроса транзакций
