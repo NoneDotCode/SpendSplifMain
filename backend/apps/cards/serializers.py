@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
 from backend.apps.space.models import Space, MemberPermissions
-from .models import BankConnection, UserSpace, ClientToken
+from backend.apps.cards.models import BankConnection, UserSpace, ClientToken
 from django.shortcuts import get_object_or_404
 import string
 import random
@@ -25,6 +25,27 @@ class BankConnectionSerializer(serializers.ModelSerializer):
         if not data.get('access_token') or not data.get('refresh_token'):
             raise serializers.ValidationError("Access token and refresh token are required.")
         return data
+    
+
+# Нужно изменить получение трат и доходов
+class BankConnectionSerializer(serializers.ModelSerializer):
+    created = serializers.SerializerMethodField()
+    income = serializers.SerializerMethodField()
+    expenses = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = BankConnection
+        fields = ['bankConnectionName', 'balance', 'currency', 'created', 'income', 'expenses']
+
+    def get_created(self, obj):
+        return obj.created_at.strftime('%d.%m.%Y')
+    
+    def get_income(self, obj):
+        return "0.00"
+    
+    def get_expenses(self, obj):
+        return "0.00"
+
 
 
 # Сериализатор для модели UserSpace

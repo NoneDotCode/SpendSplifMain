@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import (
+from backend.apps.cards.views import (
     BankConnectionView,
     BankConnectionWebhook,
     BankTransactionsAndBalanceWebhook,

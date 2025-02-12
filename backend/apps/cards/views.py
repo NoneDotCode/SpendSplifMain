@@ -18,6 +18,7 @@ from .serializers import (
     FinAPIRefreshTokenSerializer,
     UserSpaceSerializer,
     TransactionsRequestSerializer,
+    BankConnectionSerializer
 )
 
 import string
@@ -235,7 +236,7 @@ class BankConnectionView(APIView):
             webFormId=response.id,
         )
         
-        return Response(response, status=status.HTTP_200_OK)
+        return Response(response.url, status=status.HTTP_200_OK)
 
 
 class BankConnectionWebhook(APIView):
@@ -365,6 +366,20 @@ class BankTransactionsAndBalanceWebhook(APIView):
                     else:
                         print(f"BankConnection not found for {bank_connection_name}")
         return Response("Success", status=status.HTTP_200_OK)
+
+
+class SpaceBankConnectionsView(APIView):
+    def get(self, request, pk):
+        # Получаем пространство по pk или возвращаем 404
+        space = get_object_or_404(Space, pk=pk)
+        
+        # Получаем все банковские подключения для данного пространства
+        connections = BankConnection.objects.filter(space=space)
+        
+        # Сериализуем данные
+        serializer = BankConnectionSerializer(connections, many=True)
+        
+        return Response(serializer.data)
 
 
 class BanksView(APIView):
