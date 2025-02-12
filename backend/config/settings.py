@@ -228,7 +228,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTP_ONLY = True
+CSRF_COOKIE_HTTP_ONLY = False
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5473",
@@ -236,7 +236,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
@@ -269,7 +269,7 @@ CORS_ORIGIN_WHITELIST = [
 # Celery
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = "redis://redis:6379/0"  # "redis://127.0.0.1:6379" if not in docker
+CELERY_BROKER_URL = "redis://127.0.0.1:6379"  # "redis://127.0.0.1:6379" if not in docker
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
