@@ -369,9 +369,9 @@ class BankTransactionsAndBalanceWebhook(APIView):
 
 
 class SpaceBankConnectionsView(APIView):
-    def get(self, request, pk):
+    def get(self, request, space_pk):
         # Получаем пространство по pk или возвращаем 404
-        space = get_object_or_404(Space, pk=pk)
+        space = get_object_or_404(Space, pk=space_pk)
         
         # Получаем все банковские подключения для данного пространства
         connections = BankConnection.objects.filter(space=space)
