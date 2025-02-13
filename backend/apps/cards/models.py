@@ -1,9 +1,10 @@
 from django.db import models
 from django.conf import settings
 from backend.apps.space.models import Space
+from backend.apps.customuser.models import CustomUser
 
 class BankConnection(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, verbose_name='user', on_delete=models.CASCADE)
     space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     bankConnectionName = models.CharField(max_length=255)
     currency = models.CharField(max_length=255, null=True, blank=True)
@@ -17,7 +18,7 @@ class BankConnection(models.Model):
 
 
 class UserSpace(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, verbose_name='user', on_delete=models.CASCADE)
     space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     username = models.CharField(max_length=50, null=True, blank=True)
     password = models.CharField(max_length=50, null=True, blank=True)
