@@ -5,9 +5,10 @@ import dj_database_url
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-env = environ.Env()
+env = environ.Env(
+    DEBUG=(bool, False)
+)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 
 
 # Quick-start development settings - unsuitable for production
@@ -16,9 +17,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env.bool("DEBUG")
-
-ALLOWED_HOSTS = ["*"]
+DEBUG = env.bool("DEBUG", default=False)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost"])
 
 
 # Application definition
@@ -119,11 +119,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB"),
-        "USER": env("POSTGRES_USER"),
-        "PASSWORD": env("POSTGRES_PASSWORD"),
-        "HOST": env("DB_HOST"),
-        "PORT": env.int("DB_PORT"),
+        "NAME": env("POSTGRES_DB", default="spendsplif"),
+        "USER": env("POSTGRES_USER", default="postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="default_password"),
+        "HOST": env("POSTGRES_HOST", default="db"),
+        "PORT": env.int("POSTGRES_PORT", default=5432),
     }
 }
 
@@ -164,6 +164,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
@@ -221,11 +222,10 @@ SIMPLE_JWT = {
 
 # Cors
 
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[
     "http://localhost:5173",
-    "http://localhost:5473",
-    "http://127.0.0.1:8000",
-]
+])
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = False
 CSRF_COOKIE_HTTP_ONLY = False
@@ -269,11 +269,11 @@ CORS_ORIGIN_WHITELIST = [
 # Celery
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = "redis://127.0.0.1:6379"  # "redis://127.0.0.1:6379" if not in docker
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_BACKEND = "django-db"
 
 # Email settings
 
@@ -284,8 +284,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
-EMAIL_HOST_USER = "spendsplif@gmail.com"
-EMAIL_HOST_PASSWORD = env("EMAIL_SECRET_KEY")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
@@ -305,8 +305,8 @@ GOOGLE_PROJECT_ID = "spendsplif-000001"
 
 # Custom variables
 
-BASE_BACKEND_URL = 'http://localhost:8000'
-FRONTEND_URL = 'http://localhost:5173'
+BASE_BACKEND_URL = env('BASE_BACKEND_URL', default='http://localhost:8000')
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 MOBILE_APP_ACTUAL_VERSION = "0.0.1"
 
 SUBSCRIBES_DATA = {
@@ -335,3 +335,10 @@ TINK = {
     "CLIENT_ID": "df402ff180c743fe988144ac9623c0dd",
     "CLIENT_SECRET": "52e1e6441ecf4e50ba1f0fa92fe586fe"
 }
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 3600

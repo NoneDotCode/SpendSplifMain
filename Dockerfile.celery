@@ -1,0 +1,33 @@
+# Dockerfile.celery
+
+FROM python:3.11-slim
+
+# Install all needed system packages
+RUN apt-get update \
+    && apt-get install -y netcat-openbsd gcc python3-dev libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set up work dir
+WORKDIR /app
+
+# Copy and install all requirements
+COPY ./backend/requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the code of the project
+COPY ./backend /app
+
+# Copy the script celery_entrypoint and set up permissions
+COPY ./celery_entrypoint.sh /celery_entrypoint.sh
+RUN chmod +x /celery_entrypoint.sh
+
+# Setting up env varialbe for Django settings
+ENV DJANGO_SETTINGS_MODULE=backend.config.settings
+
+# Lauch script when the container starts
+ENTRYPOINT ["/celery_entrypoint.sh"]
