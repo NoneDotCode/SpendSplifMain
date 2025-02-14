@@ -73,12 +73,12 @@ class CustomUser(AbstractUser):
         ("sponsor", "Sponsor"),
         ("employee", "Employee"),
         ]
-    roles = ArrayField(
-        models.CharField(max_length=20, choices=roles_choices), 
-        default=["free"], 
-        blank=True
-        )
-
+    # roles = ArrayField(
+    #     models.CharField(max_length=20, choices=roles_choices), 
+    #     default=["free"], 
+    #     blank=True
+    #     )
+    roles = models.CharField(max_length=20, choices=roles_choices, default="free", blank=True)
     new_email = models.EmailField(null=True, blank=True)
     new_password = models.CharField(max_length=24, null=True, blank=True)
 
