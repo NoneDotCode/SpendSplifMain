@@ -385,9 +385,9 @@ class SpaceBankConnectionsView(APIView):
 class BanksView(APIView):
     """Представление для получения списка банков."""
 
-    def get(self, request):
+    def get(self, request, space_pk):
         """Позже привяжем к FinAPI."""
-        
+        print(space_pk)
         czech_banks = [
             {"id": 3001, "name": "Česká spořitelna"},
             {"id": 3002, "name": "ČSOB"},
