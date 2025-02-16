@@ -7,8 +7,8 @@ done
 echo "DB is ready"
 
 # Migrating and collecting statics
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+python backend/manage.py migrate --noinput
+python backend/manage.py collectstatic --noinput
 
 # Launch Gunicorn server
-gunicorn backend.config.wsgi:application --bind 0.0.0.0:8000
+gunicorn backend.config.wsgi:application --bind 0.0.0.0:8000 --timeout 90

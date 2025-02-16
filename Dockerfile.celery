@@ -2,32 +2,29 @@
 
 FROM python:3.11-slim
 
-# Install all needed system packages
+# Установка необходимых системных пакетов
 RUN apt-get update \
     && apt-get install -y netcat-openbsd gcc python3-dev libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Set up work dir
+# Установка рабочей директории
 WORKDIR /app
 
-# Copy and install all requirements
+# Скопируем только requirements.txt для установки зависимостей
 COPY ./backend/requirements.txt /app/requirements.txt
+
+# Установка зависимостей
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the code of the project
-COPY ./backend /app
+# Копирование всего проекта в контейнер, включая папку 'backend'
+COPY . /app/
 
-# Copy the script celery_entrypoint and set up permissions
-COPY ./celery_entrypoint.sh /celery_entrypoint.sh
-RUN chmod +x /celery_entrypoint.sh
+# Копирование скрипта entrypoint и установка прав
+RUN chmod +x /app/celery_entrypoint.sh
 
-# Setting up env varialbe for Django settings
+# Установка переменной окружения для настроек Django
 ENV DJANGO_SETTINGS_MODULE=backend.config.settings
 
-# Lauch script when the container starts
-ENTRYPOINT ["/celery_entrypoint.sh"]
+# Запуск скрипта при старте контейнера
+ENTRYPOINT ["/app/celery_entrypoint.sh"]

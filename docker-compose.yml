@@ -6,13 +6,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    image: spendsplitbackend_web
+    image: spendsplifbackend_web
     restart: always
     env_file:
       - ./backend/config/.env.prod
-    command: gunicorn backend.config.wsgi:application --bind 0.0.0.0:8000
     volumes:
-      - static_volume:/app/static
+      - static_volume:/app/backend/static
     depends_on:
       - db
       - redis
@@ -25,9 +24,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=your_db_name
-      - POSTGRES_USER=your_db_user
-      - POSTGRES_PASSWORD=your_db_password
+      POSTGRES_DB: spendsplif
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Serega20097
     ports:
       - "5432:5432"
 
@@ -41,26 +40,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.celery
-    image: spendsplitbackend_celery_worker
+    image: spendsplifbackend_celery_worker
     restart: always
+    env_file:
+      - ./backend/config/.env.prod
     depends_on:
       - db
       - redis
     volumes:
-      - static_volume:/app/static
+      - static_volume:/app/backend/static
     command: celery -A backend.config worker --pool=solo --loglevel=INFO
 
   celery_beat:
     build:
       context: .
       dockerfile: Dockerfile.celery
-    image: spendsplitbackend_celery_beat
+    image: spendsplifbackend_celery_beat
     restart: always
+    env_file:
+      - ./backend/config/.env.prod
     depends_on:
       - db
       - redis
     volumes:
-      - static_volume:/app/static
+      - static_volume:/app/backend/static
     command: celery -A backend.config beat --loglevel=INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
   nginx:
@@ -70,10 +73,11 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - static_volume:/app/static
+      - static_volume:/app/backend/static
     depends_on:
       - web
 
 volumes:
   postgres_data:
+    driver: local
   static_volume:
