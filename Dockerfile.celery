@@ -1,0 +1,30 @@
+# Dockerfile.celery
+
+FROM python:3.11-slim
+
+# Установка необходимых системных пакетов
+RUN apt-get update \
+    && apt-get install -y netcat-openbsd gcc python3-dev libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Установка рабочей директории
+WORKDIR /app
+
+# Скопируем только requirements.txt для установки зависимостей
+COPY ./backend/requirements.txt /app/requirements.txt
+
+# Установка зависимостей
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копирование всего проекта в контейнер, включая папку 'backend'
+COPY . /app/
+
+# Копирование скрипта entrypoint и установка прав
+RUN chmod +x /app/celery_entrypoint.sh
+
+# Установка переменной окружения для настроек Django
+ENV DJANGO_SETTINGS_MODULE=backend.config.settings
+
+# Запуск скрипта при старте контейнера
+ENTRYPOINT ["/app/celery_entrypoint.sh"]

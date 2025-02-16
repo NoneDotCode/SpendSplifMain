@@ -3,12 +3,14 @@ from typing import Dict
 import jwt
 from rest_framework import generics, permissions
 from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import AllowAny
 
 
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from random import SystemRandom
 from urllib.parse import urlencode
+import random
 
 from django.shortcuts import redirect
 from rest_framework.views import APIView
@@ -19,6 +21,7 @@ from backend.apps.customuser.models import CustomUser
 from backend.apps.customuser.serializers import (
     CustomUserSerializer,
     CustomTokenRefreshSerializer, CheckAppVersionSerializer,
+    ForgotPasswordSerializer, ConfirmValidationSerializer
 )
 from backend.apps.customuser.utils import cookie_response_payload_handler
 from rest_framework.exceptions import APIException
@@ -41,6 +44,10 @@ from django.core.exceptions import ImproperlyConfigured
 from google.oauth2 import id_token
 from oauthlib.common import UNICODE_ASCII_CHARACTER_SET
 import requests as requestss
+from django.utils.translation import get_language_from_request
+from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
+from backend.apps.customuser import translate
 
 
 class CustomUserRegistrationView(generics.CreateAPIView):
@@ -87,13 +94,14 @@ class LogoutView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
+        language = str(request.user.language)
         response = Response()
         response.delete_cookie(
             key=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_NAME'],
             path=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('path', '/'),
             samesite=settings.SIMPLE_JWT['REFRESH_TOKEN_COOKIE_OPTIONS'].get('samesite', 'Lax'),
         )
-        response.data = {"message": "Logout successful."}
+        response.data = translate.logout_success[language.lower()]
         return response
 
 
@@ -639,3 +647,58 @@ class ConfirmNewPasswordView(GenericAPIView):
             return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
         else:
             return Response({'detail': 'Invalid or expired reset code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ForgotPasswordView(GenericAPIView):
+    serializer_class = ForgotPasswordSerializer
+    permission_classes = (AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            verify_code = str(random.randint(1000, 99999999))
+            user = get_object_or_404(CustomUser, email=email)
+            user.verify_new_password = verify_code
+            user.save()
+
+            send_mail(
+                subject="Password Reset Code",
+                message=f"Your password reset code is: {verify_code}",
+                from_email="spendsplif@gmail.com",
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            return Response({"message": "Verification code sent to your email."}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ConfirmValidationPasswordView(GenericAPIView):
+    serializer_class = ConfirmValidationSerializer
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            code = serializer.validated_data['verify_new_password']
+            email = request.data['email']
+
+            # Find the user by code and email
+            try:
+                user = CustomUser.objects.get(verify_new_password=code, email=email)
+            except CustomUser.DoesNotExist:
+                # If the user is not found, return a 400 error with a custom message
+                return Response(
+                    {"error": "Invalid verification code or email."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # If the user is found, update the password
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+
+        # If the data is invalid, return serializer errors
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

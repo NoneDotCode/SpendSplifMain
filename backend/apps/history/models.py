@@ -8,6 +8,7 @@ from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.goal.models import Goal
 from backend.apps.customuser.constants import Currency
+from backend.apps.tink.models import TinkAccount
 
 from backend.apps.category.constants import Icons
 
@@ -17,12 +18,14 @@ class HistoryExpense(models.Model):
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=12, decimal_places=2)
     comment = models.CharField(max_length=300, null=True, blank=True)
-    from_acc = models.JSONField(verbose_name="from_acc", null=False)
+    from_acc = models.JSONField(verbose_name='account', null=True, blank=True)
     to_cat = models.JSONField(verbose_name='to_cat', null=True)
     periodic_expense = models.BooleanField(default=False)
-    new_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    tink_id = models.CharField(blank=True, null=True, unique=True)
+    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING, null=True)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class HistoryIncome(models.Model):
@@ -30,10 +33,12 @@ class HistoryIncome(models.Model):
     currency = models.CharField(max_length=4, choices=Currency.choices, default=Currency.UNITED_STATES_DOLLAR)
     amount_in_default_currency = models.DecimalField(max_digits=20, decimal_places=2)
     comment = models.CharField(max_length=300, blank=True)
-    account = models.JSONField(verbose_name='account', null=False)
-    new_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    account = models.JSONField(verbose_name='account', null=True, blank=True)
+    new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    tink_id = models.CharField(blank=True, null=True, unique=True)
+    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING, null=True)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class HistoryTransfer(models.Model):
@@ -48,4 +53,4 @@ class HistoryTransfer(models.Model):
     goal_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     collected = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(default=datetime.now)
+    created = models.DateTimeField(auto_created=True)

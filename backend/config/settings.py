@@ -4,20 +4,19 @@ from datetime import timedelta
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-env = environ.Env()
+env = environ.Env(
+    DEBUG=(bool, False)
+)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 
 # Quick-start development settings - unsuitable for production
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = "wpx-5^owzo27j^x8mhbrw&57i=*8butq$6_(_n8^9-ifa2^m)j"
-DEBUG = True
-
-
-ALLOWED_HOSTS = ["spendsplif.com", "api.spendsplif.com"]
+SECRET_KEY = env("SECRET_KEY")
+DEBUG = env.bool("DEBUG", default=False)
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 
 # Application definition
@@ -56,16 +55,32 @@ INSTALLED_APPS = [
     "apps.messenger",
     "apps.Dowt",
     "apps.notifications",
+    "apps.tickets",
     "apps.store",
     "apps.community",
+    "apps.tink",
+    "apps.cards",
+    'apps.adminpanel',
+    "apps.excel"
 ]
+
+STRIPE_SECRET_KEY = "sk_test_51QeGGjDwblSo7CmztJGGMhVtjXUFXAQddm2xnoTCNE4pObMuv9fIf4jT0CzlDMnFsCqVR6zUw8v5cMusiYPsXmEo00f60bP16T"
+STRIPE_STANDARD_PRICE_ID = "price_1QeHXaDwblSo7CmzsZoyzHOt"
+STRIPE_PREMIUM_PRICE_ID = "price_1QgXA9DwblSo7CmzBnPfDTWj"
+STRIPE_WEBHOOK_SECRET = "whsec_7FewYEUuldAaSSukV6IiF7LdETLmDo8l"
+STRIPE_PUBLISHABLE_KEY = "pk_test_51QeGGjDwblSo7CmzpbLkYjnFrOVggqKbxJiiBeGH0L6gEhmTKdes0TqiZwmEILay5sZ8C6oWFc5aebej4MSY3GG800WNwDAZdI"
+FRONTEND_URL = "http://localhost:5173"
 
 # Custom user model auth
 
 AUTH_USER_MODEL = "customuser.CustomUser"
 
+FINAPI_CLIENT_ID = 'd637bac7-d3af-4312-b749-f6e2ae468d43'
+FINAPI_CLIENT_SECRET = 'ab045065-2714-4915-bb0f-e99007ec069f'
+
 
 MIDDLEWARE = [
+    'backend.config.middleware.UpdateSpaceLastModifiedMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -103,11 +118,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "spendsplif",
-        "USER": "postgres",
-        "PASSWORD": "gc9!V-APp!69vL8",
-        "HOST": "localhost",
-        "PORT": 5432,
+        "NAME": env("POSTGRES_DB", default="spendsplif"),
+        "USER": env("POSTGRES_USER", default="postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="default_password"),
+        "HOST": env("POSTGRES_HOST", default="db"),
+        "PORT": env.int("POSTGRES_PORT", default=5432),
     }
 }
 
@@ -148,7 +163,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "static/")
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
@@ -206,6 +221,7 @@ SIMPLE_JWT = {
 
 # Cors
 
+
 CORS_ALLOWED_ORIGINS = [
     "https://spendsplif.com",
     "https://api.spendsplif.com"
@@ -226,14 +242,30 @@ CORS_ORIGIN_WHITELIST = [
     "https://api.spendsplif.com"
 ]
 
+# Security headers
+# SESSION_COOKIE_SECURE = True
+# SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
+# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# X_FRAME_OPTIONS = "DENY"  # Prevent clickjacking
+
+# # Rate limiting (e.g., using Django Ratelimit or DRF extensions)
+# REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+#     'rest_framework.throttling.UserRateThrottle',
+# ]
+# REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+#     'user': '8000/day',
+# }
+
+# SQL Injection prevention is handled by Django ORM automatically.
+
 # Celery
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = "redis://10.157.45.147:6379/0"
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_BACKEND = "django-db"
 
 # Email settings
 
@@ -244,8 +276,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
-EMAIL_HOST_USER = "spendsplif@gmail.com"
-EMAIL_HOST_PASSWORD = env("EMAIL_SECRET_KEY")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
@@ -265,8 +297,8 @@ GOOGLE_PROJECT_ID = "spendsplif-000001"
 
 # Custom variables
 
-BASE_BACKEND_URL = 'https://api.spendsplif.com'
-FRONTEND_URL = 'https://spendsplif.com'
+BASE_BACKEND_URL = env('BASE_BACKEND_URL', default='http://localhost:8000')
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 MOBILE_APP_ACTUAL_VERSION = "0.0.1"
 
 SUBSCRIBES_DATA = {
@@ -281,11 +313,24 @@ SUBSCRIBES_DATA = {
 }
 
 STRIPE = {
-    "secret": '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'
-              'djMQqF',
-    "publishableKey": "pk_live_51OaEz8J4gLcb8EJ9itysEpsC4GvCGDycOg2MQHmCn93iZVAfsP3rQ9bqzTqYiDeVsVUUMVjbWV1PY1pIIUnXxc"
-                      "p200k2QBISlL",
-    "webhook_secret_key": "whsec_9mX1SdKRhhSS8vl0GjgiF0AjOZ6I0eum"
+    "secret": 'sk_test_51QeGGjDwblSo7CmztJGGMhVtjXUFXAQddm2xnoTCNE4pObMuv9fIf4jT0CzlDMnFsCqVR6zUw8v5cMusiYPsXmEo00f60bP16T',
+    "payment_callback_url": "localhost:8000/api/v1/store/payment/callback/",
+    "publishableKey": "pk_test_51QeGGjDwblSo7CmzpbLkYjnFrOVggqKbxJiiBeGH0L6gEhmTKdes0TqiZwmEILay5sZ8C6oWFc5aebej4MSY3GG800WNwDAZdI",
+    "webhook_secret_key": "whsec_7FewYEUuldAaSSukV6IiF7LdETLmDo8l"
 }
 
 EXPO_APP_KEY = "d142c3a6-34df-4c3e-993e-fa14fa88d94f"
+
+# For Tink sync
+
+TINK = {
+    "CLIENT_ID": "df402ff180c743fe988144ac9623c0dd",
+    "CLIENT_SECRET": "52e1e6441ecf4e50ba1f0fa92fe586fe"
+}
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 3600

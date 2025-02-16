@@ -33,7 +33,6 @@ class AccountSerializer(serializers.ModelSerializer):
         if obj.balance is not None:
             return convert_number_to_letter(obj.balance)
         return None
-
     def to_representation(self, instance):
         data = super().to_representation(instance)
 

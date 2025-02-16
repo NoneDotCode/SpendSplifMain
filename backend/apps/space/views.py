@@ -3,6 +3,7 @@ from rest_framework import generics
 from backend.apps.account.models import Account
 from backend.apps.category.models import Category
 from backend.apps.customuser.models import CustomUser
+from backend.apps.store.models import PaymentHistory
 from backend.apps.customuser.serializers import CustomUserSerializer
 from backend.apps.notifications.models import Notification
 from backend.apps.space.models import Space, MemberPermissions, SpaceBackup
@@ -26,11 +27,15 @@ from rest_framework.permissions import IsAuthenticated
 import random
 from datetime import timedelta
 from decimal import Decimal
+import datetime
+from django.shortcuts import get_object_or_404
+from django.utils.timezone import now
 from django.utils import timezone
 from rest_framework.views import APIView
 from backend.apps.space.permissions import IsSpaceMember, IsSpaceOwner
 from backend.apps.account.permissions import IsSpaceMember as IsSpaceMemberAcc
 from backend.apps.converter.utils import convert_number_to_letter
+from dateutil.relativedelta import relativedelta
 
 
 class CreateSpace(generics.CreateAPIView):
@@ -95,6 +100,67 @@ class ListOfSpaces(generics.ListAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+
+class ActiveSpace(generics.RetrieveAPIView):
+    serializer_class = SpaceListSerializer
+
+    def get_object(self):
+        # Попробуем найти первый спейс с заполненными member_slots
+        space = Space.objects.filter(
+            members=self.request.user, 
+            members_slots__isnull=False
+        ).first()
+        
+        # Если не найдено, вернем просто первый спейс пользователя
+        if not space:
+            space = Space.objects.filter(
+                members=self.request.user
+            ).first()
+        
+        return space
+
+
+class SpaceStatusView(generics.GenericAPIView):
+    permission_classes = (permissions.IsSpaceMember,)
+
+    def get(self, request, *args, **kwargs):
+        # Получаем space_id из параметров запроса
+        space_pk = self.kwargs['space_pk']
+        
+        if not space_pk:
+            return Response(
+                {'error': 'space_id required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = request.user
+            # Проверяем роли пользователя
+            if ('business_plan' in user.roles or 
+                'business_member_plan' in user.roles or 
+                'free' in user.roles):
+                return Response({'active': True})
+            
+            # Получаем последнюю запись оплаты для данного пространства
+            last_payment = PaymentHistory.objects.filter(
+                payment_category='service',
+                father_space=space_pk
+            ).order_by('-date').first()
+            print(last_payment)
+            
+            # Проверяем, прошло ли больше 12 месяцев с последней оплаты
+            twelve_months_ago = timezone.now() - relativedelta(months=12)
+            is_active = last_payment.date > twelve_months_ago if last_payment else False
+            print(last_payment.date > twelve_months_ago)
+            print(is_active)
+            return Response({'active': is_active})
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class ListOfUsersInSpace(generics.ListAPIView):
@@ -165,33 +231,66 @@ class DeleteSpace(generics.RetrieveDestroyAPIView):
 class AddMemberToSpace(generics.GenericAPIView):
     serializer_class = AddAndRemoveMemberSerializer
     permission_classes = (IsSpaceMember & (IsSpaceOwner | CanAddMembers),)
-
+    
     @staticmethod
     def put(request, *args, **kwargs):
         space_pk = kwargs.get("pk")
-        user_email = request.data.get("user_email", )
+        user_email = request.data.get("user_email")
+        highest_role = request.user.roles[0]
         space = Space.objects.get(pk=space_pk)
-
+        
         try:
             user = CustomUser.objects.get(email=user_email)
         except CustomUser.DoesNotExist:
-            return Response({"error": "User not found."},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        # Check if user is not yet member of the space.
+            return Response(
+                {"error": "User not found."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Check if user is not yet member of the space
         if user in space.members.all():
-            return Response({"error": "User is member of the space already."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Add user to the space.
+            return Response(
+                {"error": "User is member of the space already."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Check if adding a new member would exceed the slots limit
+        current_members_count = space.members.count()
+        if space.members_slots is not None and current_members_count >= space.members_slots:
+            return Response(
+                {"error": f"Cannot add more members. Space is limited to {space.members_slots} members."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Add user to the space
         space.members.add(user)
-
+        
+        # Change user role from 'free' to 'business_member'
+        try:
+            if user.roles and 'free' in user.roles:
+                if highest_role == "business_lic" or highest_role == "business_member_lic":
+                    user.roles = ['business_member_lic']
+                    user.save()
+                    print(f"User role updated to 'business_member_lic' for user {user.username}")
+                elif highest_role == "business_plan" or highest_role == "business_member_plan":
+                    user.roles = ['business_member_plan']
+                    user.save()
+                    print(f"User role updated to 'business_member_lic' for user {user.username}")
+                else:
+                    print(f"User {user.username} already has a non-free role or no roles set.")
+        except Exception as e:
+            print(f"Error updating user role: {str(e)}")
+        
+        # Create notification
         notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
         notification = Notification.objects.create(message=notif_message, importance="Medium")
         notification.who_can_view.set(space.members.all())
-
+        
         # Return success answer
-        return Response({"success": "User successfully added to the space."}, status=status.HTTP_200_OK)
+        return Response(
+            {"success": "User successfully added to the space."}, 
+            status=status.HTTP_200_OK
+        )
 
 
 class RemoveMemberFromSpace(generics.GenericAPIView):
@@ -215,6 +314,16 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
             return Response({"error": "You cannot remove this member from the space"})
 
         space.members.remove(user)
+
+        try:
+            if user.roles and 'business_member_plan' in user.roles or 'business_member_lic' in user.roles:
+                user.roles = ['free']
+                user.save()
+                print(f"User role updated to 'free' for user {user.username}")
+            else:
+                print(f"User {user.username} already has a non-free role or no roles set.")
+        except Exception as e:
+            print(f"Error updating user role: {str(e)}")
 
         return Response({"success": "User successfully removed from the space."}, status=status.HTTP_200_OK)
 
@@ -413,3 +522,16 @@ class LeaveFromSpaceView(generics.GenericAPIView):
                             status=status.HTTP_403_FORBIDDEN)
         MemberPermissions.objects.get(space=space, member=user).delete()
         return Response({"message": "You have successfully left the space"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class CheckSpaceChangesView(APIView):
+    def get(self, request, space_pk):
+        # Получение объекта Space по переданному ID
+        space = get_object_or_404(Space, id=space_pk)
+
+        # Проверка времени последнего изменения
+        time_diff = now() - space.last_modified
+        if time_diff <= datetime.timedelta(seconds=10):
+            return Response({"message": "There's been a change"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "There's no change"}, status=status.HTTP_200_OK)

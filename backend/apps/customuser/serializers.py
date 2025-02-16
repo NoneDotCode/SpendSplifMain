@@ -13,35 +13,40 @@ class GoogleAuthSerializer(serializers.Serializer):
     currency = serializers.CharField(max_length=3, required=False)
 
 
-class CustomUserSerializer(serializers.ModelSerializer, ):
+class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ("id", "username", "email", "password", "language", "tag", "roles")
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
-
+        # Normalize email before checking
+        normalized_email = data.get('email', '').lower()
+        
+        # Check if an account with this normalized email already exists
+        if CustomUser.objects.filter(email__iexact=normalized_email).exists():
+            raise serializers.ValidationError("An account with this email already exists")
+        
+        # Rest of your existing password validation
         password = data.get("password")
         if password:
-
             if not 8 <= len(password) <= 24:
                 raise serializers.ValidationError("the password should be at least 8 characters long")
-
             if password.isdecimal():
                 raise serializers.ValidationError("the password cannot be all numeric")
-
             if len(re.findall(r'[a-zA-Z]', password)) < 4:
                 raise serializers.ValidationError("the password should have more than four letters")
-
             if len(re.findall(r'\d', password)) < 1:
                 raise serializers.ValidationError("the password should have more than 3 numbers")
-
+        
         return data
 
     def update(self, instance, validated_data):
         email_changed = instance.email != validated_data.get("email", instance.email) and validated_data.get(
             "email") is not None
         password_changed = validated_data.get('password') is not None
+        language_changed = validated_data.get('language') is not None
+
 
         # Обновляем почту и пароль одновременно
         if email_changed and password_changed:
@@ -52,6 +57,15 @@ class CustomUserSerializer(serializers.ModelSerializer, ):
         elif password_changed:
             instance.send_password_reset_code()
             instance.new_password = validated_data.get('password')
+
+        # Обновление языка
+        elif language_changed:
+            # Применяем логику для языка
+            language = validated_data.get('language', '').lower()
+            if language == 'cs':
+                instance.language = 'CZECH'
+            else:
+                instance.language = 'ENGLISH'
 
         # Только обновление почты
         elif email_changed:
@@ -143,6 +157,19 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         if code != self.request.user.password_reset_code:
             raise serializers.ValidationError("Incorrect code")
 
+        if new_password:
+            if not 8 <= len(new_password) <= 24:
+                raise serializers.ValidationError("the password should be at least 8 characters long")
+
+            if new_password.isdecimal():
+                raise serializers.ValidationError("the password cannot be all numeric")
+
+            if len(re.findall(r'[a-zA-Z]', new_password)) < 4:
+                raise serializers.ValidationError("the password should have more than four letters")
+
+            if len(re.findall(r'\d', new_password)) < 1:
+                raise serializers.ValidationError("the password should have more than 3 numbers")
+
         self.request.user.set_password(new_password)
         self.request.user.save()
 
@@ -151,3 +178,13 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
 
 class CheckAppVersionSerializer(serializers.Serializer):
     version = serializers.CharField()
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ConfirmValidationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    new_password = serializers.CharField(write_only=True, min_length=4)
+    verify_new_password = serializers.CharField(write_only=True)

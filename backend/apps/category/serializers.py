@@ -19,8 +19,9 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'spent', 'limit', 'limit_formatted', 'color', 'icon', 'father_space',
                   'spent_percentage')
 
+    
     @staticmethod
-    def get_spent_percentage(obj):
+    def get_spent_percentage(obj):        
         if obj.limit and obj.spent is not None:
             return f"{round((obj.spent / obj.limit) * 100)}%"
         return None

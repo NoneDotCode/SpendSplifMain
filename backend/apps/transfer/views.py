@@ -46,7 +46,10 @@ class TransferView(generics.GenericAPIView):
                                                to_acc=account.title,
                                                father_space_id=space_pk,
                                                amount=amount,
-                                               amount_in_default_currency=amount,
+                                               amount_in_default_currency=convert_currencies(
+                                                   from_currency=account.currency,
+                                                   amount=amount,
+                                                   to_currency=to_currency),
                                                currency=from_currency,
                                                goal_amount=goal.goal,
                                                collected=goal.collected,
@@ -61,25 +64,25 @@ class TransferView(generics.GenericAPIView):
                     return Response({"error": "You have not enough money on the account."})
                 account.balance -= amount
                 goal.collected += convert_currencies(amount=amount,
-                                                     from_currency=account.currency,
-                                                     to_currency=to_currency)
+                                                    from_currency=account.currency,
+                                                    to_currency=to_currency)
                 account.save()
                 goal.save()
                 goal_is_done = False
                 if goal.collected >= goal.goal:
                     goal_is_done = True
                 HistoryTransfer.objects.create(from_acc=account.title,
-                                               to_goal=goal.title,
-                                               father_space_id=space_pk,
-                                               amount_in_default_currency=convert_currencies(
-                                                   from_currency=account.currency,
-                                                   amount=amount,
-                                                   to_currency=to_currency),
-                                               goal_amount=goal.goal,
-                                               collected=goal.collected,
-                                               amount=amount,
-                                               currency=to_currency,
-                                               goal_is_done=goal_is_done)
+                                            to_goal=goal.title,
+                                            father_space_id=space_pk,
+                                            amount_in_default_currency=convert_currencies(
+                                                from_currency=account.currency,
+                                                amount=amount,
+                                                to_currency=to_currency),
+                                            goal_amount=goal.goal,
+                                            collected=goal.collected,
+                                            amount=amount,
+                                            currency=to_currency,
+                                            goal_is_done=goal_is_done)
                 return Response({"success": "Transfer successfully completed."}, status=status.HTTP_200_OK)
         elif from_object == "account" and to_object == "account":
             from_account = Account.objects.get(pk=request.data.get("from_account"))

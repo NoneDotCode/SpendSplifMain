@@ -16,7 +16,7 @@ class TotalBalanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = TotalBalance
         fields = ('balance', 'formatted_balance', 'currency', 'total_expenses_this_month', 'total_income_this_month')
-
+    
     @staticmethod
     def get_currency(obj):
         return obj.father_space.currency if obj.father_space else None

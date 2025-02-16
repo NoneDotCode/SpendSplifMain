@@ -51,6 +51,8 @@ class SpendView(generics.GenericAPIView):
         category_pk = request.data.get("category_pk")
         if amount > int(account.balance):
             return Response({"error": "Is not enough money on the balance."}, status=status.HTTP_400_BAD_REQUEST)
+        if amount > 99000000000:
+            return Response({"error": "Amount cannot exceed 99 billion."}, status=status.HTTP_400_BAD_REQUEST)
         account.balance -= amount
         account.save()
 
@@ -137,18 +139,19 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
         highest_role = request.user.roles[0]
 
-        if (highest_role == "premium" or highest_role == "premium/pre") and periodic_spends_count >= 20:
-            return Response({"error": "You can't create more than 20 periodic spends with a premium role."},
+        if (highest_role == "business_lic" or highest_role == "premium/pre") and periodic_spends_count >= 150:
+            return Response({"error": "You can't create more than 150 periodic spends with a Business license role."},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif (highest_role == "standard" or highest_role == "standard/pre") and periodic_spends_count >= 10:
-            return Response({"error": "You can't create more than 10 periodic spends with a standard role."},
+        elif (highest_role == "business_plan" or highest_role == "standard/pre") and periodic_spends_count >= 25:
+            return Response({"error": "You can't create more than 25 periodic spends with a Business plan role."},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        elif highest_role == "free" and periodic_spends_count >= 5:
-            return Response({"error": "You can't create more than 5 periodic spends with a free role."},
+        elif highest_role == "free" and periodic_spends_count >= 1:
+            return Response({"error": "You can't create more than 1 periodic spends with a free role."},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         if amount <= 0:
             return Response({"error": "The amount must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+
 
         schedule, created = CrontabSchedule.objects.get_or_create(hour=hour,
                                                                   minute=minute,

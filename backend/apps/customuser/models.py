@@ -24,15 +24,19 @@ class CustomUserManager(BaseUserManager):
             raise ValidationError("Too many people registered with this username, try another please.")
 
         tag = random.choice(list(available_tags))
+        extra_fields.setdefault("tag", tag)
         email = self.normalize_email(email)
-        user = self.model(email=email, tag=tag, **extra_fields)
+        user = self.model(email=email, **extra_fields)
 
+        user.save(using=self._db)
         user.set_password(password)
         user.save(using=self._db)
+        return user
 
-    def create_superuser(self, email, password=None, username=None, **extra_fields):
+    def create_superuser(self, email, password, username, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
 
         existing_tags = set(CustomUser.objects.filter(username=username).values_list('tag', flat=True))
         available_tags = set(range(1, 10000)) - existing_tags
@@ -40,8 +44,12 @@ class CustomUserManager(BaseUserManager):
             raise ValidationError("Too many people registered with this username, try another please.")
 
         tag = random.choice(list(available_tags))
-
-        return self.create_user(email, password, tag=tag, **extra_fields)
+        extra_fields.setdefault("tag", tag)
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+        return self.create_user(username, email, password, **extra_fields)
 
 
 class CustomUser(AbstractUser):
@@ -53,19 +61,21 @@ class CustomUser(AbstractUser):
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
     email = models.EmailField(unique=True, null=False, blank=False)
     username = models.CharField(max_length=150, unique=False, null=False, blank=False)
+
+    objects = CustomUserManager()
     
     roles_choices = [
         ("free", "Free"),
-        ("standard", "Standard"),
-        ("premium", "Premium"),
+        ("business_plan", "Business plan"),
+        ("business_member_lic", "Business member license"),
+        ("business_member_plan", "Business member plan"),
+        ("business_lic", "Business license"),
         ("sponsor", "Sponsor"),
         ("employee", "Employee"),
-        ("premium/pre", "Premium/Pre"),
-        ("standard/pre", "Standard/Pre")
-    ]
+        ]
     roles = ArrayField(
-        models.CharField(max_length=12, choices=roles_choices), 
-        default=["premium"], 
+        models.CharField(max_length=20, choices=roles_choices), 
+        default=["free"], 
         blank=True
         )
 
@@ -80,11 +90,11 @@ class CustomUser(AbstractUser):
     # The following fields are required when creating a user.
     groups = models.ManyToManyField(Group, related_name="custom_users")
     user_permissions = models.ManyToManyField(Permission, related_name="custom_users")
-
+    verify_new_password = models.CharField(max_length=12, blank=True,null=True)
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
-    def add_role(self, role, *args, **kwargs):
+    def add_role(self, role):
         if role not in [choice[0] for choice in self.roles_choices]:
             raise ValueError(f"Role {role} is not a valide one.")
         if role != self.roles[0]:
@@ -124,7 +134,7 @@ class CustomUser(AbstractUser):
             verify_code = get_random_string(length=8)
             self.verify_code = verify_code
             self.is_active = False
-            send_code_for_verify_email(email=self.email, code=verify_code, flag="registration")
+            send_code_for_verify_email(email=self.email, code=verify_code, flag="registration", language=self.language)
 
         if self.new_email:
             verify_code = get_random_string(length=8)

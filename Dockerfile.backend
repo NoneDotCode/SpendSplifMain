@@ -1,0 +1,32 @@
+# Dockerfile.backend
+
+FROM python:3.11-slim
+
+# Install all needed packages
+RUN apt-get update \
+    && apt-get install -y netcat-openbsd gcc python3-dev libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set up work directory
+WORKDIR /app
+
+# Copy and install all requirements
+COPY ./backend/requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire project into the container
+COPY . /app/
+
+# Ensure entrypoint script has execution permissions
+RUN chmod +x /app/entrypoint.sh
+
+# Set the Django settings module
+ENV DJANGO_SETTINGS_MODULE=backend.config.settings
+
+# Set the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]

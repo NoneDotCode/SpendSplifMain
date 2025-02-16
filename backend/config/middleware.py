@@ -1,6 +1,9 @@
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 import re
+from django.utils.timezone import now
+from django.shortcuts import get_object_or_404
+from backend.apps.space.models import Space
 
 
 class UserAgentMiddleware(MiddlewareMixin):
@@ -27,3 +30,22 @@ class UserAgentMiddleware(MiddlewareMixin):
             return None
 
         return JsonResponse({'error': 'Forbidden'}, status=403)
+
+
+class UpdateSpaceLastModifiedMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.method in ["POST", "PUT"]:
+            # Регулярное выражение для URL с API-версией и идентификатором спейса
+            match = re.match(r"^/api/v1/my_spaces/(?P<space_pk>\d+)/", request.path)
+            if match:
+                space_id = match.group("space_pk")
+                # Обновление last_modified для Space
+                space = get_object_or_404(Space, id=space_id)
+                space.last_modified = now()
+                space.save()
+
+        response = self.get_response(request)
+        return response

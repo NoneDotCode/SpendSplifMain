@@ -4,14 +4,13 @@ from rest_framework import serializers
 class SpendSerializer(serializers.Serializer):
     account_pk = serializers.IntegerField(required=True)
     category_pk = serializers.IntegerField(required=False)
-    amount = serializers.IntegerField(required=True)
+    amount = serializers.IntegerField(required=True, max_value=99000000000)
     comment = serializers.CharField(required=False)
-
 
 class PeriodicSpendCreateSerializer(serializers.Serializer):
     account_pk = serializers.IntegerField(required=True)
     category_pk = serializers.IntegerField(required=True)
-    amount = serializers.FloatField(required=True)
+    amount = serializers.FloatField(required=True, max_value=99000000000)
     title = serializers.CharField(required=True)
     hour = serializers.CharField(required=False, default="10")
     minute = serializers.CharField(required=False, default="00")
@@ -19,11 +18,10 @@ class PeriodicSpendCreateSerializer(serializers.Serializer):
     day_of_month = serializers.CharField(required=False, default="*")
     month_of_year = serializers.CharField(required=False, default="*")
 
-
 class PeriodicSpendEditSerializer(serializers.Serializer):
     account_pk = serializers.IntegerField(required=False, default=None)
     category_pk = serializers.IntegerField(required=False, default=None)
-    amount = serializers.FloatField(required=False, default=None)
+    amount = serializers.FloatField(required=False, default=None, max_value=99000000000)
     title = serializers.CharField(required=False, default=None)
     hour = serializers.CharField(required=False, default=None)
     minute = serializers.CharField(required=False, default=None)

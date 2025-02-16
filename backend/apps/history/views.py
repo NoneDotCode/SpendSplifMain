@@ -75,6 +75,7 @@ class HistoryView(APIView):
             formatted_time = localized_time.strftime('%H:%M')
 
             if isinstance(item, HistoryIncome):
+                balance_value = float(item.account.get("balance", 0))
                 serialized_data.append({
                     "id": item.id,
                     "type": "income",
@@ -82,11 +83,12 @@ class HistoryView(APIView):
                     "currency": item.currency,
                     "comment": item.comment,
                     "account": item.account["title"],
-                    "account_balance": convert_number_to_letter(item.account["balance"]),
+                    "account_balance": convert_number_to_letter(balance_value),
                     "created_date": formatted_date,
                     "created_time": formatted_time,
                 })
             elif isinstance(item, HistoryExpense):
+                balance_value = float(item.from_acc.get("balance", 0))
                 try:
                     cat_title, cat_icon, history_type = item.to_cat["title"], item.to_cat["icon"], "expense"
                 except TypeError:
@@ -98,7 +100,7 @@ class HistoryView(APIView):
                     "currency": item.currency,
                     "comment": item.comment,
                     "account": item.from_acc["title"],
-                    "account_balance": convert_number_to_letter(item.from_acc["balance"]),
+                    "account_balance": convert_number_to_letter(balance_value),
                     "category_title": cat_title,
                     "category_icon": cat_icon,
                     "periodic_expense": item.periodic_expense,
@@ -503,21 +505,21 @@ class CategoryStatisticView(generics.ListAPIView):
         formatted_result = {}
         for period, period_expenses in expenses.items():
             if not period_expenses:
-                formatted_result[period.capitalize()] = {}
-                formatted_result[f"{period.capitalize()}_Percent"] = {}
+                formatted_result[period] = {}
+                formatted_result[f"{period}_Percent"] = {}
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"You didn't make any category expenditures this {period}"
+                    f"Analyze_{period}"] = f"You didn't make any category expenditures this {period}"
             else:
                 space = Space.objects.get(pk=self.kwargs.get("space_pk"))
                 summary, percentages = self.get_summary_and_percentages(period_expenses)
-                formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
-                formatted_result[f"{period.capitalize()}_Percent"] = percentages
+                formatted_result[period] = self.add_currency(summary, space.currency)
+                formatted_result[f"{period}_Percent"] = percentages
                 if summary:
                     max_spending_category = max(summary, key=summary.get)
                 else:
                     max_spending_category = "No categories"
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"This {period}, you spend most on {max_spending_category} category"
+                    f"Analyze_{period}"] = f"This {period}, you spend most on {max_spending_category} category"
         return formatted_result
 
     def list(self, request, *args, **kwargs) -> Response:
@@ -602,17 +604,17 @@ class IncomeStatisticView(generics.ListAPIView):
 
         for period, period_incomes in periods.items():
             summary, percentages = self.get_summary_and_percentages(period_incomes)
-            formatted_result[period.capitalize()] = self.add_currency(summary, space.currency)
-            formatted_result[f"{period.capitalize()}_Percent"] = percentages
+            formatted_result[period] = self.add_currency(summary, space.currency)
+            formatted_result[f"{period}_Percent"] = percentages
 
             if summary:
                 max_income_date = max(summary, key=summary.get)
                 max_income_value = summary[max_income_date]
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"For this {period} the most {max_income_value} {space.currency} you earned on {max_income_date}"
+                    f"Analyze_{period}"] = f"For this {period} the most {max_income_value} {space.currency} you earned on {max_income_date}"
             else:
                 formatted_result[
-                    f"Analyze_{period.capitalize()}"] = f"For this {period} you did not receive any income."
+                    f"Analyze_{period}"] = f"For this {period} you did not receive any income."
 
         return formatted_result
 
@@ -633,17 +635,17 @@ class ExpensesStatisticView(generics.ListAPIView):
     def get_periods(expenses: List[HistoryExpense]) -> Dict[str, List[HistoryExpense]]:
         now = timezone.now()
         periods = {
-            'Week': [],
-            'Month': [],
-            'Three_month': [],
-            'Year': [],
+            'week': [],
+            'month': [],
+            'three_month': [],
+            'year': [],
         }
         for expense in expenses:
             days_since_creation = (now - expense.created).days
             if days_since_creation < 365:
                 periods['Year'].append(expense)
             if days_since_creation < 90:
-                periods['Three_month'].append(expense)
+                periods['three_month'].append(expense)
             if days_since_creation < 30:
                 periods['Month'].append(expense)
             if days_since_creation < 7:
@@ -749,10 +751,10 @@ class GoalTransferStatisticView(generics.ListAPIView):
     @staticmethod
     def _init_periods() -> Dict[str, List[HistoryTransfer]]:
         return {
-            'Week': [],
-            'Month': [],
-            'Three_month': [],
-            'Year': [],
+            'week': [],
+            'month': [],
+            'three_month': [],
+            'year': [],
         }
 
     @staticmethod
@@ -768,17 +770,17 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def _add_to_periods(periods: Dict[str, List[HistoryTransfer]], transfer: HistoryTransfer,
                         days_since_creation: int) -> None:
         if days_since_creation < 7:
-            periods['Week'].append(transfer)
-            periods['Month'].append(transfer)
-            periods['Three_month'].append(transfer)
-            periods['Year'].append(transfer)
+            periods['week'].append(transfer)
+            periods['month'].append(transfer)
+            periods['three_month'].append(transfer)
+            periods['year'].append(transfer)
         elif days_since_creation < 30:
-            periods['Month'].append(transfer)
-            periods['Three_month'].append(transfer)
-            periods['Year'].append(transfer)
+            periods['month'].append(transfer)
+            periods['three_month'].append(transfer)
+            periods['year'].append(transfer)
         elif days_since_creation < 90:
-            periods['Three_month'].append(transfer)
-            periods['Year'].append(transfer)
+            periods['three_month'].append(transfer)
+            periods['year'].append(transfer)
         else:
             periods['Year'].append(transfer)
 
@@ -885,10 +887,10 @@ class GeneralView(generics.GenericAPIView):
 
     def get(self, request, space_pk, *args, **kwargs):
         data = {
-            "Week": self.get_data_and_percentages(6, space_pk),
-            "Month": self.get_data_and_percentages(29, space_pk),
-            "Three_month": self.get_data_and_percentages(89, space_pk),
-            "Year": self.get_data_and_percentages(364, space_pk)
+            "week": self.get_data_and_percentages(6, space_pk),
+            "month": self.get_data_and_percentages(29, space_pk),
+            "three_month": self.get_data_and_percentages(89, space_pk),
+            "year": self.get_data_and_percentages(364, space_pk)
         }
 
         # Удаление пустых записей
@@ -1088,9 +1090,9 @@ class RecurringPaymentsStatistic(generics.ListAPIView):
         for period, period_expenses in expenses.items():
             summary, percentages = self.get_summary_and_percentages(period_expenses)
             period_sum = sum(summary.values())
-            formatted_result[period.capitalize()] = self.add_currency(summary, currency)
-            formatted_result[f"{period.capitalize()}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
-            formatted_result[f"Analyze_{period.capitalize()}"] = self.get_analysis_message(summary, currency, period)
+            formatted_result[period] = self.add_currency(summary, currency)
+            formatted_result[f"{period}_Percent"] = self.get_percentage_for_summary(summary, period_sum)
+            formatted_result[f"Analyze_{period}"] = self.get_analysis_message(summary, currency, period)
         return formatted_result
 
     @staticmethod
