@@ -122,7 +122,7 @@ class FinAPIClient:
                 "waitForCategorization": True,
                 "maxTransactionsCount": 100,
             },
-            "callbackHandle": space_pk,
+            "callbackHandle": str(space_pk),
             "includeDetails": True,
         }
         return self._request("POST", "/api/v2/notificationRules", data=payload, access_token=access_token)
