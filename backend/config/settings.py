@@ -1,7 +1,6 @@
 import os
 from datetime import timedelta
 
-import dj_database_url
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -9,7 +8,6 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 # Quick-start development settings - unsuitable for production
 
@@ -91,6 +89,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "backend.config.middleware.UserAgentMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -211,8 +210,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_COOKIE_OPTIONS': {
         'max_age': 604800,
         'httponly': True,
-        'samesite': 'Lax',
-        'secure': False,
+        'samesite': "None",
+        'secure': True,
         'path': '/',
         },
 
@@ -222,34 +221,25 @@ SIMPLE_JWT = {
 
 # Cors
 
-CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[
-    "http://localhost:5173",
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "http://localhost",])
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+CORS_ALLOWED_ORIGINS = [
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
+]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTP_ONLY = False
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://3000",
-    "http://127.0.0.1:8000",
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://127.0.0.1:8000",
-    ]
-SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SAMESITE = "None"
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:5173",
-    "http://localhost:5473",
-    "http://127.0.0.1:8000",
+    "https://spendsplif.com",
+    "https://api.spendsplif.com"
 ]
 
 # Security headers
