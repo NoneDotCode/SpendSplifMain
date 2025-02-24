@@ -16,7 +16,11 @@ environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env.bool("DEBUG")
+def get_debug_setting():
+    debug_str = os.environ.get('DEBUG', 'True')  
+    return debug_str.lower() != 'false'  
+
+DEBUG = get_debug_setting()
 
 ALLOWED_HOSTS = ["*"]
 
