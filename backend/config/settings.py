@@ -15,7 +15,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env.bool("DEBUG", default=False)
+def get_debug_setting():
+    debug_str = os.environ.get('DEBUG', 'True')  
+    return debug_str.lower() != 'false'  
+
+DEBUG = get_debug_setting()
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 
