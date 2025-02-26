@@ -2,7 +2,7 @@ from django.urls import path
 from backend.apps.cards.views import (
     BankConnectionView,
     BankConnectionWebhook,
-    BankTransactionsAndBalanceWebhook,
+    DeleteBankAccountView,
     BanksView,
     UserSpaceView,
     SpaceBankConnectionsView
@@ -14,5 +14,5 @@ urlpatterns = [
     path('my_connections/', SpaceBankConnectionsView.as_view(), name='my-connections'),
     path('user-bank/', UserSpaceView.as_view(), name='user-space'),
     path('webhook/bank/connection/', BankConnectionWebhook.as_view(), name='bank-connection-webhook'),
-    path('webhook/bank/transactions/', BankTransactionsAndBalanceWebhook.as_view(), name='bank-transactions-webhook'),
+    path('delete_bank_account/', DeleteBankAccountView.as_view(), name='account-connection-delete'),
 ]

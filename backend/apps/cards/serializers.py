@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
 from backend.apps.space.models import Space, MemberPermissions
-from backend.apps.cards.models import BankConnection, UserSpace, ClientToken
+from backend.apps.cards.models import BankConnection, UserSpace, ClientToken, ConnectedAccounts
 from django.shortcuts import get_object_or_404
 import string
 import random
@@ -32,20 +32,25 @@ class BankConnectionSerializer(serializers.ModelSerializer):
     created = serializers.SerializerMethodField()
     income = serializers.SerializerMethodField()
     expenses = serializers.SerializerMethodField()
-    
+    bankConnectionName = serializers.SerializerMethodField()
+
     class Meta:
-        model = BankConnection
-        fields = ['bankConnectionName', 'balance', 'currency', 'created', 'income', 'expenses']
+        model = ConnectedAccounts
+        fields = ['accountIban', 'accountId', 'balance', 'currency', 'created', 'income', 'expenses', 'bankConnectionName']
 
     def get_created(self, obj):
         return obj.created_at.strftime('%d.%m.%Y')
-    
+
     def get_income(self, obj):
         return "0.00"
-    
+
     def get_expenses(self, obj):
         return "0.00"
 
+    def get_bankConnectionName(self, obj):
+        bank_name = obj.bankConnection.bankConnectionName if obj.bankConnection else "Unknown"
+        iban_prefix = obj.accountIban[:8] + "..." if obj.accountIban else "N/A"
+        return f"{bank_name} - {iban_prefix}"
 
 
 # Сериализатор для модели UserSpace
@@ -104,13 +109,6 @@ class FinAPIRefreshTokenSerializer(serializers.Serializer):
 
 # Сериализатор для создания пользователя
 class UserCreateSerializer(serializers.Serializer):
-    phone = serializers.CharField(max_length=255)
-
-    def validate_phone(self, value):
-        if not value.startswith('+'):
-            raise serializers.ValidationError("Phone number must start with '+'.")
-        return value
-
     def validate(self, data):
         space_pk = self.context.get('space_pk')
         if not space_pk:
