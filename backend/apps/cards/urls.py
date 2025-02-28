@@ -13,6 +13,5 @@ urlpatterns = [
     path('banks/', BanksView.as_view(), name='czech-banks'),
     path('my_connections/', SpaceBankConnectionsView.as_view(), name='my-connections'),
     path('user-bank/', UserSpaceView.as_view(), name='user-space'),
-    path('webhook/bank/connection/', BankConnectionWebhook.as_view(), name='bank-connection-webhook'),
     path('delete_bank_account/', DeleteBankAccountView.as_view(), name='account-connection-delete'),
 ]

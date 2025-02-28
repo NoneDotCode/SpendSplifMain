@@ -129,8 +129,8 @@ class FinAPIClient:
                 "id": bank_id
             },
             "callbacks": {
-                "finalised": f"https://api.spendsplif.com/api/v1/my_spaces/{space_pk}/webhook/bank/connection/"
-                # "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/my_spaces/{space_pk}/webhook/bank/connection/"
+                # "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
+                "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
             },
             "bankConnectionName": bank_connection_name,
             "maxDaysForDownload": 60
@@ -173,6 +173,7 @@ class FinAPIClient:
             "includeDetails": True,
         }
         return self._request("POST", "/api/v2/notificationRules", data=payload, access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API)
+
 
 class UserAuthView(APIView):
     """Представление для аутентификации пользователя и создания токенов доступа."""
@@ -464,7 +465,7 @@ class BanksView(APIView):
         token_obj = ClientToken.objects.first()
         return token_obj.access_token if token_obj else None
 
-    def get(self, request):
+    def get(self, request, space_pk=None):
         """Получение списка чешских банков из FinAPI."""
         finapi_url = "https://sandbox.finapi.io/api/v2/banks"
         token = self.get_finapi_token()
@@ -478,6 +479,8 @@ class BanksView(APIView):
         }
 
         response = requests.get(finapi_url, headers=headers, params=params)
+
+        print(response)
 
         if response.status_code == 200:
             banks_data = response.json().get("banks", [])
