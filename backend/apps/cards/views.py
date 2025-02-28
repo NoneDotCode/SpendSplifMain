@@ -1,31 +1,26 @@
-from rest_framework import serializers, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+import json
+import random
+import string
+from datetime import timedelta
+
+import requests
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from datetime import timedelta
-from rest_framework.request import Request
-from rest_framework.permissions import AllowAny 
-import json
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from backend.apps.space.models import Space
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.cards.models import UserSpace, ClientToken, BankConnection, ConnectedAccounts
+from backend.apps.space.models import Space
 from .serializers import (
-    FinAPICreateTokenSerializer,
     UserCreateSerializer,
-    FinAPIRefreshTokenSerializer,
     UserSpaceSerializer,
-    TransactionsRequestSerializer,
     BankConnectionSerializer
 )
-
-import string
-import random
-import uuid
-import requests
 
 
 def generate_secure_password(length=12):
@@ -46,6 +41,18 @@ class FinAPIClient:
         """Получает последний FinAPI токен КЛИЕНТА из базы данных"""
         token_obj = ClientToken.objects.first()
         return token_obj.access_token if token_obj else None
+
+    def refresh_or_authenticate_user(self, user_space):
+        """Обновляет или получает новый токен доступа для пользователя."""
+        user_response = self.refresh_token(user_space.refresh_token, grant_type="refresh_token")
+        if 'error' in user_response:
+            user_response = self.auth_token(user_space.password, user_space.username, grant_type="password")
+        access_token = user_response.get("access_token")
+        user_space.access_token = access_token
+        user_space.refresh_token = user_response.get("refresh_token")
+        user_space.updated_at = timezone.now()
+        user_space.save()
+        return access_token
 
     def _request(self, method, endpoint, content_type, BASE_URL, data=None, params=None, access_token=None):
         """Базовый метод для выполнения HTTP-запросов к FinAPI"""
@@ -171,7 +178,8 @@ class UserAuthView(APIView):
     """Представление для аутентификации пользователя и создания токенов доступа."""
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, space_pk):
+    @staticmethod
+    def post(request, space_pk):
         """Обрабатывает POST-запрос для создания пользователя и получения токенов."""
         serializer = UserCreateSerializer(data=request.data, context={'space_pk': space_pk, 'request': request})
         if not serializer.is_valid():
@@ -182,29 +190,17 @@ class UserAuthView(APIView):
         member_email = serializer.validated_data['user_email']
 
         finapi_client = FinAPIClient()
-        user_space_created = UserSpace.objects.filter(space=space, user=user, access_token__isnull=False).first()
         user_space = UserSpace.objects.filter(space=space, user=user).first()
 
-        if user_space is None:
+        if not user_space:
             return Response("error", status=status.HTTP_400_BAD_REQUEST)
 
-        # Проверка на None
-        if user_space_created is not None and user_space_created.updated_at > timezone.now() - timedelta(hours=1):
+        if user_space.access_token and user_space.updated_at > timezone.now() - timedelta(hours=1):
             return Response(UserSpaceSerializer(user_space).data, status=status.HTTP_200_OK)
-        elif user_space_created is not None:
-            refresh_token = user_space_created.refresh_token
-            user_response = finapi_client.refresh_token(refresh_token, grant_type="refresh_token")
-            if 'error' in user_response:
-                username = user_space_created.username
-                password = user_space_created.password
-                user_response = finapi_client.auth_token(password, username, grant_type="password")
-                return Response(user_response, status=status.HTTP_200_OK)
-            access_token = user_response.get("access_token")
-            user_space_created.access_token = access_token
-            user_space_created.refresh_token = user_response.get("refresh_token")
-            user_space_created.updated_at = timezone.now()
-            user_space_created.save()
-            return Response(user_response, status=status.HTTP_200_OK)
+
+        if user_space.refresh_token:
+            access_token = finapi_client.refresh_or_authenticate_user(user_space)
+            return Response({'access_token': access_token}, status=status.HTTP_200_OK)
 
         generated_password = generate_secure_password()
         phone = user_space.phone
@@ -218,10 +214,7 @@ class UserAuthView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         except Exception as e:
-            return Response(
-                {'detail': f"{e}"}, 
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+            return Response({'detail': f"{e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         username = user_response.get('id')
         password = user_response.get('password')
@@ -245,7 +238,8 @@ class BankConnectionView(APIView):
     """Представление для импорта банковских подключений."""
     permission_classes = [IsAuthenticated, IsSpaceMember]
 
-    def _is_valid_bank_name(self, bank_name):
+    @staticmethod
+    def _is_valid_bank_name(bank_name):
         """Проверяет валидность имени банковского подключения."""
         return bank_name and 2 <= len(bank_name) <= 50
 
@@ -260,21 +254,9 @@ class BankConnectionView(APIView):
         bank_id = request.data.get('bank_id')
 
         # Аутентификация пользователя
-        user_auth_view = UserAuthView()
-        auth_response = user_auth_view.post(request, space_pk=space.pk)
-
-        if auth_response.status_code != status.HTTP_200_OK and auth_response.status_code != status.HTTP_201_CREATED:
-            return auth_response
-
-        # Проверяем, что data - это словарь
-        if isinstance(auth_response.data, dict):
-            access_token = auth_response.data.get('access_token')
-        else:
-            # Если data не словарь, значит в ответе строка с токеном
-            access_token = auth_response.data
-
-        if not access_token:
-            return Response({'error': 'Failed to retrieve user token'}, status=status.HTTP_400_BAD_REQUEST)
+        access_token = self._get_access_token(request, space_pk)
+        if isinstance(access_token, Response):
+            return access_token
 
         # Импорт банковского подключения
         finapi_client = FinAPIClient()
@@ -286,27 +268,38 @@ class BankConnectionView(APIView):
         # Получение значений из словаря response
         webform_id = response.get('id')
         redirect_url = response.get('url')
-        bank_connection_id = response.get('payload', {}).get('bankConnectionId')
-        
+
         if not webform_id or not redirect_url:
             return Response({'error': 'Invalid response from FinAPI'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        bank_connection = BankConnection.objects.create(
+
+        BankConnection.objects.create(
             user=request.user,
             space=space,  # Важно добавить space в модель
             bankConnectionName=bank_connection_name,
             status="WAITING",
             webFormId=webform_id,
         )
-        
+
         return Response({"url": redirect_url}, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _get_access_token(request, space_pk):
+        """Obtains the access token for FinAPI."""
+        auth_response = UserAuthView.post(request, space_pk)
+        if auth_response.status_code not in [status.HTTP_200_OK, status.HTTP_201_CREATED]:
+            return auth_response
+
+        if isinstance(auth_response.data, dict):
+            return auth_response.data.get('access_token')
+        return auth_response.data
 
 
 class BankConnectionWebhook(APIView):
     """Представление на которое будут приходить запросы о статусе банковских подключений."""
-    permission_classes = [AllowAny,]
+    permission_classes = [AllowAny]
 
-    def post(self, request, space_pk):
+    @staticmethod
+    def post(request):
         """Обрабатывает POST-запрос и обновляет статус банковского подключения"""
         print(request, request.data)
         webFormId = request.data.get('webFormId')
@@ -316,20 +309,14 @@ class BankConnectionWebhook(APIView):
         space = bank_connection.space
         if not space:
             return Response({'message': 'No transactions available'}, status=status.HTTP_200_OK)
-        
+
         space_pk = space.pk
 
         finapi_client = FinAPIClient()
         user_space = UserSpace.objects.filter(space=space, user=bank_connection.user, access_token__isnull=False).first()
-        user_response = finapi_client.refresh_token(user_space.refresh_token, grant_type="refresh_token")
-        if 'error' in user_response:
-            username = user_space.username
-            password = user_space.password
-            user_response = finapi_client.auth_token(password, username, grant_type="password")
+        user_response = UserAuthView._get_or_refresh_token(user_space, finapi_client)
         access_token = user_response.get("access_token")
-        user_space.access_token = access_token
-        user_space.refresh_token = user_response.get("refresh_token")
-        user_space.save()
+        UserAuthView._update_user_space(user_space, user_response)
 
         bank_connection.status = connection_status
         bank_connection.save()
@@ -378,53 +365,55 @@ class BankConnectionWebhook(APIView):
 
 
 class BankTransactionsAndBalanceWebhook(APIView):
-    """Представление на которое будут приходить транзакции и обновление баланса банковского счета."""
-    def post(self, request, space_pk):
-        """Обрабатывает POST-запрос и обновляет баланс или добавляет транзакцию"""
+    """Webhook view to receive transactions and balance updates."""
+
+    @staticmethod
+    def post(request):
+        """Handles POST request to update balance or add a transaction."""
         print(request.data)
         triggerEvent = request.data.get('triggerEvent')
         callbackHandle = request.data.get('callbackHandle')
-       
+
         space_pk = callbackHandle
         space = Space.objects.filter(pk=space_pk).first()
         if not space:
             return Response("Space not found", status=status.HTTP_404_NOT_FOUND)
-        
+
         if triggerEvent == "NEW_TRANSACTIONS":
             print("Trigger NEW_TRANSACTIONS")
             new_transactions = request.data.get('newTransactions', [])
-            
+
             for transaction in new_transactions:
                 account_name = transaction.get('accountName')
                 bank_connection_name = transaction.get('bankConnectionName')
                 details = transaction.get('details')
-                
+
                 if details:
                     try:
                         details_data = json.loads(details)
                         transactions_details = details_data.get('transactionDetails', [])
-                        
+
                         for detail in transactions_details:
                             amount = detail.get('amount', 0)
-                            transaction_type = "доход" if amount >= 0 else "трата"
-                            
+                            transaction_type = "income" if amount >= 0 else "expense"
+
                             print("------------------------------------------------")
-                            print(f"Тип: {transaction_type}")
-                            print(f"Сумма: {abs(amount)}")
-                            print(f"Банк: {bank_connection_name}")
-                            print(f"Счёт: {account_name}")
-                            print(f"Категория: {detail.get('categoryName', 'Не указана')}")
-                            print(f"Назначение: {detail.get('purpose', 'Не указано')}")
-                            if transaction_type == "трата":
-                                print(f"Магазин: {detail.get('counterpartName', 'Не указан')}")
-                            
+                            print(f"Type: {transaction_type}")
+                            print(f"Amount: {abs(amount)}")
+                            print(f"Bank: {bank_connection_name}")
+                            print(f"Account: {account_name}")
+                            print(f"Category: {detail.get('categoryName', 'Not specified')}")
+                            print(f"Purpose: {detail.get('purpose', 'Not specified')}")
+                            if transaction_type == "expense":
+                                print(f"Store: {detail.get('counterpartName', 'Not specified')}")
+
                     except Exception as e:
                         print(f"Error parsing transaction details: {e}")
                         continue
-                        
+
         elif triggerEvent == "NEW_ACCOUNT_BALANCE":
             balance_changes = request.data.get('balanceChanges', [])
-           
+
             for change in balance_changes:
                 bank_connection_name = change.get('bankConnectionName')
                 details = change.get('details')
@@ -449,19 +438,20 @@ class BankTransactionsAndBalanceWebhook(APIView):
 
 
 class SpaceBankConnectionsView(APIView):
-    def get(self, request, space_pk):
+    @staticmethod
+    def get(request, space_pk):
         # Получаем пространство по pk или возвращаем 404
         space = get_object_or_404(Space, pk=space_pk)
-        
+
         # Получаем все банковские подключения для данного пространства
         bank_connections = BankConnection.objects.filter(space=space, user=request.user)
-        
+
         # Получаем все связанные счета
         connections = ConnectedAccounts.objects.filter(bankConnection__in=bank_connections)
-        
+
         # Сериализуем данные
         serializer = BankConnectionSerializer(connections, many=True)
-        
+
         return Response(serializer.data)
 
 
@@ -474,10 +464,10 @@ class BanksView(APIView):
         token_obj = ClientToken.objects.first()
         return token_obj.access_token if token_obj else None
 
-    def get(self, request, space_pk):
+    def get(self, request):
         """Получение списка чешских банков из FinAPI."""
         finapi_url = "https://sandbox.finapi.io/api/v2/banks"
-        token=self.get_finapi_token()
+        token = self.get_finapi_token()
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/json"
@@ -488,25 +478,26 @@ class BanksView(APIView):
         }
 
         response = requests.get(finapi_url, headers=headers, params=params)
-        
+
         if response.status_code == 200:
             banks_data = response.json().get("banks", [])
             result = [{"id": bank["id"], "name": bank["name"]} for bank in banks_data if bank.get("location") == "CZ"]
             return Response(result, status=status.HTTP_200_OK)
-        
-        return Response({"error": "Не удалось получить данные из FinAPI"}, status=response.status_code)
+
+        return Response({"error": "Failed to retrieve data from FinAPI"}, status=response.status_code)
 
 
 class UserSpaceView(APIView):
-    def get(self, request, space_pk):
+    @staticmethod
+    def get(request, space_pk):
         user = request.user
-        
+
         if not space_pk:
             return Response({"message": "space_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         space = get_object_or_404(Space, id=space_pk)
         user_space = UserSpace.objects.filter(user=user, space=space).first()
-        
+
         if user_space:
             return Response({"phone": user_space.phone}, status=status.HTTP_200_OK)
         return Response({"message": "No record found"}, status=status.HTTP_400_BAD_REQUEST)
@@ -514,37 +505,39 @@ class UserSpaceView(APIView):
     def post(self, request, space_pk):
         user = request.user
         phone = request.data.get('phone')
-        
+
         if not space_pk or not phone:
             return Response({"message": "space_pk and phone are required"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         space = get_object_or_404(Space, id=space_pk)
         
         # Проверка валидности номера телефона
         if not self._is_valid_phone(phone):
             return Response({"message": "Invalid phone number"}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         user_space, created = UserSpace.objects.update_or_create(
             user=user,
             space=space,
             defaults={"phone": phone, "username": user.username}
         )
-        
+
         return Response({
             "message": "Record updated" if not created else "Record created",
             "phone": user_space.phone
         }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
 
-    def _is_valid_phone(self, phone):
+    @staticmethod
+    def _is_valid_phone(phone):
         """Проверяет валидность номера телефона."""
         return phone and phone.startswith('+') and 2 <= len(phone) <= 50
 
 
 class DeleteBankAccountView(APIView):
-    """Представление для удаления банковского счета и отвязки его от FinAPI."""
+    """View to delete a bank account and unlink it from FinAPI."""
     permission_classes = [IsAuthenticated, IsSpaceMember]
 
-    def delete(self, request, space_pk):
+    @staticmethod
+    def delete(request, space_pk):
         """Обрабатывает DELETE-запрос для удаления счета."""
         print(request.data)
         account_id = request.data.get('accountId')
@@ -560,21 +553,9 @@ class DeleteBankAccountView(APIView):
         )
 
         # Получаем access_token для FinAPI
-        user_auth_view = UserAuthView()
-        auth_response = user_auth_view.post(request, space_pk)
-
-        if auth_response.status_code != status.HTTP_200_OK and auth_response.status_code != status.HTTP_201_CREATED:
-            return auth_response
-        
-        # Проверяем, что data - это словарь
-        if isinstance(auth_response.data, dict):
-            access_token = auth_response.data.get('access_token')
-        else:
-            # Если data не словарь, значит в ответе строка с токеном
-            access_token = auth_response.data
-
-        if not access_token:
-            return Response({'error': 'Failed to retrieve user token'}, status=status.HTTP_400_BAD_REQUEST)
+        access_token = BankConnectionView._get_access_token(request, space_pk)
+        if isinstance(access_token, Response):
+            return access_token
 
         # Удаляем счет из FinAPI
         finapi_client = FinAPIClient()
