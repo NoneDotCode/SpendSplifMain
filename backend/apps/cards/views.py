@@ -75,12 +75,43 @@ class FinAPIClient:
             else:
                 response = requests.request(method, url, json=data, params=params, headers=headers)
             
+            # Проверяем статус код ответа
+            if response.status_code == 200 and not response.text:
+                # Пустой ответ с кодом 200 - это нормально
+                return {}
+            
             response.raise_for_status()
+            print("Ответ", response.json())
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Request error: {str(e)}")
             print(f"Details: {e.response.text if e.response else 'No response body available'}")
             return {'error': str(e)}
+
+    def make_finapi_token(self):
+        """Обновляет токен клиента FinAPI."""
+        payload = {
+            'grant_type': 'client_credentials',
+            'client_id': settings.FINAPI_CLIENT_ID,
+            'client_secret': settings.FINAPI_CLIENT_SECRET,
+        }
+        response = self._request("POST", "/api/v2/oauth/token", data=payload, content_type='application/x-www-form-urlencoded', BASE_URL=self.BASE_URL_API)
+        
+        # Если ответ пустой или содержит ошибку
+        if not response or 'error' in response:
+            return {'error': 'Failed to refresh FinAPI token'}
+        
+        # Сохраняем новый токен в базе данных
+        token_obj, _ = ClientToken.objects.get_or_create()
+        token_obj.access_token = response.get('access_token')
+        token_obj.save()
+        self.token = response.get('access_token')
+        
+        return response
+
+    def delete_account(self, access_token, account_id):
+        """Удаляет привязанный счет в FinAPI"""
+        return self._request("DELETE", f"/api/v2/accounts/{account_id}", access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API,)
 
     def create_user(self, member_email, generated_password, phone):
         """Создаёт пользователя в FinAPI"""
@@ -180,6 +211,23 @@ class UserAuthView(APIView):
     permission_classes = [IsAuthenticated]
 
     @staticmethod
+    def _get_or_refresh_token(user_space, finapi_client):
+        """Получает новый токен или обновляет существующий."""
+        user_response = finapi_client.refresh_token(user_space.refresh_token, grant_type="refresh_token")
+        if 'error' in user_response:
+            username = user_space.username
+            password = user_space.password
+            user_response = finapi_client.auth_token(password, username, grant_type="password")
+        return user_response
+    
+    @staticmethod
+    def _update_user_space(user_space, user_response):
+        """Обновляет токены в объекте UserSpace."""
+        user_space.access_token = user_response.get("access_token")
+        user_space.refresh_token = user_response.get("refresh_token")
+        user_space.save()
+
+    @staticmethod
     def post(request, space_pk):
         """Обрабатывает POST-запрос для создания пользователя и получения токенов."""
         serializer = UserCreateSerializer(data=request.data, context={'space_pk': space_pk, 'request': request})
@@ -200,7 +248,9 @@ class UserAuthView(APIView):
             return Response(UserSpaceSerializer(user_space).data, status=status.HTTP_200_OK)
 
         if user_space.refresh_token:
-            access_token = finapi_client.refresh_or_authenticate_user(user_space)
+            user_response = UserAuthView._get_or_refresh_token(user_space, finapi_client)
+            access_token = user_response.get("access_token")
+            UserAuthView._update_user_space(user_space, user_response)
             return Response({'access_token': access_token}, status=status.HTTP_200_OK)
 
         generated_password = generate_secure_password()
@@ -209,26 +259,43 @@ class UserAuthView(APIView):
         # Создаем пользователя в FinAPI
         try:
             user_response = finapi_client.create_user(member_email, generated_password, phone)
-            if 'error' in user_response:
+            
+            # Если ответ содержит ошибку и статус 401, обновляем токен и повторяем запрос
+            if 'error' in user_response and user_response.get('status_code') == 401:
+                # Обновляем токен клиента
+                token_response = finapi_client.make_finapi_token()
+                if 'error' in token_response:
+                    return Response(
+                        {'detail': 'Failed to refresh FinAPI token'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+                # Повторяем запрос на создание пользователя
+                user_response = finapi_client.create_user(member_email, generated_password, phone)
+                if 'error' in user_response:
+                    return Response(
+                        {'detail': 'Failed to create FinAPI user after token refresh'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            # Если ошибка не связана с авторизацией, возвращаем ее
+            elif 'error' in user_response:
                 return Response(
                     {'detail': 'Failed to create FinAPI user'}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
+
         except Exception as e:
             return Response({'detail': f"{e}"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
         username = user_response.get('id')
         password = user_response.get('password')
         user_response = finapi_client.auth_token(password, username, grant_type="password")
         access_token = user_response.get('access_token')
-        refresh_token = user_response.get('refresh_token')
-
+        
         try:
-            user_space.access_token = access_token
-            user_space.refresh_token = refresh_token
             user_space.password = generated_password
             user_space.username = username
-            user_space.save(update_fields=['access_token', 'refresh_token', 'password', 'username'])
+            UserAuthView._update_user_space(user_space, user_response)
 
             return Response(UserSpaceSerializer(user_space).data, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -322,7 +389,7 @@ class BankConnectionWebhook(APIView):
         bank_connection.status = connection_status
         bank_connection.save()
 
-        if connection_status in ['CANCELLED', 'EXPIRED']:
+        if connection_status in ['CANCELLED', 'EXPIRED', 'COMPLETED_WITH_ERROR']:
             bank_connection.delete()
 
         if connection_status == 'COMPLETED':
@@ -478,16 +545,38 @@ class BanksView(APIView):
             "perPage": 100
         }
 
+        # Первый запрос
         response = requests.get(finapi_url, headers=headers, params=params)
 
-        print(response)
+        # Если статус 401, обновляем токен и повторяем запрос
+        if response.status_code == 401:
+            finapi_client = FinAPIClient()
+            token_response = finapi_client.make_finapi_token()
+            
+            # Если token_response равен None или содержит ошибку
+            if not token_response or 'error' in token_response:
+                return Response(
+                    {'detail': 'Failed to refresh FinAPI token'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Обновляем заголовки с новым токеном
+            headers["Authorization"] = f"Bearer {finapi_client.token}"
+            
+            # Повторяем запрос
+            response = requests.get(finapi_url, headers=headers, params=params)
 
+        # Если запрос успешен
         if response.status_code == 200:
             banks_data = response.json().get("banks", [])
             result = [{"id": bank["id"], "name": bank["name"]} for bank in banks_data if bank.get("location") == "CZ"]
             return Response(result, status=status.HTTP_200_OK)
 
-        return Response({"error": "Failed to retrieve data from FinAPI"}, status=response.status_code)
+        # Если запрос завершился ошибкой
+        return Response(
+            {"error": "Failed to retrieve data from FinAPI"}, 
+            status=response.status_code
+        )
 
 
 class UserSpaceView(APIView):
@@ -562,13 +651,7 @@ class DeleteBankAccountView(APIView):
 
         # Удаляем счет из FinAPI
         finapi_client = FinAPIClient()
-        delete_response = finapi_client._request(
-            method="DELETE",
-            endpoint=f"/api/v2/accounts/{account_id}",
-            content_type='application/json',
-            BASE_URL=finapi_client.BASE_URL_API,
-            access_token=access_token
-        )
+        delete_response = finapi_client.delete_account(access_token, account_id)
 
         print(delete_response)
 
