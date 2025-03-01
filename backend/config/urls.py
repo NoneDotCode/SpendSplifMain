@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenVerifyView
 from django.conf import settings
 from django.conf.urls.static import static
 from backend.apps.customuser.views import CustomTokenObtainPairView, CustomTokenRefreshView
+from backend.apps.cards.views import BankTransactionsAndBalanceWebhook, BankConnectionWebhook
 
 base_space_url = "api/v1/my_spaces/<int:space_pk>/"
 
@@ -31,6 +32,8 @@ urlpatterns = [
     path("api/v1/", include("apps.tickets.urls")),
     path("api/v1/store/", include("apps.store.urls")),
     path("api/v1/community/", include("apps.community.urls")),
+    path('api/v1/webhook/bank/transactions/', BankTransactionsAndBalanceWebhook.as_view(), name='bank-transactions-webhook'),
+    path('api/v1/webhook/bank/connection/', BankConnectionWebhook.as_view(), name='bank-connection-webhook'),
 
     # JWT
     path("api/v1/token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
