@@ -19,6 +19,7 @@ __pycache__
 
 # Environments
 ../venv/
+venv/
 
 # local env files
 .env
