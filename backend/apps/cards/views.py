@@ -61,8 +61,6 @@ class FinAPIClient:
         }
 
         token = access_token or self.token
-        if not token:
-            return None
         # Добавляем токен авторизации, если он есть
         if token and endpoint != "/api/v2/oauth/token":
             headers['Authorization'] = f'Bearer {token}'
@@ -97,6 +95,8 @@ class FinAPIClient:
         }
         response = self._request("POST", "/api/v2/oauth/token", data=payload, content_type='application/x-www-form-urlencoded', BASE_URL=self.BASE_URL_API)
         
+        print(response)
+
         # Если ответ пустой или содержит ошибку
         if not response or 'error' in response:
             return {'error': 'Failed to refresh FinAPI token'}
