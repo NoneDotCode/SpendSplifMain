@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from urllib.parse import quote
 
 import environ
 
@@ -123,11 +124,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", default="spendsplif"),
-        "USER": env("POSTGRES_USER", default="postgres"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="default_password"),
-        "HOST": env("POSTGRES_HOST", default="db"),
-        "PORT": env.int("POSTGRES_PORT", default=5432),
+        "NAME": os.environ.get("POSTGRES_DB", default="spendsplif"),
+        "USER": os.environ.get("POSTGRES_USER", default="postgres"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", default="default_password"),
+        "HOST": os.environ.get("POSTGRES_HOST", default="db"),
+        "PORT": int(os.environ.get("POSTGRES_PORT", default=5432)),
     }
 }
 
@@ -247,26 +248,29 @@ CORS_ORIGIN_WHITELIST = [
     "https://api.spendsplif.com"
 ]
 
-# Security headers
-# SESSION_COOKIE_SECURE = True
-# SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
-# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-# X_FRAME_OPTIONS = "DENY"  # Prevent clickjacking
-
-# # Rate limiting (e.g., using Django Ratelimit or DRF extensions)
-# REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
-#     'rest_framework.throttling.UserRateThrottle',
-# ]
-# REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
-#     'user': '8000/day',
-# }
-
-# SQL Injection prevention is handled by Django ORM automatically.
+# Rate limiting (e.g., using Django Ratelimit or DRF extensions)
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+    'rest_framework.throttling.UserRateThrottle',
+]
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+    'user': '8000/day',
+}
 
 # Celery
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+
+if REDIS_PASSWORD:
+    encoded_password = quote(REDIS_PASSWORD, safe='')
+    REDIS_CONNECTION_STRING = f"redis://:{encoded_password}@{REDIS_HOST}:{REDIS_PORT}/0"
+else:
+    REDIS_CONNECTION_STRING = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_BROKER_URL = REDIS_CONNECTION_STRING
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
@@ -281,8 +285,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
@@ -339,3 +343,4 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 3600
+    X_FRAME_OPTIONS = "DENY"
