@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from urllib.parse import quote
+import re
 
 import environ
 
@@ -95,7 +96,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "backend.config.middleware.UserAgentMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -227,17 +227,18 @@ SIMPLE_JWT = {
 
 # Cors
 
-
 CORS_ALLOWED_ORIGINS = [
     "https://spendsplif.com",
-    "https://api.spendsplif.com"
+    "https://api.spendsplif.com",
+    r"^https://.*\.finapi\.io$",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "https://spendsplif.com",
-    "https://api.spendsplif.com"
+    "https://api.spendsplif.com",
+    r"^https://.*\.finapi\.io$",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
@@ -245,7 +246,8 @@ CSRF_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SAMESITE = "None"
 CORS_ORIGIN_WHITELIST = [
     "https://spendsplif.com",
-    "https://api.spendsplif.com"
+    "https://api.spendsplif.com",
+    r"^https://.*\.finapi\.io$",
 ]
 
 # Rate limiting (e.g., using Django Ratelimit or DRF extensions)

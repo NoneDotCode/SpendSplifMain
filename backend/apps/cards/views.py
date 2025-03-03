@@ -160,8 +160,8 @@ class FinAPIClient:
                 "id": bank_id
             },
             "callbacks": {
-                # "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
-                "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
+                "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
+                # "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
             },
             "bankConnectionName": bank_connection_name,
             "maxDaysForDownload": 60
