@@ -231,6 +231,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://spendsplif.com",
     "https://api.spendsplif.com",
     r"^https://.*\.finapi\.io$",
+    r"^https://.*\.stripe\.com$",
+    "https://stripe.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
@@ -239,6 +241,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://spendsplif.com",
     "https://api.spendsplif.com",
     r"^https://.*\.finapi\.io$",
+    r"^https://.*\.stripe\.com$",
+    "https://stripe.com",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
@@ -248,6 +252,8 @@ CORS_ORIGIN_WHITELIST = [
     "https://spendsplif.com",
     "https://api.spendsplif.com",
     r"^https://.*\.finapi\.io$",
+    r"^https://.*\.stripe\.com$",
+    "https://stripe.com",
 ]
 
 # Rate limiting (e.g., using Django Ratelimit or DRF extensions)
