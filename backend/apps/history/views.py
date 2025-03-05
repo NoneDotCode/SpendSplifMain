@@ -47,8 +47,8 @@ class HistoryView(APIView):
         # Получаем временную зону, установленную middleware
         user_timezone = timezone.get_current_timezone()
 
-        # Получаем лимит из тела JSON-запроса, по умолчанию возвращаем все записи
-        limit = request.data.get('limit')
+        # Получаем лимит из URL-параметров
+        limit = request.query_params.get('limit')
         try:
             limit = int(limit) if limit else None
         except ValueError:
@@ -162,7 +162,7 @@ class HistoryExpenseEditView(APIView):
                 new_category_id = old_category_id
 
             if 'comment' in request.data:
-                expense.comment = request.data['comment']
+                expense.comment = request.data.get('comment', '')
 
             # Обновляем баланс счетов только если они существуют и изменились
             if old_account_id != new_account_id or old_amount != new_amount:
@@ -239,9 +239,11 @@ class HistoryExpenseEditView(APIView):
 
             # Обновляем new_balance
             expense.new_balance = space.totalbalance.balance
+            expense.amount = new_amount
 
             # Сохраняем изменения в расходе
             expense.save()
+            print(expense.to_cat)
 
             return Response({"message": "Expense has been updated successfully"}, status=status.HTTP_200_OK)
         else:
@@ -284,7 +286,11 @@ class HistoryExpenseEditView(APIView):
 
         # Обновляем общий баланс пространства
         space = Space.objects.select_for_update().get(pk=expense.father_space_id)
-        space.totalbalance.balance += old_amount
+        space.totalbalance.balance += convert_currencies(
+            amount=old_amount,
+            from_currency=expense.from_acc["currency"],
+            to_currency=space.currency
+        )
         space.totalbalance.save()
 
         # Удаляем запись о расходе
@@ -403,22 +409,29 @@ class HistoryIncomeEditView(APIView):
         old_account_id = income.account["id"]
 
         try:
-            account = Account.objects.get(pk=old_account_id)
-            account.balance -= old_amount
+            account = Account.objects.select_for_update().get(pk=old_account_id)
+            # Calculate the net effect on the account balance
+            net_effect = old_amount - max(0, account.balance)
+
+            # Update account balance
+            account.balance = max(0, account.balance - old_amount)
             account.save()
+
+            # Update total balance
+            space = Space.objects.select_for_update().get(pk=income.father_space_id)
+            total_balance = TotalBalance.objects.select_for_update().get(father_space=space)
+            total_balance.balance -= convert_currencies(amount=net_effect,
+                                                        from_currency=income.currency,
+                                                        to_currency=space.currency)
+            total_balance.balance = max(0, total_balance.balance)  # Ensure non-negative balance
+            total_balance.save()
+
+            # Delete the income record
+            income.delete()
+
+            return Response({"message": "Income has been deleted successfully"}, status=status.HTTP_200_OK)
         except ObjectDoesNotExist:
-            pass
-
-        space = Space.objects.select_for_update().get(pk=income.father_space_id)
-        total_balance = TotalBalance.objects.get(father_space=space)
-        total_balance.balance -= convert_currencies(amount=old_amount,
-                                                    from_currency=income.currency,
-                                                    to_currency=space.currency)
-        total_balance.save()
-
-        income.delete()
-
-        return Response({"message": "Income has been deleted successfully"}, status=status.HTTP_200_OK)
+            return Response({"error": "Account or Space not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class StatisticView(generics.GenericAPIView):
@@ -460,7 +473,7 @@ class CategoryStatisticView(generics.ListAPIView):
     def get_expenses_for_period(queryset, days: int) -> List[HistoryExpense]:
         return queryset.filter(created__gte=datetime.now() - timedelta(days=days))
 
-    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, Decimal], Dict[str, int]]:
+    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> tuple[dict[str, Decimal], dict[str, int]]:
         expenses = [expense for expense in expenses if expense.to_cat]
         total = sum(expense.amount_in_default_currency for expense in expenses)
         summary = self.get_summary(expenses)
@@ -481,7 +494,7 @@ class CategoryStatisticView(generics.ListAPIView):
         return summary
 
     @staticmethod
-    def get_percentages(summary: Dict[str, float], total: float) -> Dict[str, str]:
+    def get_percentages(summary: Dict[str, float], total: float) -> dict[str, str]:
         percentages = {category: round(value / total * 100) for category, value in summary.items()}
         remaining_percentage = 100 - sum(percentages.values())
         if remaining_percentage != 0:
@@ -643,17 +656,17 @@ class ExpensesStatisticView(generics.ListAPIView):
         for expense in expenses:
             days_since_creation = (now - expense.created).days
             if days_since_creation < 365:
-                periods['Year'].append(expense)
+                periods['year'].append(expense)
             if days_since_creation < 90:
                 periods['three_month'].append(expense)
             if days_since_creation < 30:
-                periods['Month'].append(expense)
+                periods['month'].append(expense)
             if days_since_creation < 7:
-                periods['Week'].append(expense)
+                periods['week'].append(expense)
         return periods
 
     @staticmethod
-    def get_summary(expenses: List[HistoryExpense]) -> Dict[str, int]:
+    def get_summary(expenses: List[HistoryExpense]) -> dict[str, int]:
         category_expenses = sum(expense.amount for expense in expenses if expense.to_cat)
         loss_expenses = sum(expense.amount for expense in expenses if expense.to_cat is None)
         recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic_expense)
@@ -664,10 +677,10 @@ class ExpensesStatisticView(generics.ListAPIView):
         }
 
     @staticmethod
-    def get_total_expenses(summary: Dict[str, int]) -> int:
+    def get_total_expenses(summary: dict[str, int]) -> int:
         return sum(summary.values())
 
-    def get_daily_percentages(self, daily_expenses: Dict[str, List[HistoryExpense]], total_expenses: int) -> Dict[str, Dict[str, str]]:
+    def get_daily_percentages(self, daily_expenses: dict[str, List[HistoryExpense]], total_expenses: int) -> dict[str, dict[str, str]]:
         daily_percentages = {}
         for date_str, expenses in daily_expenses.items():
             day_summary = self.get_summary(expenses)
@@ -675,7 +688,7 @@ class ExpensesStatisticView(generics.ListAPIView):
             daily_percentages[date_str] = percentages
         return daily_percentages
 
-    def get_percentages(self, summary: Dict[str, int], total_expenses: int) -> Dict[str, str]:
+    def get_percentages(self, summary: dict[str, int], total_expenses: int) -> dict[str, str]:
         if total_expenses == 0:
             return {key: '0 %' for key in summary}
         return {key: f"{round((val / total_expenses) * 100)} %" for key, val in summary.items()}
@@ -782,7 +795,7 @@ class GoalTransferStatisticView(generics.ListAPIView):
             periods['three_month'].append(transfer)
             periods['year'].append(transfer)
         else:
-            periods['Year'].append(transfer)
+            periods['year'].append(transfer)
 
     def get_summary(self, transfers: List[HistoryTransfer], currency: str) -> Dict[str, Dict[str, str]]:
         summary = {}
@@ -793,7 +806,6 @@ class GoalTransferStatisticView(generics.ListAPIView):
         return sorted_summary
 
     def _update_summary(self, summary: Dict[str, Dict[str, str]], transfer: HistoryTransfer, currency: str) -> None:
-        print(transfer)
         goal = transfer.to_goal
         goal_amount = transfer.goal_amount
         collected = transfer.amount_in_default_currency
@@ -886,6 +898,7 @@ class GeneralView(generics.GenericAPIView):
     permission_classes = (IsSpaceMember,)
 
     def get(self, request, space_pk, *args, **kwargs):
+        currency = Space.objects.get(pk=space_pk).currency
         data = {
             "week": self.get_data_and_percentages(6, space_pk),
             "month": self.get_data_and_percentages(29, space_pk),
@@ -898,7 +911,7 @@ class GeneralView(generics.GenericAPIView):
 
         # Добавление текстового анализа
         for period in data:
-            data[period]["analysis"] = self.get_analysis_message(data[period], period)
+            data[period]["analysis"] = self.get_analysis_message(data[period], period, currency=currency)
 
         return Response(data)
 
@@ -1014,7 +1027,7 @@ class GeneralView(generics.GenericAPIView):
             percentages[date] = f"{round(percentage, 2)}%"
         return percentages
 
-    def get_analysis_message(self, period_data, period):
+    def get_analysis_message(self, period_data, period, currency):
         balances = period_data.get('balance', {})
         if not balances:
             return f"No data available for the {period.lower()}."
@@ -1026,9 +1039,9 @@ class GeneralView(generics.GenericAPIView):
         difference = end_balance - start_balance
 
         if difference > 0:
-            return f"You have {difference} USD more this {period.lower()}."
+            return f"You have {difference} {currency} more this {period.lower()}."
         elif difference < 0:
-            return f"You have {abs(difference)} USD less this {period.lower()}."
+            return f"You have {abs(difference)} {currency} less this {period.lower()}."
         else:
             return f"Your balance remained the same this {period.lower()}."
 

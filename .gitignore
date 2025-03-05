@@ -23,10 +23,11 @@ venv/
 
 # local env files
 .env
-./backend/config/.env.prod
+backend/config/.env.prod
 
 # Editor directories and files
 .idea
+ba
 *.suo
 *.ntvs*
 *.njsproj
