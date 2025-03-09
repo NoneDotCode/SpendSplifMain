@@ -1,5 +1,11 @@
 from rest_framework import generics
 from rest_framework.generics import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+import os
+from openai import OpenAI
 
 from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
 
@@ -8,9 +14,6 @@ from backend.apps.category.permissions import (CanCreateCategories, CanEditCateg
                                                CanDeleteCategories)
 from backend.apps.category.serializers import CategorySerializer
 from backend.apps.space.models import Space
-
-from rest_framework.response import Response
-from rest_framework import status
 
 import logging
 
@@ -68,3 +71,75 @@ class DeleteCategory(generics.RetrieveDestroyAPIView):
 
     def get_queryset(self):
         return Category.objects.filter(pk=self.kwargs.get('pk'))
+
+
+os.environ["OPENAI_API_KEY"] = "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"
+
+class CategorizeExpense(APIView):
+    def post(self, request, *args, **kwargs):
+        space_pk = kwargs.get('space_pk')
+        category_name = request.data.get('category_name')
+        amount = request.data.get('amount')
+        counterpart_name = request.data.get('counterpart_name')
+        purpose = request.data.get('purpose')
+        currency = request.data.get('currency')
+        
+        # Получаем пространство (спейс) и проверяем доступ пользователя
+        space = Space.objects.filter(pk=space_pk, members=request.user).first()
+        if not space:
+            return Response({"detail": "You do not have permission to access this space."}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Получаем все категории из спейса
+        categories = Category.objects.filter(father_space=space).values('id', 'title')
+        if not categories:
+            return Response({"detail": "No categories found in this space."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Формируем список названий категорий для запроса к OpenAI
+        category_names = ", ".join([cat['title'] for cat in categories])
+
+        # Формируем запрос к OpenAI
+        prompt = (
+            f"The following are categories for expenses: {category_names}. "
+            f"An expense has been made with the following details: "
+            f"Category Name: {category_name}, Amount: {amount} {currency}, "
+            f"Counterpart Name: {counterpart_name}, Purpose: {purpose}. "
+            f"Which category does this expense most likely fall into? "
+            f"Please respond with the exact category name."
+        )
+
+        # Инициализация клиента OpenAI
+        client = OpenAI() 
+
+        try:
+            # Запрос к OpenAI
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that classifies expenses into predefined categories."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=50
+            )
+            
+            # Получаем название категории от OpenAI
+            suggested_category_name = response.choices[0].message.content.strip()
+            
+            # Ищем категорию по названию
+            category = next((cat for cat in categories if cat['title'] == suggested_category_name), None)
+
+            print("НОВЫЙ ЗАПРОС")
+            print(prompt)
+            print(suggested_category_name)
+            print(category)
+
+            # Если категория не найдена, выбираем первую категорию из списка
+            if not category:
+                category = categories[0]
+            
+            # Возвращаем только ID категории
+            return Response({"category_id": category['id']})
+        
+        except Exception as e: 
+            category = categories[0]
+            return Response({"category_id": category['id']})
+        

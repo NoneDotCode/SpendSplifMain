@@ -13,6 +13,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from backend.apps.history.models import HistoryIncome, HistoryExpense
+from backend.apps.category.views import CategorizeExpense
+from backend.apps.category.models import Category
+from backend.apps.converter.utils import convert_currencies
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.cards.models import UserSpace, ClientToken, BankConnection, ConnectedAccounts
 from backend.apps.space.models import Space
@@ -170,14 +174,15 @@ class FinAPIClient:
 
     def get_transactions(self, access_token, account_ids, start_date, end_date):
         """Получение транзакций"""
-        payload = {
-            'accountIds': account_ids,
-            'minBookingDate': start_date,
-            'maxBookingDate': end_date,
-            'includeChildCategories': True,
-            'orderBy': 'bookingDate,desc'
+        params = {
+            'accountIds': ','.join(map(str, account_ids)),  # Преобразование списка в строку
+            'minBankBookingDate': start_date.strftime('%Y-%m-%d'),
+            'maxBankBookingDate': end_date.strftime('%Y-%m-%d'),
+            'view': 'userView',
+            'direction': 'all',
+            'perPage': 500
         }
-        return self._request("POST", "/api/v2/transactions", data=payload, access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API)
+        return self._request("GET", "/api/v2/transactions", params=params, access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API)
 
     def make_webhook_balance(self, access_token, account_ids, space_pk):
         """Получение изменения баланса"""
@@ -661,41 +666,193 @@ class DeleteBankAccountView(APIView):
         return Response({'message': 'Bank account successfully deleted and unlinked from FinAPI'}, status=status.HTTP_200_OK)
 
 
-# class TransactionsFetchView(APIView):
-#     """Представление для получения транзакций за последние 10 дней. Нужно переделать под скрипт, на случаи ЧП"""
-#     permission_classes = [IsAuthenticated, IsSpaceMember]
+class RefreshAccountView(APIView):
+    """Представление для обновления транзакций и баланса за последние 30 дней"""
+    permission_classes = [IsAuthenticated]
 
-#     def get(self, request, space_pk):
-#         """Обрабатывает GET-запрос для получения транзакций."""
-#         space = Space.objects.filter(pk=space_pk).first()
-#         if not space:
-#             return Response({'message': 'No transactions available'}, status=status.HTTP_200_OK)
+    def post(self, request, space_pk):
+        """Обрабатывает POST-запрос для получения транзакций."""
+        account_id = request.data.get('account_id')
+        if not account_id:
+            return Response({'error': 'account_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-#         try:
-#             user_space = UserSpace.objects.get(space_id=space_pk)
-#         except UserSpace.DoesNotExist:
-#             return Response({'message': 'No transactions available'}, status=status.HTTP_200_OK)
+        space = Space.objects.filter(pk=space_pk).first()
+        if not space:
+            return Response({'message': 'Space not found'}, status=status.HTTP_404_NOT_FOUND)
 
-#         finapi_client = FinAPIClient()
-#         access_token = user_space.access_token
+        # Получаем access_token для FinAPI
+        access_token = BankConnectionView._get_access_token(request, space_pk)
+        if isinstance(access_token, Response):
+            return access_token
 
-#         end_date = timezone.now().date()
-#         start_date = end_date - timedelta(days=10)
+        finapi_client = FinAPIClient()
 
-#         # Получаем список счетов
-#         accounts_response = finapi_client.get_accounts(access_token)
-#         if not accounts_response.ok:
-#             return Response({'error': 'Failed to fetch accounts'}, status=status.HTTP_400_BAD_REQUEST)
+        # Получаем информацию о счете
+        account_response = finapi_client.get_account(access_token, account_id)
 
-#         accounts_data = accounts_response.json()
-#         account_ids = [account['id'] for account in accounts_data.get('accounts', [])]
+        if not account_response or "balance" not in account_response:
+            return Response({'error': 'Failed to fetch account information'}, status=status.HTTP_400_BAD_REQUEST)
 
-#         if not account_ids:
-#             return Response({'message': 'No accounts found'}, status=status.HTTP_200_OK)
+        # Достаём баланс и валюту
+        currency = account_response.get('accountCurrency', 'USD')  
+        balance = account_response.get('balance', 0)
 
-#         # Получаем транзакции
-#         transactions_response = finapi_client.get_transactions(access_token, account_ids, start_date, end_date)
-#         if not transactions_response.ok:
-#             return Response({'error': 'Failed to fetch transactions'}, status=status.HTTP_400_BAD_REQUEST)
+        # Обновляем баланс и валюту в ConnectedAccounts
+        connected_account = ConnectedAccounts.objects.filter(accountId=account_id).first()
+        if connected_account:
+            connected_account.currency = currency
+            connected_account.balance = balance
+            connected_account.save()
 
-#         return Response(transactions_response.json(), status=status.HTTP_200_OK)
+        # Получаем транзакции за последние 30 дней
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+
+        transactions_response = finapi_client.get_transactions(access_token, [account_id], start_date, end_date)
+        if "error" in transactions_response:
+            return Response({'error': 'Failed to fetch transactions'}, status=status.HTTP_400_BAD_REQUEST)
+
+        transactions_data = transactions_response.get('transactions', [])
+
+        # Обрабатываем транзакции
+        for transaction in transactions_data:
+            amount = transaction.get('amount')
+            transaction_id = transaction.get('id')
+            comment = transaction.get('purpose', '')[:300]  
+            booking_date = transaction.get('bankBookingDate')  
+            counterpart_name = transaction.get('counterpartName', '')  
+            currency = transaction.get('currency', 'EUR') 
+
+            if amount > 0:
+                # Обработка доходов
+                existing_record = HistoryIncome.objects.filter(
+                    transaction_id=transaction_id,
+                    bank_account__accountId=account_id,
+                    father_space=space
+                ).first()
+
+                if existing_record:
+                    # Если запись существует, проверяем, нужно ли её обновить
+                    if (existing_record.amount != amount or
+                        existing_record.amount_in_default_currency != convert_currencies(
+                                                            from_currency=connected_account.currency,
+                                                            amount=amount,
+                                                            to_currency=space.currency) or
+                        existing_record.comment != comment or
+                        existing_record.created != booking_date):
+                        existing_record.amount = float(amount) 
+                        existing_record.comment = comment
+                        existing_record.created = booking_date
+                        existing_record.save()
+                else:
+                    # Если записи нет, создаем новую
+                    HistoryIncome.objects.create(
+                        amount=float(amount),  
+                        amount_in_default_currency=float(convert_currencies(
+                                                            from_currency=connected_account.currency,
+                                                            amount=amount,
+                                                            to_currency=space.currency)),
+                        currency=currency,
+                        comment=comment,
+                        transaction_id=int(transaction_id), 
+                        father_space=space,
+                        account={
+                            'id': connected_account.accountId,
+                            'title': connected_account.bankConnection.bankConnectionName,
+                            'currency': connected_account.currency,
+                            'balance': float(connected_account.balance)  
+                        },
+                        created=booking_date
+                    )
+            else:
+                # Обработка расходов
+                existing_record = HistoryExpense.objects.filter(
+                    transaction_id=transaction_id,
+                    bank_account__accountId=account_id,
+                    father_space=space
+                ).first()
+
+                # Определяем категорию для трат
+                category_name = transaction.get('category', {}).get('name', '')
+                categorize_expense = CategorizeExpense()
+                category_response = categorize_expense.post(
+                    request=request,
+                    space_pk=space_pk,
+                    data={
+                        'category_name': category_name, 
+                        'amount': abs(amount),
+                        'counterpart_name': counterpart_name,
+                        'purpose': comment,
+                        'currency': currency 
+                    }
+                )
+                print(category_response)
+
+                if category_response.status_code != status.HTTP_200_OK:
+                    # Если не удалось определить категорию, пропускаем транзакцию
+                    continue
+
+                category_id = category_response.data.get('category_id')
+
+                # Получаем информацию о категории из модели Category
+                category = Category.objects.filter(id=category_id).first()
+                if not category:
+                    continue  
+
+                # Формируем JSON для категории
+                category_json = {
+                    'id': category.id,
+                    'icon': category.icon,
+                    'color': category.color,
+                    'limit': float(category.limit),
+                    'spent': float(category.spent),
+                    'title': category.title,
+                    'father_space': category.father_space.id
+                }
+
+                if existing_record:
+                    # Если запись существует, проверяем, нужно ли её обновить
+                    if (existing_record.amount != abs(amount) or
+                        existing_record.amount_in_default_currency != convert_currencies(
+                                                            from_currency=connected_account.currency,
+                                                            amount=abs(amount),
+                                                            to_currency=space.currency) or
+                        existing_record.comment != comment or
+                        existing_record.created != booking_date):
+                        existing_record.amount = float(abs(amount)) 
+                        existing_record.comment = comment
+                        existing_record.created = booking_date
+                        existing_record.to_cat = category_json
+                        existing_record.save()
+                else:
+                    # Если записи нет, создаем новую
+                    HistoryExpense.objects.create(
+                        amount=float(abs(amount)),  
+                        amount_in_default_currency=float(convert_currencies(
+                            from_currency=connected_account.currency,
+                            amount=abs(amount),
+                            to_currency=space.currency
+                        )),
+                        currency=currency,
+                        comment=comment,
+                        from_acc={
+                            'id': connected_account.accountId,
+                            'title': connected_account.bankConnection.bankConnectionName,
+                            'currency': connected_account.currency,
+                            'balance': float(connected_account.balance) 
+                        },
+                        to_cat={
+                            'id': category.id,
+                            'icon': category.icon,
+                            'color': category.color,
+                            'limit': float(category.limit),
+                            'spent': float(category.spent),
+                            'title': category.title,
+                            'father_space': category.father_space.id
+                        },
+                        transaction_id=int(transaction_id),
+                        father_space=space,
+                        created=booking_date
+                    )
+
+        return Response({'message': 'Transactions updated successfully'}, status=status.HTTP_200_OK)
