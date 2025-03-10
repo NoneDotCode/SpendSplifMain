@@ -1,5 +1,7 @@
 import os
 from datetime import timedelta
+from urllib.parse import quote
+import re
 
 import environ
 
@@ -14,7 +16,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ.get('SECRET_KEY', 'defaultsecret')
 def get_debug_setting():
     debug_str = os.environ.get('DEBUG', 'True')  
     return debug_str.lower() != 'false'  
@@ -93,7 +95,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "backend.config.middleware.UserAgentMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -122,11 +123,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", default="spendsplif"),
-        "USER": env("POSTGRES_USER", default="postgres"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="default_password"),
-        "HOST": env("POSTGRES_HOST", default="db"),
-        "PORT": env.int("POSTGRES_PORT", default=5432),
+        "NAME": os.environ.get("POSTGRES_DB", default="spendsplif"),
+        "USER": os.environ.get("POSTGRES_USER", default="postgres"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", default="default_password"),
+        "HOST": os.environ.get("POSTGRES_HOST", default="db"),
+        "PORT": int(os.environ.get("POSTGRES_PORT", default=5432)),
     }
 }
 
@@ -225,17 +226,22 @@ SIMPLE_JWT = {
 
 # Cors
 
-
 CORS_ALLOWED_ORIGINS = [
     "https://spendsplif.com",
-    "https://api.spendsplif.com"
+    "https://api.spendsplif.com",
+    r"^https://.*\.finapi\.io$",
+    r"^https://.*\.stripe\.com$",
+    "https://stripe.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "https://spendsplif.com",
-    "https://api.spendsplif.com"
+    "https://api.spendsplif.com",
+    r"^https://.*\.finapi\.io$",
+    r"^https://.*\.stripe\.com$",
+    "https://stripe.com",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 SESSION_COOKIE_SECURE = True
@@ -243,29 +249,35 @@ CSRF_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SAMESITE = "None"
 CORS_ORIGIN_WHITELIST = [
     "https://spendsplif.com",
-    "https://api.spendsplif.com"
+    "https://api.spendsplif.com",
+    r"^https://.*\.finapi\.io$",
+    r"^https://.*\.stripe\.com$",
+    "https://stripe.com",
 ]
 
-# Security headers
-# SESSION_COOKIE_SECURE = True
-# SECURE_SSL_REDIRECT = True  # Redirect all HTTP to HTTPS
-# SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-# X_FRAME_OPTIONS = "DENY"  # Prevent clickjacking
-
-# # Rate limiting (e.g., using Django Ratelimit or DRF extensions)
-# REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
-#     'rest_framework.throttling.UserRateThrottle',
-# ]
-# REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
-#     'user': '8000/day',
-# }
-
-# SQL Injection prevention is handled by Django ORM automatically.
+# Rate limiting (e.g., using Django Ratelimit or DRF extensions)
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+    'rest_framework.throttling.UserRateThrottle',
+]
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+    'user': '8000/day',
+}
 
 # Celery
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+
+if REDIS_PASSWORD:
+    encoded_password = quote(REDIS_PASSWORD, safe='')
+    REDIS_CONNECTION_STRING = f"redis://:{encoded_password}@{REDIS_HOST}:{REDIS_PORT}/0"
+else:
+    REDIS_CONNECTION_STRING = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+
 
 CELERY_TIMEZONE = "UTC"
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_BROKER_URL = REDIS_CONNECTION_STRING
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
@@ -280,8 +292,8 @@ EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
 
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
@@ -300,8 +312,8 @@ GOOGLE_PROJECT_ID = os.environ.get("GOOGLE_PROJECT_ID")
 
 # Custom variables
 
-BASE_BACKEND_URL = env('BASE_BACKEND_URL', default='http://localhost:8000')
-FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+BASE_BACKEND_URL = os.environ.get('BASE_BACKEND_URL', default='http://localhost:8000')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', default='http://localhost:5173')
 MOBILE_APP_ACTUAL_VERSION = "0.0.1"
 
 SUBSCRIBES_DATA = {
@@ -330,3 +342,4 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 3600
+    X_FRAME_OPTIONS = "DENY"

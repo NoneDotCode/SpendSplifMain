@@ -6,14 +6,13 @@ import environ
 import os
 from backend.apps.converter.constants import CURRENCIES
 
-env = environ.Env()
 BASE_DIR = os.path.dirname(os.path.abspath("../../config/.."))
-environ.Env.read_env(os.path.join(BASE_DIR, "dev.env"))
+api_token = os.environ.get("FIXER_API_TOKEN")
 
 def fill_currencies(apps, schema_editor):
     Currency = apps.get_model('converter', 'Currency')
     try:
-        url = str.__add__('http://data.fixer.io/api/latest?access_key=', env("FIXER_API_TOKEN"))
+        url = str.__add__('http://data.fixer.io/api/latest?access_key=', api_token)
         print(f"Fetching data from: {url}")
         
         response = requests.get(url)
