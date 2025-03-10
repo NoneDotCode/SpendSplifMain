@@ -14,7 +14,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = os.environ.get("SECRET_KEY")
 def get_debug_setting():
     debug_str = os.environ.get('DEBUG', 'True')  
     return debug_str.lower() != 'false'  
@@ -69,19 +69,18 @@ INSTALLED_APPS = [
     "apps.excel"
 ]
 
-STRIPE_SECRET_KEY = "sk_test_51QeGGjDwblSo7CmztJGGMhVtjXUFXAQddm2xnoTCNE4pObMuv9fIf4jT0CzlDMnFsCqVR6zUw8v5cMusiYPsXmEo00f60bP16T"
-STRIPE_STANDARD_PRICE_ID = "price_1QeHXaDwblSo7CmzsZoyzHOt"
-STRIPE_PREMIUM_PRICE_ID = "price_1QgXA9DwblSo7CmzBnPfDTWj"
-STRIPE_WEBHOOK_SECRET = "whsec_7FewYEUuldAaSSukV6IiF7LdETLmDo8l"
-STRIPE_PUBLISHABLE_KEY = "pk_test_51QeGGjDwblSo7CmzpbLkYjnFrOVggqKbxJiiBeGH0L6gEhmTKdes0TqiZwmEILay5sZ8C6oWFc5aebej4MSY3GG800WNwDAZdI"
-FRONTEND_URL = "http://localhost:5173"
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+STRIPE_STANDARD_PRICE_ID = os.environ.get('STRIPE_STANDARD_PRICE_ID')
+STRIPE_PREMIUM_PRICE_ID = os.environ.get('STRIPE_PREMIUM_PRICE_ID')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 
 # Custom user model auth
 
 AUTH_USER_MODEL = "customuser.CustomUser"
 
-FINAPI_CLIENT_ID = 'bf013538-9824-4533-88a1-a75df953ac3b'
-FINAPI_CLIENT_SECRET = 'cb409727-432e-44a1-85df-c89af6fe2748'
+FINAPI_CLIENT_ID = os.environ.get('FINAPI_CLIENT_ID')
+FINAPI_CLIENT_SECRET = os.environ.get('FINAPI_CLIENT_SECRET')
 
 
 MIDDLEWARE = [
@@ -291,14 +290,13 @@ EMAIL_ADMIN = EMAIL_HOST_USER
 
 # Anthropic
 
-ANTHROPIC_API_KEY = ("sk-ant-api03-mqBtIiFrvSAz50MNcvXzodCEa7GRnv6Q0DGZr6scuTd1_CmXk4rpm6jtytSjrMvpCic_lvKSLpQ36tSny-"
-                     "GKEg-UE6i-QAA")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 # Google Auth
 
-GOOGLE_CLIENT_ID = "1002186527863-pd1c9naj1kt8hq6cogg80kn3nl4d9vjf.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
-GOOGLE_PROJECT_ID = "spendsplif-000001"
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+GOOGLE_PROJECT_ID = os.environ.get("GOOGLE_PROJECT_ID")
 
 # Custom variables
 
@@ -317,20 +315,13 @@ SUBSCRIBES_DATA = {
     }
 }
 
-STRIPE = {
-    "secret": 'sk_test_51QeGGjDwblSo7CmztJGGMhVtjXUFXAQddm2xnoTCNE4pObMuv9fIf4jT0CzlDMnFsCqVR6zUw8v5cMusiYPsXmEo00f60bP16T',
-    "payment_callback_url": "localhost:8000/api/v1/store/payment/callback/",
-    "publishableKey": "pk_test_51QeGGjDwblSo7CmzpbLkYjnFrOVggqKbxJiiBeGH0L6gEhmTKdes0TqiZwmEILay5sZ8C6oWFc5aebej4MSY3GG800WNwDAZdI",
-    "webhook_secret_key": "whsec_7FewYEUuldAaSSukV6IiF7LdETLmDo8l"
-}
-
-EXPO_APP_KEY = "d142c3a6-34df-4c3e-993e-fa14fa88d94f"
+EXPO_APP_KEY = os.environ.get("EXPO_APP_KEY")
 
 # For Tink sync
 
 TINK = {
-    "CLIENT_ID": "df402ff180c743fe988144ac9623c0dd",
-    "CLIENT_SECRET": "52e1e6441ecf4e50ba1f0fa92fe586fe"
+    "CLIENT_ID": os.environ.get("TINK_CLIENT_ID"),
+    "CLIENT_SECRET": os.environ.get("TINK_CLIENT_SECRET"),
 }
 
 if not DEBUG:

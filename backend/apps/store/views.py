@@ -26,7 +26,7 @@ class SubscribePricesView(generics.ListAPIView):
         return Response(result, status=status.HTTP_200_OK)
 
 
-stripe.api_key = settings.STRIPE["secret"]
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class CreatePaymentSessionView(generics.GenericAPIView):

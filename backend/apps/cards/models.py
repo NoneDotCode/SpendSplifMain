@@ -16,7 +16,7 @@ class BankConnection(models.Model):
 
 
 class ConnectedAccounts(models.Model):
-    bankConnection = models.ForeignKey(BankConnection, verbose_name='bank_connection', on_delete=models.CASCADE)
+    bankConnection = models.ForeignKey(BankConnection, verbose_name='bank_connection', null=True, blank=True, on_delete=models.CASCADE)
     accountIban = models.CharField(max_length=255, null=True, blank=True)
     currency = models.CharField(max_length=255, null=True, blank=True)
     balance = models.DecimalField(max_digits=20, decimal_places=2, null=True)
@@ -45,7 +45,6 @@ class UserSpace(models.Model):
 
 class ClientToken(models.Model):
     access_token = models.CharField(max_length=305, null=True, blank=True)
-    refresh_token = models.CharField(max_length=305, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
