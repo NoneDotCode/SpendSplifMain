@@ -12,6 +12,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.serializers.json import DjangoJSONEncoder
+import json
 
 from backend.apps.history.models import HistoryIncome, HistoryExpense
 from backend.apps.category.views import CategorizeExpense
@@ -745,23 +747,29 @@ class RefreshAccountView(APIView):
                         existing_record.created = booking_date
                         existing_record.save()
                 else:
+                    account_data = {
+                        'id': connected_account.accountId,
+                        'title': connected_account.bankConnection.bankConnectionName,
+                        'currency': connected_account.currency,
+                        'balance': connected_account.balance 
+                    }
+
+                    account_json = json.loads(json.dumps(account_data, cls=DjangoJSONEncoder)) 
+
                     # Если записи нет, создаем новую
                     HistoryIncome.objects.create(
                         amount=float(amount),  
                         amount_in_default_currency=float(convert_currencies(
-                                                            from_currency=connected_account.currency,
-                                                            amount=amount,
-                                                            to_currency=space.currency)),
+                            from_currency=connected_account.currency,
+                            amount=amount,
+                            to_currency=space.currency
+                        )),
                         currency=currency,
                         comment=comment,
+                        bank_account=connected_account,
                         transaction_id=int(transaction_id), 
                         father_space=space,
-                        account={
-                            'id': connected_account.accountId,
-                            'title': connected_account.bankConnection.bankConnectionName,
-                            'currency': connected_account.currency,
-                            'balance': float(connected_account.balance)  
-                        },
+                        account=account_json, 
                         created=booking_date
                     )
             else:
@@ -826,6 +834,26 @@ class RefreshAccountView(APIView):
                         existing_record.save()
                 else:
                     # Если записи нет, создаем новую
+                    from_acc_data = {
+                        'id': connected_account.accountId,
+                        'title': connected_account.bankConnection.bankConnectionName,
+                        'currency': connected_account.currency,
+                        'balance': connected_account.balance  
+                    }
+
+                    to_cat_data = {
+                        'id': category.id,
+                        'icon': category.icon,
+                        'color': category.color,
+                        'limit': category.limit,
+                        'spent': category.spent,
+                        'title': category.title,
+                        'father_space': category.father_space.id
+                    }
+
+                    from_acc_json = json.loads(json.dumps(from_acc_data, cls=DjangoJSONEncoder))
+                    to_cat_json = json.loads(json.dumps(to_cat_data, cls=DjangoJSONEncoder))
+
                     HistoryExpense.objects.create(
                         amount=float(abs(amount)),  
                         amount_in_default_currency=float(convert_currencies(
@@ -835,21 +863,9 @@ class RefreshAccountView(APIView):
                         )),
                         currency=currency,
                         comment=comment,
-                        from_acc={
-                            'id': connected_account.accountId,
-                            'title': connected_account.bankConnection.bankConnectionName,
-                            'currency': connected_account.currency,
-                            'balance': float(connected_account.balance) 
-                        },
-                        to_cat={
-                            'id': category.id,
-                            'icon': category.icon,
-                            'color': category.color,
-                            'limit': float(category.limit),
-                            'spent': float(category.spent),
-                            'title': category.title,
-                            'father_space': category.father_space.id
-                        },
+                        from_acc=from_acc_json,
+                        to_cat=to_cat_json,
+                        bank_account=connected_account,
                         transaction_id=int(transaction_id),
                         father_space=space,
                         created=booking_date
