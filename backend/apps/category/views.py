@@ -8,6 +8,7 @@ import os
 from openai import OpenAI
 
 from backend.apps.account.permissions import IsSpaceMember, IsSpaceOwner
+import difflib
 
 from backend.apps.category.models import Category
 from backend.apps.category.permissions import (CanCreateCategories, CanEditCategories,
@@ -78,26 +79,28 @@ os.environ["OPENAI_API_KEY"] = "sk-proj-r9v_EXHBB5mYC6mLaBpvuP8hmSHRLZYOZmlk30zT
 class CategorizeExpense(APIView):
     def post(self, request, *args, **kwargs):
         space_pk = kwargs.get('space_pk')
-        category_name = request.data.get('category_name')
-        amount = request.data.get('amount')
-        counterpart_name = request.data.get('counterpart_name')
-        purpose = request.data.get('purpose')
-        currency = request.data.get('currency')
         
-        # Получаем пространство (спейс) и проверяем доступ пользователя
+        # Извлекаем данные
+        data = kwargs.get('category_data', request.data)
+        category_name = data.get('category_name')
+        amount = data.get('amount')
+        counterpart_name = data.get('counterpart_name')
+        purpose = data.get('purpose')
+        currency = data.get('currency')
+
+        # Проверяем доступ к спейсу
         space = Space.objects.filter(pk=space_pk, members=request.user).first()
         if not space:
             return Response({"detail": "You do not have permission to access this space."}, status=status.HTTP_403_FORBIDDEN)
         
-        # Получаем все категории из спейса
-        categories = Category.objects.filter(father_space=space).values('id', 'title')
+        # Получаем категории
+        categories = list(Category.objects.filter(father_space=space).values('id', 'title'))
         if not categories:
             return Response({"detail": "No categories found in this space."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Формируем список названий категорий для запроса к OpenAI
         category_names = ", ".join([cat['title'] for cat in categories])
 
-        # Формируем запрос к OpenAI
+        # Формируем промпт
         prompt = (
             f"The following are categories for expenses: {category_names}. "
             f"An expense has been made with the following details: "
@@ -107,11 +110,9 @@ class CategorizeExpense(APIView):
             f"Please respond with the exact category name."
         )
 
-        # Инициализация клиента OpenAI
-        client = OpenAI() 
-
+        # Запрос к OpenAI
+        client = OpenAI()
         try:
-            # Запрос к OpenAI
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -120,26 +121,23 @@ class CategorizeExpense(APIView):
                 ],
                 max_tokens=50
             )
-            
-            # Получаем название категории от OpenAI
+
             suggested_category_name = response.choices[0].message.content.strip()
-            
-            # Ищем категорию по названию
-            category = next((cat for cat in categories if cat['title'] == suggested_category_name), None)
+            category_titles = [cat['title'].lower() for cat in categories]
 
-            print("НОВЫЙ ЗАПРОС")
-            print(prompt)
-            print(suggested_category_name)
-            print(category)
+            # Проверяем, есть ли точное совпадение
+            matched_category = next((cat for cat in categories if cat['title'].lower() == suggested_category_name.lower()), None)
 
-            # Если категория не найдена, выбираем первую категорию из списка
-            if not category:
-                category = categories[0]
-            
-            # Возвращаем только ID категории
+            # Если нет точного совпадения – ищем ближайшее
+            if not matched_category:
+                closest_match = difflib.get_close_matches(suggested_category_name.lower(), category_titles, n=1, cutoff=0.6)
+                if closest_match:
+                    matched_category = next(cat for cat in categories if cat['title'].lower() == closest_match[0])
+
+            # Если все еще нет совпадения, выбираем первую категорию
+            category = matched_category or categories[0]
+
             return Response({"category_id": category['id']})
-        
-        except Exception as e: 
-            category = categories[0]
-            return Response({"category_id": category['id']})
-        
+
+        except Exception:
+            return Response({"category_id": categories[0]['id']})

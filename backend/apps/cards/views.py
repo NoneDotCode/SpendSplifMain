@@ -7,6 +7,7 @@ import requests
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework.test import APIRequestFactory
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
@@ -720,10 +721,13 @@ class RefreshAccountView(APIView):
         for transaction in transactions_data:
             amount = transaction.get('amount')
             transaction_id = transaction.get('id')
-            comment = transaction.get('purpose', '')[:300]  
+            purpose = transaction.get('purpose', '')[:200]  
             booking_date = transaction.get('bankBookingDate')  
             counterpart_name = transaction.get('counterpartName', '')  
             currency = transaction.get('currency', 'EUR') 
+
+            # Формируем комментарий: НАЗВАНИЕ МАГАЗИНА. КОММЕНТАРИЙ
+            comment = f"{counterpart_name}. {purpose}" if counterpart_name else purpose
 
             if amount > 0:
                 # Обработка доходов
@@ -786,11 +790,11 @@ class RefreshAccountView(APIView):
                 category_response = categorize_expense.post(
                     request=request,
                     space_pk=space_pk,
-                    data={
+                    category_data={
                         'category_name': category_name, 
                         'amount': abs(amount),
                         'counterpart_name': counterpart_name,
-                        'purpose': comment,
+                        'purpose': purpose,
                         'currency': currency 
                     }
                 )
@@ -812,7 +816,7 @@ class RefreshAccountView(APIView):
                     'id': category.id,
                     'icon': category.icon,
                     'color': category.color,
-                    'limit': float(category.limit),
+                    'limit': float(category.limit) if category.limit is not None else 0.0,
                     'spent': float(category.spent),
                     'title': category.title,
                     'father_space': category.father_space.id
@@ -845,7 +849,7 @@ class RefreshAccountView(APIView):
                         'id': category.id,
                         'icon': category.icon,
                         'color': category.color,
-                        'limit': category.limit,
+                        'limit': float(category.limit) if category.limit is not None else 0.0,
                         'spent': category.spent,
                         'title': category.title,
                         'father_space': category.father_space.id
@@ -872,3 +876,4 @@ class RefreshAccountView(APIView):
                     )
 
         return Response({'message': 'Transactions updated successfully'}, status=status.HTTP_200_OK)
+    
