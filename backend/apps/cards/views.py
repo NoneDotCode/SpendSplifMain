@@ -442,6 +442,7 @@ class BankConnectionWebhook(APIView):
 
 class BankTransactionsAndBalanceWebhook(APIView):
     """Webhook view to receive transactions and balance updates."""
+    permission_classes = [AllowAny]
 
     @staticmethod
     def post(request):
@@ -709,7 +710,7 @@ class RefreshAccountView(APIView):
 
         # Получаем транзакции за последние 30 дней
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=10)
 
         transactions_response = finapi_client.get_transactions(access_token, [account_id], start_date, end_date)
         if "error" in transactions_response:
@@ -798,7 +799,7 @@ class RefreshAccountView(APIView):
                         'currency': currency 
                     }
                 )
-                print(category_response)
+                print("category:", category_name)
 
                 if category_response.status_code != status.HTTP_200_OK:
                     # Если не удалось определить категорию, пропускаем транзакцию
