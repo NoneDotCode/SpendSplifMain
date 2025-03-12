@@ -21,7 +21,7 @@ class ExportHistoryView(generics.GenericAPIView):
         highest_role = request.user.roles[0]
         if highest_role == 'free':
             return Response("Error: You are not allowed to export history data with a free role.", status=status.HTTP_403_FORBIDDEN)
-        
+
         space = Space.objects.get(pk=kwargs['space_pk'])
         expenses = HistoryExpense.objects.filter(father_space=space)
         incomes = HistoryIncome.objects.filter(father_space=space)
@@ -42,6 +42,8 @@ class ExportHistoryView(generics.GenericAPIView):
             if account_ids:
                 expenses = expenses.filter(from_acc__id__in=account_ids)
                 incomes = incomes.filter(account__id__in=account_ids)
+
+        print(filters)
 
         export_type = request.data.get("export_type", "both")
 
@@ -82,7 +84,6 @@ class ExportHistoryView(generics.GenericAPIView):
                     cat_title, cat_icon, history_type = expense.to_cat["title"], expense.to_cat["icon"], "expense"
                 except TypeError:
                     cat_title, cat_icon, history_type = "", "", "loss"
-                print(history_type)
                 if field == 'type' and export_type == "both":
                     row.append(history_type)
                 elif field == 'amount':

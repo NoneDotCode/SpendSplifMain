@@ -9,6 +9,7 @@ from backend.apps.category.models import Category
 from backend.apps.goal.models import Goal
 from backend.apps.customuser.constants import Currency
 from backend.apps.tink.models import TinkAccount
+from backend.apps.cards.models import ConnectedAccounts
 
 from backend.apps.category.constants import Icons
 
@@ -22,9 +23,9 @@ class HistoryExpense(models.Model):
     to_cat = models.JSONField(verbose_name='to_cat', null=True)
     periodic_expense = models.BooleanField(default=False)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    transaction_id = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    tink_id = models.CharField(blank=True, null=True, unique=True)
-    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING, null=True)
+    bank_account = models.ForeignKey(ConnectedAccounts, verbose_name='bank_account', on_delete=models.DO_NOTHING, null=True)
     created = models.DateTimeField(auto_now_add=True)
 
 
@@ -35,9 +36,9 @@ class HistoryIncome(models.Model):
     comment = models.CharField(max_length=300, blank=True)
     account = models.JSONField(verbose_name='account', null=True, blank=True)
     new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    transaction_id = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    tink_id = models.CharField(blank=True, null=True, unique=True)
-    tink_account = models.ForeignKey(TinkAccount, verbose_name='tink_account', on_delete=models.DO_NOTHING, null=True)
+    bank_account = models.ForeignKey(ConnectedAccounts, verbose_name='bank_account', on_delete=models.DO_NOTHING, null=True)
     created = models.DateTimeField(auto_now_add=True)
 
 
