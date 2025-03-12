@@ -29,3 +29,7 @@ __pycache__
 *.ntvs*
 *.njsproj
 *.sln
+
+**/migrations/*.py
+!**/migrations/__init__.py
+!backend/apps/converter/migrations/*.py
