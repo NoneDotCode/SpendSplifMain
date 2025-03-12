@@ -27,10 +27,14 @@ backend/config/.env.prod
 
 # Editor directories and files
 .idea
-ba
+
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 
 .backend/config/.env.prod
+
+**/migrations/*.py
+!**/migrations/__init__.py
+!backend/apps/converter/migrations/*.py
