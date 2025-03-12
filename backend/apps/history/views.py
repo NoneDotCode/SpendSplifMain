@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework.request import Request
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
+from types import SimpleNamespace
 
 from .permissions import CanEditHistory, CanDeleteHistory
 from .serializers import IncomeStatisticViewSerializer, \
@@ -74,6 +75,9 @@ class HistoryView(APIView):
             formatted_date = localized_time.strftime('%Y-%m-%d')
             formatted_time = localized_time.strftime('%H:%M')
 
+            # Проверяем, есть ли transaction_id
+            is_card = bool(getattr(item, 'transaction_id', None))
+
             if isinstance(item, HistoryIncome):
                 balance_value = float(item.account.get("balance", 0))
                 serialized_data.append({
@@ -86,6 +90,7 @@ class HistoryView(APIView):
                     "account_balance": convert_number_to_letter(balance_value),
                     "created_date": formatted_date,
                     "created_time": formatted_time,
+                    "is_card": is_card,  
                 })
             elif isinstance(item, HistoryExpense):
                 balance_value = float(item.from_acc.get("balance", 0))
@@ -106,6 +111,7 @@ class HistoryView(APIView):
                     "periodic_expense": item.periodic_expense,
                     "created_date": formatted_date,
                     "created_time": formatted_time,
+                    "is_card": is_card,  
                 })
 
         return Response(serialized_data)
@@ -120,6 +126,7 @@ class HistoryExpenseEditView(APIView):
 
     @transaction.atomic
     def put(self, request, pk, *args, **kwargs):
+        print(request.data)
         try:
             expense = HistoryExpense.objects.select_for_update().get(pk=pk)
         except HistoryExpense.DoesNotExist:
@@ -145,16 +152,20 @@ class HistoryExpenseEditView(APIView):
                 new_account_id = request.data['account']
             else:
                 new_account_id = old_account_id
+            
 
             # Проверка достаточности средств на новом счете
-            try:
-                new_account = Account.objects.get(pk=new_account_id)
-                if new_account.balance + old_amount < new_amount:
-                    return Response({"error": "Insufficient funds in the account"},
+            if new_account_id == old_account_id:
+                new_account = expense.from_acc
+            else:
+                try:
+                    new_account = Account.objects.get(pk=new_account_id)
+                    if new_account.balance + old_amount < new_amount:
+                        return Response({"error": "Insufficient funds in the account"},
+                                        status=status.HTTP_400_BAD_REQUEST)
+                except ObjectDoesNotExist:
+                    return Response({"error": "Specified new account does not exist"},
                                     status=status.HTTP_400_BAD_REQUEST)
-            except ObjectDoesNotExist:
-                return Response({"error": "Specified new account does not exist"},
-                                status=status.HTTP_400_BAD_REQUEST)
 
             if 'category' in request.data:
                 new_category_id = request.data['category']
@@ -186,8 +197,7 @@ class HistoryExpenseEditView(APIView):
                         'father_space': new_account.father_space.id
                     }
                 except ObjectDoesNotExist:
-                    return Response({"error": "Specified new account does not exist"},
-                                    status=status.HTTP_400_BAD_REQUEST)
+                    pass
             else:
                 new_account = expense.from_acc
 
@@ -218,8 +228,10 @@ class HistoryExpenseEditView(APIView):
                     except ObjectDoesNotExist:
                         return Response({"error": "Specified new category does not exist"},
                                         status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    expense.to_cat = None
+
+            new_category_id = request.data.get('category')  # Вернет None, если ключа нет
+            if new_category_id is None:
+                expense.to_cat = None
 
             # Обновляем общий баланс пространства
             space = Space.objects.select_for_update().get(pk=expense.father_space_id)
@@ -304,6 +316,7 @@ class HistoryIncomeEditView(APIView):
 
     @transaction.atomic
     def put(self, request, pk, *args, **kwargs):
+        print(request.data)
         try:
             income = HistoryIncome.objects.select_for_update().get(pk=pk)
         except HistoryIncome.DoesNotExist:
@@ -313,6 +326,7 @@ class HistoryIncomeEditView(APIView):
             return Response({"error": "Cannot edit incomes older than 14 days"},
                             status=status.HTTP_403_FORBIDDEN)
 
+        space = Space.objects.select_for_update().get(pk=income.father_space_id)
         old_amount = income.amount
         old_account_id = income.account["id"]
 
@@ -329,6 +343,8 @@ class HistoryIncomeEditView(APIView):
             else:
                 new_account_id = old_account_id
 
+            new_account = SimpleNamespace(**income.account) 
+
             # Проверка достаточности средств при уменьшении дохода
             if new_amount < old_amount:
                 try:
@@ -337,7 +353,9 @@ class HistoryIncomeEditView(APIView):
                         return Response({"error": "Insufficient funds in the account to decrease income"},
                                         status=status.HTTP_400_BAD_REQUEST)
                 except ObjectDoesNotExist:
-                    pass
+                    if new_account.balance < (old_amount - new_amount):
+                        return Response({"error": "Insufficient funds in the account to decrease income"},
+                                        status=status.HTTP_400_BAD_REQUEST)
 
             if 'comment' in serializer.validated_data:
                 income.comment = serializer.validated_data['comment']
@@ -362,30 +380,28 @@ class HistoryIncomeEditView(APIView):
                         'included_in_total_balance': new_account.included_in_total_balance,
                         'father_space': new_account.father_space.id
                     }
+                    total_balance = TotalBalance.objects.get(father_space=space)
+                    total_balance.balance -= convert_currencies(amount=old_amount,
+                                                                from_currency=income.currency,
+                                                                to_currency=space.currency)
+                    total_balance.balance += convert_currencies(amount=new_amount,
+                                                                from_currency=new_account.currency,
+                                                                to_currency=space.currency)
+                    income.new_balance = total_balance.balance
+                    income.currency = new_account.currency
+                    total_balance.save()
                 except ObjectDoesNotExist:
-                    return Response({"error": f"Account with id {new_account_id} does not exist"},
-                                    status=status.HTTP_400_BAD_REQUEST)
-            else:
-                new_account = Account.objects.get(pk=old_account_id)
+                    new_account = SimpleNamespace(**income.account)
+                    pass
 
-            space = Space.objects.select_for_update().get(pk=income.father_space_id)
-            total_balance = TotalBalance.objects.get(father_space=space)
-            total_balance.balance -= convert_currencies(amount=old_amount,
-                                                        from_currency=income.currency,
-                                                        to_currency=space.currency)
-            total_balance.balance += convert_currencies(amount=new_amount,
-                                                        from_currency=new_account.currency,
-                                                        to_currency=space.currency)
-            total_balance.save()
+            print(new_account)
 
             income.amount_in_default_currency = convert_currencies(
                 amount=float(new_amount),
                 from_currency=new_account.currency,
                 to_currency=space.currency
             )
-
-            income.new_balance = total_balance.balance
-            income.currency = new_account.currency
+            income.amount = new_amount
             income.save()
 
             return Response({"message": "Income has been updated successfully"}, status=status.HTTP_200_OK)

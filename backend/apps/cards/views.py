@@ -22,6 +22,11 @@ from backend.apps.category.models import Category
 from backend.apps.converter.utils import convert_currencies
 from backend.apps.account.permissions import IsSpaceMember
 from backend.apps.cards.models import UserSpace, ClientToken, BankConnection, ConnectedAccounts
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Util.Padding import unpad
+from binascii import unhexlify
+import base64
 from backend.apps.space.models import Space
 from .serializers import (
     UserCreateSerializer,
@@ -440,6 +445,29 @@ class BankConnectionWebhook(APIView):
         return Response({"Success"}, status=status.HTTP_200_OK)
 
 
+# Data Decryption Key (DDK)
+DDK = 'fe80104d205f15f3654c30db3d2605ad'
+
+def decrypt_data(encrypted_text, ddk):
+    """
+    Расшифровывает данные, зашифрованные finAPI, используя Data Decryption Key (DDK).
+    """
+    try:
+        # Генерация ключа с использованием PBKDF2
+        secret = PBKDF2(ddk, unhexlify(ddk), 16, 1000, None)
+        # Инициализация вектора (IV)
+        iv = unhexlify(ddk)
+        # Создание объекта AES для расшифровки
+        cipher = AES.new(secret, AES.MODE_CBC, iv)
+        # Расшифровка данных
+        decrypted = cipher.decrypt(base64.b64decode(encrypted_text))
+        # Удаление padding и преобразование в строку
+        return unpad(decrypted, 16).decode('utf-8')
+    except Exception as e:
+        print(f"Ошибка при расшифровке данных: {e}")
+        return None
+
+
 class BankTransactionsAndBalanceWebhook(APIView):
     """Webhook view to receive transactions and balance updates."""
     permission_classes = [AllowAny]
@@ -461,56 +489,197 @@ class BankTransactionsAndBalanceWebhook(APIView):
             new_transactions = request.data.get('newTransactions', [])
 
             for transaction in new_transactions:
-                account_name = transaction.get('accountName')
-                bank_connection_name = transaction.get('bankConnectionName')
-                details = transaction.get('details')
+                account_id = transaction.get("accountId")
+                details_encrypted = transaction.get("details")
+                connected_account = ConnectedAccounts.objects.filter(accountId=account_id).first()
+                
+                if details_encrypted:
+                    # Расшифровка details
+                    details_decrypted = decrypt_data(details_encrypted, DDK)
+                    if details_decrypted:
+                        details = json.loads(details_decrypted).get("transactionDetails", [])
+                        
+                        for detail in details:
+                            transaction_id = detail.get("id")
+                            amount = detail.get("amount")
+                            category_name = detail.get("categoryName")
+                            purpose = detail.get('purpose', '')[:200] 
+                            counterpart_name = detail.get("counterpartName", '')  
+                            booking_date = detail.get("bankBookingDate")
+                            currency = transaction.get("currency", 'EUR')
 
-                if details:
-                    try:
-                        details_data = json.loads(details)
-                        transactions_details = details_data.get('transactionDetails', [])
+                            # Формируем комментарий: НАЗВАНИЕ МАГАЗИНА. КОММЕНТАРИЙ
+                            comment = f"{counterpart_name}. {purpose}" if counterpart_name else purpose
 
-                        for detail in transactions_details:
-                            amount = detail.get('amount', 0)
-                            transaction_type = "income" if amount >= 0 else "expense"
+                            if amount > 0:
+                                # Обработка доходов
+                                existing_record = HistoryIncome.objects.filter(
+                                    transaction_id=transaction_id,
+                                    bank_account=account_id,
+                                    father_space=space
+                                ).first()
 
-                            print("------------------------------------------------")
-                            print(f"Type: {transaction_type}")
-                            print(f"Amount: {abs(amount)}")
-                            print(f"Bank: {bank_connection_name}")
-                            print(f"Account: {account_name}")
-                            print(f"Category: {detail.get('categoryName', 'Not specified')}")
-                            print(f"Purpose: {detail.get('purpose', 'Not specified')}")
-                            if transaction_type == "expense":
-                                print(f"Store: {detail.get('counterpartName', 'Not specified')}")
+                                if existing_record:
+                                    # Если запись существует, проверяем, нужно ли её обновить
+                                    if (existing_record.amount != abs(amount) or
+                                        existing_record.amount_in_default_currency != convert_currencies(
+                                                                            from_currency=connected_account.currency,
+                                                                            amount=abs(amount),
+                                                                            to_currency=space.currency) or
+                                        existing_record.comment != comment):                        
+                                        existing_record.amount = float(abs(amount)) 
+                                        existing_record.comment = comment
+                                        existing_record.created = booking_date
+                                        existing_record.save()
+                                else:
+                                    account_data = {
+                                        'id': connected_account.accountId,
+                                        'title': connected_account.bankConnection.bankConnectionName,
+                                        'currency': connected_account.currency,
+                                        'balance': connected_account.balance 
+                                    }
 
-                    except Exception as e:
-                        print(f"Error parsing transaction details: {e}")
-                        continue
+                                    account_json = json.loads(json.dumps(account_data, cls=DjangoJSONEncoder)) 
+
+                                    # Если записи нет, создаем новую
+                                    HistoryIncome.objects.create(
+                                        amount=float(amount),  
+                                        amount_in_default_currency=float(convert_currencies(
+                                            from_currency=connected_account.currency,
+                                            amount=amount,
+                                            to_currency=space.currency
+                                        )),
+                                        currency=currency,
+                                        comment=comment,
+                                        bank_account=connected_account.accountId,
+                                        transaction_id=int(transaction_id), 
+                                        father_space=space,
+                                        account=account_json, 
+                                        created=booking_date
+                                    )
+                            else:
+                                # Обработка расходов
+                                existing_record = HistoryExpense.objects.filter(
+                                    transaction_id=transaction_id,
+                                    bank_account=account_id,
+                                    father_space=space
+                                ).first()
+
+                                # Определяем категорию для трат
+                                category_name = transaction.get('category', {}).get('name', '')
+                                categorize_expense = CategorizeExpense()
+                                category_response = categorize_expense.post(
+                                    request=request,
+                                    space_pk=space_pk,
+                                    category_data={
+                                        'category_name': category_name, 
+                                        'amount': abs(amount),
+                                        'counterpart_name': counterpart_name,
+                                        'purpose': purpose,
+                                        'currency': currency 
+                                    }
+                                )
+                                print("category:", category_name)
+
+                                if category_response.status_code != status.HTTP_200_OK:
+                                    # Если не удалось определить категорию, пропускаем транзакцию
+                                    continue
+
+                                category_id = category_response.data.get('category_id')
+
+                                # Получаем информацию о категории из модели Category
+                                category = Category.objects.filter(id=category_id).first()
+                                if not category:
+                                    continue  
+
+                                # Формируем JSON для категории
+                                category_json = {
+                                    'id': category.id,
+                                    'icon': category.icon,
+                                    'color': category.color,
+                                    'limit': float(category.limit) if category.limit is not None else 0.0,
+                                    'spent': float(category.spent),
+                                    'title': category.title,
+                                    'father_space': category.father_space.id
+                                }
+
+                                if existing_record:
+                                    # Если запись существует, проверяем, нужно ли её обновить
+                                    if (existing_record.amount != abs(amount) or
+                                        existing_record.amount_in_default_currency != convert_currencies(
+                                                                            from_currency=connected_account.currency,
+                                                                            amount=abs(amount),
+                                                                            to_currency=space.currency) or
+                                        existing_record.comment != comment):
+                                        existing_record.amount = float(abs(amount)) 
+                                        existing_record.comment = comment
+                                        existing_record.created = booking_date
+                                        existing_record.save()
+                                else:
+                                    # Если записи нет, создаем новую
+                                    from_acc_data = {
+                                        'id': connected_account.accountId,
+                                        'title': connected_account.bankConnection.bankConnectionName,
+                                        'currency': connected_account.currency,
+                                        'balance': connected_account.balance  
+                                    }
+
+                                    to_cat_data = {
+                                        'id': category.id,
+                                        'icon': category.icon,
+                                        'color': category.color,
+                                        'limit': float(category.limit) if category.limit is not None else 0.0,
+                                        'spent': category.spent,
+                                        'title': category.title,
+                                        'father_space': category.father_space.id
+                                    }
+
+                                    from_acc_json = json.loads(json.dumps(from_acc_data, cls=DjangoJSONEncoder))
+                                    to_cat_json = json.loads(json.dumps(to_cat_data, cls=DjangoJSONEncoder))
+
+                                    HistoryExpense.objects.create(
+                                        amount=float(abs(amount)),  
+                                        amount_in_default_currency=float(convert_currencies(
+                                            from_currency=connected_account.currency,
+                                            amount=abs(amount),
+                                            to_currency=space.currency
+                                        )),
+                                        currency=currency,
+                                        comment=comment,
+                                        from_acc=from_acc_json,
+                                        to_cat=to_cat_json,
+                                        bank_account=connected_account.accountId,
+                                        transaction_id=int(transaction_id),
+                                        father_space=space,
+                                        created=booking_date
+                                    )
 
         elif triggerEvent == "NEW_ACCOUNT_BALANCE":
             balance_changes = request.data.get('balanceChanges', [])
 
             for change in balance_changes:
                 bank_connection_name = change.get('bankConnectionName')
-                details = change.get('details')
-                if details:
-                    try:
-                        details_data = json.loads(details)
-                        new_balance = details_data.get('newBalance')
-                    except Exception as e:
-                        print(f"Error parsing details: {e}")
-                        continue
-                    bank_connection = BankConnection.objects.filter(
-                        bankConnectionName=bank_connection_name,
-                        space=space
-                    ).first()
-                    if bank_connection:
-                        bank_connection.balance = new_balance
-                        bank_connection.save()
-                        print(f"Updated balance for {bank_connection_name} to {new_balance}")
-                    else:
-                        print(f"BankConnection not found for {bank_connection_name}")
+                details_encrypted = change.get('details')
+                if details_encrypted:
+                    # Расшифровка details
+                    details_decrypted = decrypt_data(details_encrypted, DDK)
+                    if details_decrypted:
+                        try:
+                            details_data = json.loads(details_decrypted)
+                            new_balance = details_data.get('newBalance')
+                        except Exception as e:
+                            print(f"Ошибка при парсинге details: {e}")
+                            continue
+                        bank_connection = BankConnection.objects.filter(
+                            bankConnectionName=bank_connection_name,
+                            space=space
+                        ).first()
+                        if bank_connection:
+                            bank_connection.balance = new_balance
+                            bank_connection.save()
+                            print(f"Обновлен баланс для {bank_connection_name} на {new_balance}")
+                        else:
+                            print(f"BankConnection не найден для {bank_connection_name}")
         return Response("Success", status=status.HTTP_200_OK)
 
 
@@ -710,7 +879,7 @@ class RefreshAccountView(APIView):
 
         # Получаем транзакции за последние 30 дней
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=10)
+        start_date = end_date - timedelta(days=30)
 
         transactions_response = finapi_client.get_transactions(access_token, [account_id], start_date, end_date)
         if "error" in transactions_response:
@@ -734,20 +903,19 @@ class RefreshAccountView(APIView):
                 # Обработка доходов
                 existing_record = HistoryIncome.objects.filter(
                     transaction_id=transaction_id,
-                    bank_account__accountId=account_id,
+                    bank_account=account_id,
                     father_space=space
                 ).first()
 
                 if existing_record:
                     # Если запись существует, проверяем, нужно ли её обновить
-                    if (existing_record.amount != amount or
+                    if (existing_record.amount != abs(amount) or
                         existing_record.amount_in_default_currency != convert_currencies(
                                                             from_currency=connected_account.currency,
-                                                            amount=amount,
+                                                            amount=abs(amount),
                                                             to_currency=space.currency) or
-                        existing_record.comment != comment or
-                        existing_record.created != booking_date):
-                        existing_record.amount = float(amount) 
+                        existing_record.comment != comment):                        
+                        existing_record.amount = float(abs(amount)) 
                         existing_record.comment = comment
                         existing_record.created = booking_date
                         existing_record.save()
@@ -771,7 +939,7 @@ class RefreshAccountView(APIView):
                         )),
                         currency=currency,
                         comment=comment,
-                        bank_account=connected_account,
+                        bank_account=connected_account.accountId,
                         transaction_id=int(transaction_id), 
                         father_space=space,
                         account=account_json, 
@@ -781,7 +949,7 @@ class RefreshAccountView(APIView):
                 # Обработка расходов
                 existing_record = HistoryExpense.objects.filter(
                     transaction_id=transaction_id,
-                    bank_account__accountId=account_id,
+                    bank_account=account_id,
                     father_space=space
                 ).first()
 
@@ -830,12 +998,10 @@ class RefreshAccountView(APIView):
                                                             from_currency=connected_account.currency,
                                                             amount=abs(amount),
                                                             to_currency=space.currency) or
-                        existing_record.comment != comment or
-                        existing_record.created != booking_date):
+                        existing_record.comment != comment):
                         existing_record.amount = float(abs(amount)) 
                         existing_record.comment = comment
                         existing_record.created = booking_date
-                        existing_record.to_cat = category_json
                         existing_record.save()
                 else:
                     # Если записи нет, создаем новую
@@ -870,11 +1036,10 @@ class RefreshAccountView(APIView):
                         comment=comment,
                         from_acc=from_acc_json,
                         to_cat=to_cat_json,
-                        bank_account=connected_account,
+                        bank_account=connected_account.accountId,
                         transaction_id=int(transaction_id),
                         father_space=space,
                         created=booking_date
                     )
 
         return Response({'message': 'Transactions updated successfully'}, status=status.HTTP_200_OK)
-    

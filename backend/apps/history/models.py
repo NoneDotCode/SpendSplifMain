@@ -25,7 +25,7 @@ class HistoryExpense(models.Model):
     new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     transaction_id = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    bank_account = models.ForeignKey(ConnectedAccounts, verbose_name='bank_account', on_delete=models.DO_NOTHING, null=True)
+    bank_account = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
 
@@ -38,7 +38,7 @@ class HistoryIncome(models.Model):
     new_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     transaction_id = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    bank_account = models.ForeignKey(ConnectedAccounts, verbose_name='bank_account', on_delete=models.DO_NOTHING, null=True)
+    bank_account = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
 
