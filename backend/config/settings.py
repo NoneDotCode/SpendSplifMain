@@ -229,8 +229,8 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "https://spendsplif.com",
     "https://api.spendsplif.com",
-    r"^https://.*\.finapi\.io$",
-    r"^https://.*\.stripe\.com$",
+#    r"^https://.*\.finapi\.io$",
+#    r"^https://.*\.stripe\.com$",
     "https://stripe.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
@@ -239,8 +239,8 @@ CSRF_COOKIE_HTTP_ONLY = True
 CSRF_TRUSTED_ORIGINS = [
     "https://spendsplif.com",
     "https://api.spendsplif.com",
-    r"^https://.*\.finapi\.io$",
-    r"^https://.*\.stripe\.com$",
+#    r"^https://.*\.finapi\.io$",
+#    r"^https://.*\.stripe\.com$",
     "https://stripe.com",
 ]
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]

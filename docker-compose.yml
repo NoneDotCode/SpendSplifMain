@@ -9,7 +9,7 @@ services:
     env_file:
       - ./backend/config/.env.prod
     volumes:
-      - static_volume:/app/backend/static
+      - static_volume:/app/backend/config/static
     networks:
       - app-network
 
@@ -22,7 +22,7 @@ services:
     env_file:
       - ./backend/config/.env.prod
     volumes:
-      - static_volume:/app/backend/static
+      - static_volume:/app/backend/config/static
     command: celery -A backend.config worker --pool=solo --loglevel=INFO
     networks:
       - app-network
@@ -36,7 +36,7 @@ services:
     env_file:
       - ./backend/config/.env.prod
     volumes:
-      - static_volume:/app/backend/static
+      - static_volume:/app/backend/config/static
     command: celery -A backend.config beat --loglevel=INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
     networks:
       - app-network
@@ -57,6 +57,8 @@ services:
       - certbot-www:/var/www/certbot
       - /home/spendsplif/SpendSplifFront/dist:/usr/share/nginx/html
       - /home/spendsplif/SpendSplifFront/src/image/CreateCategory/svg/Bold:/usr/share/nginx/html/icons
+      - /home/spendsplif/SpendSplifFront/src/image/WelcomePage:/usr/share/nginx/html/images/welcome
+      - static_volume:/app/backend/config/static
     networks:
       - app-network
 
