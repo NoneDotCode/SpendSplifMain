@@ -38,7 +38,7 @@ class HistoryExpenseEditSerializer(serializers.Serializer):
 class HistoryIncomeEditSerializer(serializers.Serializer):
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     account = serializers.IntegerField(required=False)
-    comment = serializers.CharField(required=False)
+    comment = serializers.CharField(required=False, allow_blank=True)
 
 
 class StatisticViewSerializer(serializers.Serializer):
