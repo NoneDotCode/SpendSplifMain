@@ -489,7 +489,7 @@ class CategoryStatisticView(generics.ListAPIView):
     def get_expenses_for_period(queryset, days: int) -> List[HistoryExpense]:
         return queryset.filter(created__gte=datetime.now() - timedelta(days=days))
 
-    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> tuple[dict[str, Decimal], dict[str, int]]:
+    def get_summary_and_percentages(self, expenses: List[HistoryExpense]) -> Tuple[Dict[str, Decimal], Dict[str, int]]:
         expenses = [expense for expense in expenses if expense.to_cat]
         total = sum(expense.amount_in_default_currency for expense in expenses)
         summary = self.get_summary(expenses)
@@ -510,7 +510,7 @@ class CategoryStatisticView(generics.ListAPIView):
         return summary
 
     @staticmethod
-    def get_percentages(summary: Dict[str, float], total: float) -> dict[str, str]:
+    def get_percentages(summary: Dict[str, float], total: float) -> Dict[str, str]:
         percentages = {category: round(value / total * 100) for category, value in summary.items()}
         remaining_percentage = 100 - sum(percentages.values())
         if remaining_percentage != 0:
@@ -682,7 +682,7 @@ class ExpensesStatisticView(generics.ListAPIView):
         return periods
 
     @staticmethod
-    def get_summary(expenses: List[HistoryExpense]) -> dict[str, int]:
+    def get_summary(expenses: List[HistoryExpense]) -> Dict[str, int]:
         category_expenses = sum(expense.amount for expense in expenses if expense.to_cat)
         loss_expenses = sum(expense.amount for expense in expenses if expense.to_cat is None)
         recurring_expenses = sum(expense.amount for expense in expenses if expense.periodic_expense)
@@ -693,10 +693,10 @@ class ExpensesStatisticView(generics.ListAPIView):
         }
 
     @staticmethod
-    def get_total_expenses(summary: dict[str, int]) -> int:
+    def get_total_expenses(summary: Dict[str, int]) -> int:
         return sum(summary.values())
 
-    def get_daily_percentages(self, daily_expenses: dict[str, List[HistoryExpense]], total_expenses: int) -> dict[str, dict[str, str]]:
+    def get_daily_percentages(self, daily_expenses: Dict[str, List[HistoryExpense]], total_expenses: int) -> Dict[str, Dict[str, str]]:
         daily_percentages = {}
         for date_str, expenses in daily_expenses.items():
             day_summary = self.get_summary(expenses)
@@ -704,7 +704,7 @@ class ExpensesStatisticView(generics.ListAPIView):
             daily_percentages[date_str] = percentages
         return daily_percentages
 
-    def get_percentages(self, summary: dict[str, int], total_expenses: int) -> dict[str, str]:
+    def get_percentages(self, summary: Dict[str, int], total_expenses: int) -> Dict[str, str]:
         if total_expenses == 0:
             return {key: '0 %' for key in summary}
         return {key: f"{round((val / total_expenses) * 100)} %" for key, val in summary.items()}
