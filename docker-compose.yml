@@ -56,8 +56,9 @@ services:
       - certbot-etc:/etc/letsencrypt
       - certbot-www:/var/www/certbot
       - /home/spendsplif/SpendSplifFront/dist:/usr/share/nginx/html
-      - /home/spendsplif/SpendSplifFront/src/image/CreateCategory/svg/Bold:/usr/share/nginx/html/icons
+      - /home/spendsplif/SpendSplifFront/src/image/CreateCategory/svg/Bold:/usr/share/nginx/html/icons/categories
       - /home/spendsplif/SpendSplifFront/src/image/WelcomePage:/usr/share/nginx/html/images/welcome
+      - /home/spendsplif/SpendSplifFront/src/image/History/svg/Bold:/usr/share/nginx/html/icons/history
       - static_volume:/app/backend/config/static
     networks:
       - app-network
