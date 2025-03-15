@@ -3,6 +3,7 @@ from django.conf import settings
 from backend.apps.space.models import Space
 from backend.apps.customuser.models import CustomUser
 
+
 class BankConnection(models.Model):
     user = models.ForeignKey(CustomUser, verbose_name='user', on_delete=models.CASCADE)
     space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)

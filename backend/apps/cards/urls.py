@@ -6,7 +6,9 @@ from backend.apps.cards.views import (
     DeleteBankAccountView,
     BanksView,
     UserSpaceView,
-    SpaceBankConnectionsView
+    SpaceBankConnectionsView,
+    IsBankActionRequiredView,
+    BankConnectionUpdateView
 )
 
 urlpatterns = [
@@ -16,4 +18,6 @@ urlpatterns = [
     path('user-bank/', UserSpaceView.as_view(), name='user-space'),
     path('delete_bank_account/', DeleteBankAccountView.as_view(), name='account-connection-delete'),
     path('account/refresh/', RefreshAccountView.as_view(), name='refresh-account'),
+    path('my_connections/action/', IsBankActionRequiredView.as_view(), name='is-bank-action-required'),
+    path('my_connections/update/', BankConnectionUpdateView.as_view(), name='bank-update'),
 ]

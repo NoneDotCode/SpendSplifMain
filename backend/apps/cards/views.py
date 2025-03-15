@@ -164,6 +164,10 @@ class FinAPIClient:
         """Получение списка счетов"""
         return self._request("GET", f"/api/v2/accounts/{id}", access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API)
 
+    def get_connections(self, access_token):
+        """Получение списка счетов"""
+        return self._request("GET", "/api/v2/bankConnections", access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API)
+
     def bank_connection_import(self, access_token, bank_id, bank_connection_name, space_pk):
         """Импорт банковского подключения"""
         # потом добавить'redirectUrl': "https://spendsplif.com/bank/success/",
@@ -180,10 +184,23 @@ class FinAPIClient:
         }
         return self._request("POST", "/api/webForms/bankConnectionImport", access_token=access_token, data=payload, content_type='application/json', BASE_URL=self.BASE_URL_WEB)
 
+    def bank_connection_update(self, access_token, bank_connection_id):
+        """Обновление банковского подключения"""
+        # потом добавить'redirectUrl': "https://spendsplif.com/bank/success/",
+        payload = {
+            'bankConnectionId': bank_connection_id,
+            'importNewAccountsMode': "CONDITIONAL",
+            'manageSavedSettings': [
+                "CREDENTIALS",
+                "DEFAULT_TWO_STEP_PROCEDURE"
+            ]
+        }
+        return self._request("POST", "/api/tasks/backgroundUpdate", access_token=access_token, data=payload, content_type='application/json', BASE_URL=self.BASE_URL_WEB)
+
     def get_transactions(self, access_token, account_ids, start_date, end_date):
         """Получение транзакций"""
         params = {
-            'accountIds': ','.join(map(str, account_ids)),  # Преобразование списка в строку
+            'accountIds': ','.join(map(str, account_ids)),  
             'minBankBookingDate': start_date.strftime('%Y-%m-%d'),
             'maxBankBookingDate': end_date.strftime('%Y-%m-%d'),
             'view': 'userView',
@@ -803,7 +820,7 @@ class UserSpaceView(APIView):
 
 
 class DeleteBankAccountView(APIView):
-    """View to delete a bank account and unlink it from FinAPI."""
+    """Класс для удаления счета и отвязания его от FinAPI."""
     permission_classes = [IsAuthenticated, IsSpaceMember]
 
     @staticmethod
@@ -879,7 +896,7 @@ class RefreshAccountView(APIView):
 
         # Получаем транзакции за последние 30 дней
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=3)
 
         transactions_response = finapi_client.get_transactions(access_token, [account_id], start_date, end_date)
         if "error" in transactions_response:
@@ -1043,3 +1060,80 @@ class RefreshAccountView(APIView):
                     )
 
         return Response({'message': 'Transactions updated successfully'}, status=status.HTTP_200_OK)
+
+
+class IsBankActionRequiredView(APIView):
+    """View to delete a bank account and unlink it from FinAPI."""
+    permission_classes = [IsAuthenticated, IsSpaceMember]
+
+    @staticmethod
+    def get(request, space_pk):
+        """Обрабатывает GET-запрос для проверки необходимости действий пользователя."""
+        # Получаем access_token для FinAPI
+        user = request.user      
+        space = Space.objects.filter(pk=space_pk).first()
+        user_space = UserSpace.objects.filter(space=space, user=user).first()
+
+        if not user_space:
+            return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+        access_token = BankConnectionView._get_access_token(request, space_pk)
+
+        # Получаем все банк-соединения от FinAPI
+        finapi_client = FinAPIClient()
+        my_connections_response = finapi_client.get_connections(access_token)
+
+        # Проверяем, есть ли коннекшны с userActionRequired = True
+        for connection in my_connections_response.get('connections', []):
+            for interface in connection.get('interfaces', []):
+                if interface.get('userActionRequired', False):
+                    connected_account = ConnectedAccounts.objects.filter(
+                        bankConnection__user=user,
+                        bankConnection__space=space,
+                        bankConnectionId=connection['id']
+                    ).first()
+
+                    if not connected_account:
+                        return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+                    # Получаем имя банка из BankConnection
+                    bank_connection = connected_account.bankConnection
+                    bank_connection_name = bank_connection.bankConnectionName
+                    # Если нашли коннекшн с userActionRequired = True, возвращаем его ID и имя банка
+                    return Response({
+                        'connection_id': connection['id'],
+                        'connection': bank_connection_name,
+                        'bank': connection['bank']['name']
+                    }, status=status.HTTP_200_OK)
+
+        # Если не нашли коннекшнов с userActionRequired = True, возвращаем пустой ответ
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+
+class BankConnectionUpdateView(APIView):
+    """Представление для обновления банковского подключения"""
+    permission_classes = [IsAuthenticated, IsSpaceMember]
+
+    def post(self, request, space_pk):
+        bank_connection_id = request.data.get('bank_connection_id')
+        print(bank_connection_id, request.data)
+        if not bank_connection_id:
+            return Response({}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Аутентификация пользователя
+        access_token = BankConnectionView._get_access_token(request, space_pk)
+
+        # Импорт банковского подключения
+        finapi_client = FinAPIClient()
+        response = finapi_client.bank_connection_update(access_token, bank_connection_id)
+
+        if 'error' in response:
+            return Response(response, status=status.HTTP_400_BAD_REQUEST)
+
+        # Получение значений из словаря response
+        redirect_url = response.get('payload', {}).get('webForm', {}).get('url')
+
+        if not redirect_url:
+            return Response({'error': 'Invalid response from FinAPI'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"url": redirect_url}, status=status.HTTP_200_OK)
