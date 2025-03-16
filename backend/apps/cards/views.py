@@ -176,8 +176,8 @@ class FinAPIClient:
                 "id": bank_id
             },
             "callbacks": {
-                # "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
-                "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
+                "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
+                # "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
             },
             "bankConnectionName": bank_connection_name,
             "maxDaysForDownload": 60
@@ -496,8 +496,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
         triggerEvent = request.data.get('triggerEvent')
         callbackHandle = request.data.get('callbackHandle')
 
-        space_pk = callbackHandle
-        space = Space.objects.filter(pk=space_pk).first()
+        space = Space.objects.filter(pk=callbackHandle).first()
         if not space:
             return Response("Space not found", status=status.HTTP_404_NOT_FOUND)
 
@@ -587,7 +586,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                 categorize_expense = CategorizeExpense()
                                 category_response = categorize_expense.post(
                                     request=request,
-                                    space_pk=space_pk,
+                                    space_pk=callbackHandle,
                                     category_data={
                                         'category_name': category_name, 
                                         'amount': abs(amount),
@@ -675,7 +674,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
             balance_changes = request.data.get('balanceChanges', [])
 
             for change in balance_changes:
-                bank_connection_name = change.get('bankConnectionName')
+                accountId = change.get('accountId')
                 details_encrypted = change.get('details')
                 if details_encrypted:
                     # Расшифровка details
@@ -683,20 +682,21 @@ class BankTransactionsAndBalanceWebhook(APIView):
                     if details_decrypted:
                         try:
                             details_data = json.loads(details_decrypted)
+                            print("расшифровано:", details_data)
                             new_balance = details_data.get('newBalance')
                         except Exception as e:
                             print(f"Ошибка при парсинге details: {e}")
                             continue
-                        bank_connection = BankConnection.objects.filter(
-                            bankConnectionName=bank_connection_name,
+                        account_connection = ConnectedAccounts.objects.filter(
+                            accountId=accountId,
                             space=space
                         ).first()
-                        if bank_connection:
-                            bank_connection.balance = new_balance
-                            bank_connection.save()
-                            print(f"Обновлен баланс для {bank_connection_name} на {new_balance}")
+                        if account_connection:
+                            account_connection.balance = new_balance
+                            account_connection.save()
+                            print(f"Обновлен баланс для {accountId} на {new_balance}")
                         else:
-                            print(f"BankConnection не найден для {bank_connection_name}")
+                            print(f"BankConnection не найден для {accountId}")
         return Response("Success", status=status.HTTP_200_OK)
 
 
@@ -896,7 +896,7 @@ class RefreshAccountView(APIView):
 
         # Получаем транзакции за последние 30 дней
         end_date = timezone.now().date()
-        start_date = end_date - timedelta(days=3)
+        start_date = end_date - timedelta(days=30)
 
         transactions_response = finapi_client.get_transactions(access_token, [account_id], start_date, end_date)
         if "error" in transactions_response:

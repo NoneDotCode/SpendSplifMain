@@ -89,7 +89,7 @@ class CategorizeExpense(APIView):
         currency = data.get('currency')
 
         # Проверяем доступ к спейсу
-        space = Space.objects.filter(pk=space_pk, members=request.user).first()
+        space = Space.objects.filter(pk=space_pk).first()
         if not space:
             return Response({"detail": "You do not have permission to access this space."}, status=status.HTTP_403_FORBIDDEN)
         
