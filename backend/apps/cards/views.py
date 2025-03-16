@@ -125,6 +125,10 @@ class FinAPIClient:
         """Удаляет привязанный счет в FinAPI"""
         return self._request("DELETE", f"/api/v2/accounts/{account_id}", access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API,)
 
+    def delete_connection(self, access_token, bankId):
+        """Удаляет банк коннекшн в FinAPI"""
+        return self._request("DELETE", f"/api/v2/bankConnections/{bankId}", access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API,)
+
     def create_user(self, member_email, generated_password, phone):
         """Создаёт пользователя в FinAPI"""
         payload = {
@@ -188,9 +192,13 @@ class FinAPIClient:
         """Обновление банковского подключения"""
         # потом добавить'redirectUrl': "https://spendsplif.com/bank/success/",
         payload = {
-            'bankConnectionId': bank_connection_id,
-            'importNewAccountsMode': "CONDITIONAL",
-            'manageSavedSettings': [
+            "bankConnectionId": int(bank_connection_id),
+            "importNewAccountsMode": "CONDITIONAL",
+            "callbacks": {
+                "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
+                # "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
+            },
+            "manageSavedSettings": [
                 "CREDENTIALS",
                 "DEFAULT_TWO_STEP_PROCEDURE"
             ]
@@ -400,8 +408,12 @@ class BankConnectionWebhook(APIView):
     def post(request):
         """Обрабатывает POST-запрос и обновляет статус банковского подключения"""
         print(request, request.data)
-        webFormId = request.data.get('webFormId')
-        connection_status = request.data.get('status')
+        webFormId = request.data.get('webFormId') 
+        if webFormId is not None:
+            connection_status = request.data.get('status')
+        else:
+            webFormId = request.data.get('webForm', {}).get('id')
+            connection_status = 'COMPLETED'
         bank_connection = BankConnection.objects.filter(webFormId=webFormId).first()
 
         space = bank_connection.space
@@ -522,7 +534,6 @@ class BankTransactionsAndBalanceWebhook(APIView):
                             purpose = detail.get('purpose', '')[:200] 
                             counterpart_name = detail.get("counterpartName", '')  
                             booking_date = detail.get("bankBookingDate")
-                            currency = transaction.get("currency", 'EUR')
 
                             # Формируем комментарий: НАЗВАНИЕ МАГАЗИНА. КОММЕНТАРИЙ
                             comment = f"{counterpart_name}. {purpose}" if counterpart_name else purpose
@@ -565,7 +576,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                             amount=amount,
                                             to_currency=space.currency
                                         )),
-                                        currency=currency,
+                                        currency=connected_account.currency,
                                         comment=comment,
                                         bank_account=connected_account.accountId,
                                         transaction_id=int(transaction_id), 
@@ -592,7 +603,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                         'amount': abs(amount),
                                         'counterpart_name': counterpart_name,
                                         'purpose': purpose,
-                                        'currency': currency 
+                                        'currency': connected_account.currency 
                                     }
                                 )
                                 print("category:", category_name)
@@ -660,7 +671,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                             amount=abs(amount),
                                             to_currency=space.currency
                                         )),
-                                        currency=currency,
+                                        currency=connected_account.currency,
                                         comment=comment,
                                         from_acc=from_acc_json,
                                         to_cat=to_cat_json,
@@ -1118,6 +1129,12 @@ class BankConnectionUpdateView(APIView):
         print(bank_connection_id, request.data)
         if not bank_connection_id:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
+        
+        account = ConnectedAccounts.objects.filter(bankConnectionId=bank_connection_id).first()
+        if not account:
+            return Response({'error': 'Bank connection not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        bank_connection = account.bankConnection
 
         # Аутентификация пользователя
         access_token = BankConnectionView._get_access_token(request, space_pk)
@@ -1130,9 +1147,50 @@ class BankConnectionUpdateView(APIView):
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
 
         # Получение значений из словаря response
-        redirect_url = response.get('payload', {}).get('webForm', {}).get('url')
+        web_form = response.get('payload', {}).get('webForm', {})
+        web_form_id = web_form.get('id')
+        redirect_url = web_form.get('url')
 
-        if not redirect_url:
+        if not web_form_id or not redirect_url:
             return Response({'error': 'Invalid response from FinAPI'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Сохранение webFormId в модели
+        bank_connection.webFormId = web_form_id
+        bank_connection.save()
+
         return Response({"url": redirect_url}, status=status.HTTP_200_OK)
+    
+
+class DeleteBankConnectionView(APIView):
+    """Класс для удаления конекта и привязанных к нему счетов FinAPI."""
+    permission_classes = [IsAuthenticated, IsSpaceMember]
+
+    @staticmethod
+    def delete(request, space_pk):
+        """Обрабатывает DELETE-запрос для удаления конекта."""
+        print(request.data)
+        bankId = request.data.get('bankId')
+        if not bankId:
+            return Response({'error': 'bankId is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Находим счет по accountId и проверяем, что он принадлежит текущему пользователю и пространству
+        accounts = ConnectedAccounts.objects.filter(bankConnectionId=bankId)
+        account = ConnectedAccounts.objects.filter(bankConnectionId=bankId).first()
+        bank_connection = account.bankConnection
+
+        # Получаем access_token для FinAPI
+        access_token = BankConnectionView._get_access_token(request, space_pk)
+        if isinstance(access_token, Response):
+            return access_token
+
+        # Удаляем счет из FinAPI
+        finapi_client = FinAPIClient()
+        delete_response = finapi_client.delete_connection(access_token, bankId)
+
+        print(delete_response)
+
+        # Удаляем счета и конекты из базы данных
+        accounts.delete()
+        bank_connection.delete()
+
+        return Response({'message': 'Bank account successfully deleted and unlinked from FinAPI'}, status=status.HTTP_200_OK)

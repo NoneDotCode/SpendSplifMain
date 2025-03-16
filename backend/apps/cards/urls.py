@@ -1,7 +1,7 @@
 from django.urls import path
 from backend.apps.cards.views import (
     BankConnectionView,
-    BankConnectionWebhook,
+    DeleteBankConnectionView,
     RefreshAccountView,
     DeleteBankAccountView,
     BanksView,
@@ -20,4 +20,5 @@ urlpatterns = [
     path('account/refresh/', RefreshAccountView.as_view(), name='refresh-account'),
     path('my_connections/action/', IsBankActionRequiredView.as_view(), name='is-bank-action-required'),
     path('my_connections/update/', BankConnectionUpdateView.as_view(), name='bank-update'),
+    path('my_connections/delete/', DeleteBankConnectionView.as_view(), name='bank-delete'),
 ]
