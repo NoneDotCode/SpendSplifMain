@@ -36,7 +36,7 @@ class BankConnectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ConnectedAccounts
-        fields = ['accountIban', 'accountId', 'balance', 'currency', 'created', 'income', 'expenses', 'bankConnectionName']
+        fields = ['accountIban', 'accountId', 'balance', 'currency', 'created', 'income', 'expenses', 'bankConnectionName', 'bankConnectionId']
 
     def get_created(self, obj):
         return obj.created_at.strftime('%d.%m.%Y')
@@ -49,8 +49,7 @@ class BankConnectionSerializer(serializers.ModelSerializer):
 
     def get_bankConnectionName(self, obj):
         bank_name = obj.bankConnection.bankConnectionName if obj.bankConnection else "Unknown"
-        iban_prefix = obj.accountIban[:8] + "..." if obj.accountIban else "N/A"
-        return f"{bank_name} - {iban_prefix}"
+        return f"{bank_name}"
 
 
 # Сериализатор для модели UserSpace
