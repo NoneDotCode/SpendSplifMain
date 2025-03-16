@@ -56,6 +56,8 @@ class CustomUser(AbstractUser):
     """
     Model class representing a custom user.
     """
+    first_name = None
+    last_name = None
 
     language = models.CharField(max_length=20, choices=Language.choices, default=Language.ENGLISH)
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
@@ -88,7 +90,6 @@ class CustomUser(AbstractUser):
     password_reset_code = models.CharField(max_length=12, blank=True, null=True)
 
     # The following fields are required when creating a user.
-    groups = models.ManyToManyField(Group, related_name="custom_users")
     user_permissions = models.ManyToManyField(Permission, related_name="custom_users")
     verify_new_password = models.CharField(max_length=12, blank=True,null=True)
     USERNAME_FIELD = "email"
