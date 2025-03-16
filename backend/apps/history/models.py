@@ -10,8 +10,8 @@ from backend.apps.goal.models import Goal
 from backend.apps.customuser.constants import Currency
 from backend.apps.tink.models import TinkAccount
 from backend.apps.cards.models import ConnectedAccounts
-
 from backend.apps.category.constants import Icons
+from django.utils import timezone
 
 
 class HistoryExpense(models.Model):
@@ -26,7 +26,13 @@ class HistoryExpense(models.Model):
     transaction_id = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     bank_account = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Если значение created не передано, устанавливаем текущую дату и время
+        if not self.created:
+            self.created = timezone.now()
+        super().save(*args, **kwargs)
 
 
 class HistoryIncome(models.Model):
@@ -39,7 +45,13 @@ class HistoryIncome(models.Model):
     transaction_id = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
     bank_account = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True)
-    created = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        # Если значение created не передано, устанавливаем текущую дату и время
+        if not self.created:
+            self.created = timezone.now()
+        super().save(*args, **kwargs)
 
 
 class HistoryTransfer(models.Model):
