@@ -688,8 +688,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
                             print(f"Ошибка при парсинге details: {e}")
                             continue
                         account_connection = ConnectedAccounts.objects.filter(
-                            accountId=accountId,
-                            space=space
+                            accountId=accountId
                         ).first()
                         if account_connection:
                             account_connection.balance = new_balance
