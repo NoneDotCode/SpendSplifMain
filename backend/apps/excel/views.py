@@ -128,7 +128,7 @@ class ImportHistoryView(generics.GenericAPIView):
     def post(request, *args, **kwargs):
         highest_role = request.user.roles[0]
         if highest_role == 'free':
-            return Response("Error: You are not allowed to export history data with a free role.", status=status.HTTP_403_FORBIDDEN)
+            return Response("Error: You are not allowed to import history data with a free role.", status=status.HTTP_403_FORBIDDEN)
         
         space_id = kwargs.get("space_pk")
         try:
