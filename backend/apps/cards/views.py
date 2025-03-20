@@ -353,6 +353,11 @@ class BankConnectionView(APIView):
         """Обрабатывает POST-запрос для импорта банковского подключения. В ответе будет юрл, на который перенаправит фронт"""
         space = get_object_or_404(Space, pk=space_pk)
 
+        user = request.user
+        # Проверяем роли пользователя
+        if ('free' in user.roles):
+            return Response({"Error": "Free user cannot do this"}, status=status.HTTP_403_FORBIDDEN)
+
         bank_connection_name = request.data.get('bankConnectionName')
         if not self._is_valid_bank_name(bank_connection_name):
             return Response({'error': 'Invalid or missing bank connection name'}, status=status.HTTP_400_BAD_REQUEST)
@@ -379,7 +384,7 @@ class BankConnectionView(APIView):
             return Response({'error': 'Invalid response from FinAPI'}, status=status.HTTP_400_BAD_REQUEST)
 
         BankConnection.objects.create(
-            user=request.user,
+            user=user,
             space=space,  # Важно добавить space в модель
             bankConnectionName=bank_connection_name,
             status="WAITING",
@@ -717,7 +722,7 @@ class SpaceBankConnectionsView(APIView):
         space = get_object_or_404(Space, pk=space_pk)
 
         # Получаем все банковские подключения для данного пространства
-        bank_connections = BankConnection.objects.filter(space=space, user=request.user)
+        bank_connections = BankConnection.objects.filter(space=space)
 
         # Получаем все связанные счета
         connections = ConnectedAccounts.objects.filter(bankConnection__in=bank_connections)
@@ -836,18 +841,30 @@ class DeleteBankAccountView(APIView):
     @staticmethod
     def delete(request, space_pk):
         """Обрабатывает DELETE-запрос для удаления счета."""
-        print(request.data)
         account_id = request.data.get('accountId')
         if not account_id:
             return Response({'error': 'accountId is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Находим счет по accountId и проверяем, что он принадлежит текущему пользователю и пространству
-        account = get_object_or_404(
-            ConnectedAccounts,
-            accountId=account_id,
-            bankConnection__space__pk=space_pk,
-            bankConnection__user=request.user
-        )
+        try:
+            account = get_object_or_404(
+                ConnectedAccounts,
+                accountId=account_id,
+                bankConnection__space__pk=space_pk
+            )
+
+            # Проверяем, принадлежит ли счёт текущему пользователю
+            if account.bankConnection.user != request.user:
+                return Response(
+                    {"Error": "You cannot delete accounts of other project users."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except ConnectedAccounts.DoesNotExist:
+            return Response(
+                {"Error": "Account not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         # Получаем access_token для FinAPI
         access_token = BankConnectionView._get_access_token(request, space_pk)
@@ -879,6 +896,26 @@ class RefreshAccountView(APIView):
         space = Space.objects.filter(pk=space_pk).first()
         if not space:
             return Response({'message': 'Space not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            account = get_object_or_404(
+                ConnectedAccounts,
+                accountId=account_id,
+                bankConnection__space__pk=space_pk
+            )
+
+            # Проверяем, принадлежит ли счёт текущему пользователю
+            if account.bankConnection.user != request.user:
+                return Response(
+                    {"Error": "You cannot delete accounts of other project users."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except ConnectedAccounts.DoesNotExist:
+            return Response(
+                {"Error": "Account not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         # Получаем access_token для FinAPI
         access_token = BankConnectionView._get_access_token(request, space_pk)
@@ -1129,11 +1166,22 @@ class BankConnectionUpdateView(APIView):
         print(bank_connection_id, request.data)
         if not bank_connection_id:
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
-        
-        account = ConnectedAccounts.objects.filter(bankConnectionId=bank_connection_id).first()
-        if not account:
-            return Response({'error': 'Bank connection not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        try:
+            account = ConnectedAccounts.objects.filter(bankConnectionId=bank_connection_id).first()
+
+            # Проверяем, принадлежит ли счёт текущему пользователю
+            if account.bankConnection.user != request.user:
+                return Response(
+                    {"Error": "You cannot delete accounts of other project users."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except ConnectedAccounts.DoesNotExist:
+            return Response(
+                {"Error": "Bank connection not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
         bank_connection = account.bankConnection
 
         # Аутентификация пользователя
@@ -1175,7 +1223,21 @@ class DeleteBankConnectionView(APIView):
 
         # Находим счет по accountId и проверяем, что он принадлежит текущему пользователю и пространству
         accounts = ConnectedAccounts.objects.filter(bankConnectionId=bankId)
-        account = ConnectedAccounts.objects.filter(bankConnectionId=bankId).first()
+        try:
+            account = ConnectedAccounts.objects.filter(bankConnectionId=bankId).first()
+
+            # Проверяем, принадлежит ли счёт текущему пользователю
+            if account.bankConnection.user != request.user:
+                return Response(
+                    {"Error": "You cannot delete accounts of other project users."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        except ConnectedAccounts.DoesNotExist:
+            return Response(
+                {"Error": "Bank connection not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
         bank_connection = account.bankConnection
 
         # Получаем access_token для FinAPI

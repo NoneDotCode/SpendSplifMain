@@ -20,8 +20,13 @@ class CreateTicketView(generics.CreateAPIView):
     serializer_class = CreateTicketSerializer
 
     def post(self, request, *args, **kwargs):
+        user = request.user
+        # Проверяем роли пользователя
+        if ('free' in user.roles):
+            return Response({"Error": "Free user cannot do this"}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = self.get_serializer(data=request.data, context={"request": request})
-        
+
         if serializer.is_valid():
             serializer.save(serializer.validated_data)
             return Response(

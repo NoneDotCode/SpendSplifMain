@@ -261,10 +261,7 @@ class AddMemberToSpace(generics.GenericAPIView):
                 {"error": f"Cannot add more members. Space is limited to {space.members_slots} members."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
-        # Add user to the space
-        space.members.add(user)
-        
+
         # Change user role from 'free' to 'business_member'
         try:
             if user.roles and 'free' in user.roles:
@@ -278,14 +275,22 @@ class AddMemberToSpace(generics.GenericAPIView):
                     print(f"User role updated to 'business_member_lic' for user {user.username}")
                 else:
                     print(f"User {user.username} already has a non-free role or no roles set.")
+            else:
+                return Response(
+                    {"Error": "You cannot add this user"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
             print(f"Error updating user role: {str(e)}")
-        
+
+        # Add user to the space
+        space.members.add(user)
+
         # Create notification
-        notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the ~{space.title}~ space."
+        notif_message = f"The user ~{user.username}#{user.tag}~ has been added to the project."
         notification = Notification.objects.create(message=notif_message, importance="Medium")
         notification.who_can_view.set(space.members.all())
-        
+
         # Return success answer
         return Response(
             {"success": "User successfully added to the space."}, 
