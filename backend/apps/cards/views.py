@@ -8,6 +8,9 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory
+from django.utils import timezone
+from datetime import datetime, timedelta
+from backend.apps.total_balance.models import TotalBalance
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.serializers.json import DjangoJSONEncoder
 import json
+from decimal import Decimal
 
 from backend.apps.history.models import HistoryIncome, HistoryExpense
 from backend.apps.category.views import CategorizeExpense
@@ -129,6 +133,18 @@ class FinAPIClient:
         """Удаляет банк коннекшн в FinAPI"""
         return self._request("DELETE", f"/api/v2/bankConnections/{bankId}", access_token=access_token, content_type='application/json', BASE_URL=self.BASE_URL_API,)
 
+    def delete_user(self, access_token):
+        """Удаляет пользователя в FinAPI"""
+        response = requests.request(
+            "DELETE", 
+            f"{self.BASE_URL_API}/api/v2/users", 
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {access_token}'
+            }
+        )
+        return response
+
     def create_user(self, member_email, generated_password, phone):
         """Создаёт пользователя в FinAPI"""
         payload = {
@@ -181,7 +197,7 @@ class FinAPIClient:
             },
             "callbacks": {
                 "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
-                # "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
+                # "finalised": f"https://416f-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
             },
             "bankConnectionName": bank_connection_name,
             "maxDaysForDownload": 60
@@ -196,7 +212,7 @@ class FinAPIClient:
             "importNewAccountsMode": "CONDITIONAL",
             "callbacks": {
                 "finalised": f"https://api.spendsplif.com/api/v1/webhook/bank/connection/"
-                # "finalised": f"https://5ef0-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
+                # "finalised": f"https://416f-46-175-177-104.ngrok-free.app/api/v1/webhook/bank/connection/"
             },
             "manageSavedSettings": [
                 "CREDENTIALS",
@@ -538,7 +554,14 @@ class BankTransactionsAndBalanceWebhook(APIView):
                             category_name = detail.get("categoryName")
                             purpose = detail.get('purpose', '')[:200] 
                             counterpart_name = detail.get("counterpartName", '')  
-                            booking_date = detail.get("bankBookingDate")
+                            booking_date_str = transaction.get('bankBookingDate')  
+                            booking_date = datetime.strptime(booking_date_str, '%Y-%m-%d').date() if booking_date_str else None
+                            # Устанавливаем время в 00:00:00 и добавляем временную зону
+                            if booking_date:
+                                # Создаем "наивный" datetime с временем 00:00:00
+                                naive_datetime = datetime.combine(booking_date, datetime.min.time())
+                                # Преобразуем в timezone-aware datetime
+                                booking_date = timezone.make_aware(naive_datetime)
 
                             # Формируем комментарий: НАЗВАНИЕ МАГАЗИНА. КОММЕНТАРИЙ
                             comment = f"{counterpart_name}. {purpose}" if counterpart_name else purpose
@@ -624,6 +647,15 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                 if not category:
                                     continue  
 
+                                converted_amount = convert_currencies(
+                                        from_currency=connected_account.currency,
+                                        amount=abs(amount),
+                                        to_currency=space.currency) 
+
+                                # Обновляем значение spent в категории
+                                category.spent += Decimal(str(abs(converted_amount)))  
+                                category.save()
+
                                 # Формируем JSON для категории
                                 category_json = {
                                     'id': category.id,
@@ -638,10 +670,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                 if existing_record:
                                     # Если запись существует, проверяем, нужно ли её обновить
                                     if (existing_record.amount != abs(amount) or
-                                        existing_record.amount_in_default_currency != convert_currencies(
-                                                                            from_currency=connected_account.currency,
-                                                                            amount=abs(amount),
-                                                                            to_currency=space.currency) or
+                                        existing_record.amount_in_default_currency != converted_amount or
                                         existing_record.comment != comment):
                                         existing_record.amount = float(abs(amount)) 
                                         existing_record.comment = comment
@@ -671,11 +700,7 @@ class BankTransactionsAndBalanceWebhook(APIView):
 
                                     HistoryExpense.objects.create(
                                         amount=float(abs(amount)),  
-                                        amount_in_default_currency=float(convert_currencies(
-                                            from_currency=connected_account.currency,
-                                            amount=abs(amount),
-                                            to_currency=space.currency
-                                        )),
+                                        amount_in_default_currency=float(converted_amount),
                                         currency=connected_account.currency,
                                         comment=comment,
                                         from_acc=from_acc_json,
@@ -896,6 +921,7 @@ class RefreshAccountView(APIView):
         space = Space.objects.filter(pk=space_pk).first()
         if not space:
             return Response({'message': 'Space not found'}, status=status.HTTP_404_NOT_FOUND)
+        total_balance = TotalBalance.objects.filter(father_space_id=space_pk).first()
         
         try:
             account = get_object_or_404(
@@ -907,7 +933,7 @@ class RefreshAccountView(APIView):
             # Проверяем, принадлежит ли счёт текущему пользователю
             if account.bankConnection.user != request.user:
                 return Response(
-                    {"Error": "You cannot delete accounts of other project users."},
+                    {"Error": "You cannot refresh accounts of other project users."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -956,7 +982,14 @@ class RefreshAccountView(APIView):
             amount = transaction.get('amount')
             transaction_id = transaction.get('id')
             purpose = transaction.get('purpose', '')[:200]  
-            booking_date = transaction.get('bankBookingDate')  
+            booking_date_str = transaction.get('bankBookingDate')  
+            booking_date = datetime.strptime(booking_date_str, '%Y-%m-%d').date() if booking_date_str else None
+            # Устанавливаем время в 00:00:00 и добавляем временную зону
+            if booking_date:
+                # Создаем "наивный" datetime с временем 00:00:00
+                naive_datetime = datetime.combine(booking_date, datetime.min.time())
+                # Преобразуем в timezone-aware datetime
+                booking_date = timezone.make_aware(naive_datetime)
             counterpart_name = transaction.get('counterpartName', '')  
             currency = transaction.get('currency', 'EUR') 
 
@@ -1006,6 +1039,7 @@ class RefreshAccountView(APIView):
                         bank_account=connected_account.accountId,
                         transaction_id=int(transaction_id), 
                         father_space=space,
+                        new_balance=total_balance.balance,
                         account=account_json, 
                         created=booking_date
                     )
@@ -1044,24 +1078,19 @@ class RefreshAccountView(APIView):
                 if not category:
                     continue  
 
-                # Формируем JSON для категории
-                category_json = {
-                    'id': category.id,
-                    'icon': category.icon,
-                    'color': category.color,
-                    'limit': float(category.limit) if category.limit is not None else 0.0,
-                    'spent': float(category.spent),
-                    'title': category.title,
-                    'father_space': category.father_space.id
-                }
+                converted_amount = convert_currencies(
+                        from_currency=connected_account.currency,
+                        amount=abs(amount),
+                        to_currency=space.currency) 
+
+                # Обновляем значение spent в категории
+                category.spent += Decimal(str(abs(converted_amount)))  
+                category.save()
 
                 if existing_record:
                     # Если запись существует, проверяем, нужно ли её обновить
                     if (existing_record.amount != abs(amount) or
-                        existing_record.amount_in_default_currency != convert_currencies(
-                                                            from_currency=connected_account.currency,
-                                                            amount=abs(amount),
-                                                            to_currency=space.currency) or
+                        existing_record.amount_in_default_currency != converted_amount or
                         existing_record.comment != comment):
                         existing_record.amount = float(abs(amount)) 
                         existing_record.comment = comment
@@ -1091,15 +1120,12 @@ class RefreshAccountView(APIView):
 
                     HistoryExpense.objects.create(
                         amount=float(abs(amount)),  
-                        amount_in_default_currency=float(convert_currencies(
-                            from_currency=connected_account.currency,
-                            amount=abs(amount),
-                            to_currency=space.currency
-                        )),
+                        amount_in_default_currency=float(converted_amount),
                         currency=currency,
                         comment=comment,
                         from_acc=from_acc_json,
                         to_cat=to_cat_json,
+                        new_balance=total_balance.balance,
                         bank_account=connected_account.accountId,
                         transaction_id=int(transaction_id),
                         father_space=space,
@@ -1256,3 +1282,57 @@ class DeleteBankConnectionView(APIView):
         bank_connection.delete()
 
         return Response({'message': 'Bank account successfully deleted and unlinked from FinAPI'}, status=status.HTTP_200_OK)
+
+
+class DeleteUserSpaceData(APIView):
+    """ Эндпоинт для удаления всех данных пользователя в определенном пространстве """
+    def delete(self, space_pk, user_id):
+        try:
+            # Получаем access_token для FinAPI
+            finapi_client = FinAPIClient()
+            user_space = UserSpace.objects.filter(space_id=space_pk, user_id=user_id, access_token__isnull=False).first()
+            user_response = UserAuthView._get_or_refresh_token(user_space, finapi_client)
+            access_token = user_response.get("access_token")
+
+            # Удаляем пользователя из FinAPI
+            finapi_client = FinAPIClient()
+            delete_response = finapi_client.delete_user(access_token)
+            print("delete:", delete_response)
+            
+            # Проверяем статус код ответа от FinAPI
+            if hasattr(delete_response, 'status_code') and delete_response.status_code == 423:
+                return Response(
+                    {"error": "User cannot get deleted at the moment as at least one of his bank connections is currently being imported or updated (either by the user or by finAPI's automatic batch update), or because the categorization of transactions is performed."},
+                    status=status.HTTP_423_LOCKED
+                )
+
+            # Удаляем все банковские подключения пользователя в этом пространстве
+            bank_connections = BankConnection.objects.filter(
+                user_id=user_id,
+                space_id=space_pk
+            )
+            
+            # Сначала удаляем связанные счета, так как они имеют ForeignKey на BankConnection
+            ConnectedAccounts.objects.filter(
+                bankConnection__in=bank_connections
+            ).delete()
+            
+            # Затем удаляем сами банковские подключения
+            bank_connections.delete()
+            
+            # Удаляем запись UserSpace
+            UserSpace.objects.filter(
+                user_id=user_id,
+                space_id=space_pk
+            ).delete()
+            
+            return Response(
+                {"message": "success"},
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            return Response(
+                {"error": f"some error while deleteng: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

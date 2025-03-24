@@ -23,6 +23,7 @@ class ExportHistoryView(generics.GenericAPIView):
             return Response("Error: You are not allowed to export history data with a free role.", status=status.HTTP_403_FORBIDDEN)
 
         space = Space.objects.get(pk=kwargs['space_pk'])
+        print(request.data)
         expenses = HistoryExpense.objects.filter(father_space=space)
         incomes = HistoryIncome.objects.filter(father_space=space)
 
@@ -37,13 +38,36 @@ class ExportHistoryView(generics.GenericAPIView):
                 expenses = expenses.filter(created__range=(start_date, end_date))
                 incomes = incomes.filter(created__range=(start_date, end_date))
 
-        if "accounts" in filters:
-            account_ids = request.data.get("account_ids", [])
+        # Фильтрация по счетам
+        if filters.get("accounts") is True:
+            account_ids = filters.get("account_ids", [])
             if account_ids:
-                expenses = expenses.filter(from_acc__id__in=account_ids)
-                incomes = incomes.filter(account__id__in=account_ids)
+                expenses = expenses.filter(from_acc__id__in=account_ids, transaction_id__isnull=True)
+                incomes = incomes.filter(account__id__in=account_ids, transaction_id__isnull=True)
 
-        print(filters)
+        # Фильтрация по картам
+        if filters.get("cards", False):
+            card_ids = filters.get("cards_ids", [])
+            if card_ids:
+                # Фильтруем только карты (transaction_id__isnull=False)
+                card_expenses = HistoryExpense.objects.filter(
+                    father_space=space,
+                    from_acc__id__in=card_ids,
+                    transaction_id__isnull=False  # Только карты
+                )
+                card_incomes = HistoryIncome.objects.filter(
+                    father_space=space,
+                    account__id__in=card_ids,
+                    transaction_id__isnull=False  # Только карты
+                )
+                # Если accounts тоже True, объединяем результаты
+                if filters.get("accounts", False):
+                    expenses = expenses | card_expenses
+                    incomes = incomes | card_incomes
+                else:
+                    # Если только cards, то используем только записи по картам
+                    expenses = card_expenses
+                    incomes = card_incomes
 
         export_type = request.data.get("export_type", "both")
 

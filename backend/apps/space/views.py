@@ -16,10 +16,9 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from backend.apps.converter.utils import convert_currencies
-
 from backend.apps.goal.models import Goal
-
 from backend.apps.total_balance.models import TotalBalance
+from backend.apps.cards.views import DeleteUserSpaceData
 
 from django.db import transaction
 
@@ -304,7 +303,7 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
 
     @staticmethod
     def put(request, *args, **kwargs):
-        user_email = request.data.get("user_email", )
+        user_email = request.data.get("user_email")
         space = Space.objects.get(pk=kwargs.get("pk"))
 
         try:
@@ -314,14 +313,23 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
 
         if user not in space.members.all():
             return Response({"error": "User is not member of the space already."},
-                            status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_400_BAD_REQUEST)
         elif space.memberpermissions_set.filter(member=user, owner=True).exists():
             return Response({"error": "You cannot remove this member from the space"})
 
+        # Сначала удаляем данные пользователя в пространстве
+        delete_endpoint = DeleteUserSpaceData()
+        delete_response = delete_endpoint.delete(space_pk=space.pk, user_id=user.id)
+        
+        # Проверяем, была ли ошибка при удалении данных
+        if delete_response.status_code != status.HTTP_200_OK:
+            return delete_response  # Возвращаем оригинальный ответ с ошибкой
+
+        # Если удаление данных прошло успешно, продолжаем удаление пользователя из пространства
         space.members.remove(user)
 
         try:
-            if user.roles and 'business_member_plan' in user.roles or 'business_member_lic' in user.roles:
+            if user.roles and ('business_member_plan' in user.roles or 'business_member_lic' in user.roles):
                 user.roles = ['free']
                 user.save()
                 print(f"User role updated to 'free' for user {user.username}")
@@ -330,7 +338,8 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
         except Exception as e:
             print(f"Error updating user role: {str(e)}")
 
-        return Response({"success": "User successfully removed from the space."}, status=status.HTTP_200_OK)
+        return Response({"success": "User successfully removed from the space and all their data was deleted."}, 
+                    status=status.HTTP_200_OK)
 
 
 class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
