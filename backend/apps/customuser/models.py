@@ -56,6 +56,9 @@ class CustomUser(AbstractUser):
     """
     Model class representing a custom user.
     """
+    first_name = None
+    last_name = None
+
     language = models.CharField(max_length=20, choices=Language.choices, default=Language.ENGLISH)
     tag = models.PositiveIntegerField(null=True, blank=True, validators=[MaxValueValidator(9999)])
     email = models.EmailField(unique=True, null=False, blank=False)
