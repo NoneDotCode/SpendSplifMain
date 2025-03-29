@@ -197,22 +197,22 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         currency = self.request.data.get("currency")
-        for category in Category.objects.filter(father_space=instance):
-            category.spent = convert_currencies(amount=category.spent,
-                                                from_currency=instance.currency,
-                                                to_currency=currency)
-            category.save()
-        total_balance = TotalBalance.objects.get(father_space=instance)
-        if total_balance:
-            total_balance.balance = convert_currencies(amount=total_balance.balance,
-                                                       from_currency=instance.currency,
-                                                       to_currency=currency)
-            total_balance.save()
-        for goal in Goal.objects.filter(father_space=instance):
-            goal.collected = convert_currencies(amount=goal.collected,
-                                                from_currency=instance.currency,
-                                                to_currency=currency)
-            goal.save()
+        # for category in Category.objects.filter(father_space=instance):
+        #     category.spent = convert_currencies(amount=category.spent,
+        #                                         from_currency=instance.currency,
+        #                                         to_currency=currency)
+        #     category.save()
+        # total_balance = TotalBalance.objects.get(father_space=instance)
+        # if total_balance:
+        #     total_balance.balance = convert_currencies(amount=total_balance.balance,
+        #                                                from_currency=instance.currency,
+        #                                                to_currency=currency)
+        #     total_balance.save()
+        # for goal in Goal.objects.filter(father_space=instance):
+        #     goal.collected = convert_currencies(amount=goal.collected,
+        #                                         from_currency=instance.currency,
+        #                                         to_currency=currency)
+        #     goal.save()
         instance.currency = currency
         instance.title = request.data.get("title")
         instance.save()
