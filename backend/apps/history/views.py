@@ -823,18 +823,17 @@ class GoalTransferStatisticView(generics.ListAPIView):
 
     def _update_summary(self, summary: Dict[str, Dict[str, str]], transfer: HistoryTransfer, currency: str) -> None:
         goal = transfer.to_goal
-        goal_id = goal.get('id')  # Предположим, что в to_goal есть поле 'id'
         goal_amount = transfer.goal_amount
         collected = transfer.amount_in_default_currency
 
-        if goal_id not in summary:
-            summary[goal_id] = {
+        if goal not in summary:
+            summary[goal] = {
                 "Goal_amount": f"{goal_amount} {currency}" if goal_amount else "",
                 "Collected": f"{collected} {currency}" if collected else "",
             }
         else:
-            existing_collected = Decimal(summary[goal_id]['Collected'].split()[0])
-            summary[goal_id]['Collected'] = f"{existing_collected + collected} {currency}"
+            existing_collected = Decimal(summary[goal]['Collected'].split()[0])
+            summary[goal]['Collected'] = f"{existing_collected + collected} {currency}"
 
     def get_percentages(self, transfers: List[HistoryTransfer]) -> Dict[str, Dict[str, str]]:
         goal_amounts = self._init_goal_amounts(transfers)  # Передаем transfers
@@ -845,6 +844,10 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def _init_goal_amounts(transfers: List[HistoryTransfer]) -> Dict[str, Dict[str, Decimal]]:
         goal_amounts = {}
         for transfer in transfers:
+            # Проверяем, является ли to_goal словарем, и если нет, пропускаем эту итерацию
+            if not isinstance(transfer.to_goal, dict):
+                continue
+                
             goal = transfer.to_goal or {}  # Проверка на None
             goal_id = goal.get('id')  # Используем уникальный идентификатор цели
             if goal_id is None:
