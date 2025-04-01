@@ -14,7 +14,7 @@ from django.utils.html import strip_tags
 
 
 def send_code_for_verify_email(email: str, code: str, flag: str, language: str):
-    from_email = 'spendsplif@gmail.com'
+    from_email = 'spendsplif@spendsplif.com'
     to_email = email
 
     if flag == "registration":
