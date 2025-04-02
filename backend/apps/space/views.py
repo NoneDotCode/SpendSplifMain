@@ -182,7 +182,7 @@ class ListOfUsersInSpace(generics.ListAPIView):
 
 class EditSpace(generics.RetrieveUpdateAPIView):
     serializer_class = SpaceSerializer
-    permission_classes = (IsSpaceMember, IsSpaceOwner, UserRolePermision)
+    permission_classes = (IsSpaceMember, IsSpaceOwner)
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))

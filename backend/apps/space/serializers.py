@@ -9,7 +9,7 @@ class SpaceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Space
-        fields = ("title", "currency", "members", "can_edit_permissions")
+        fields = ("title", "id",  "currency", "members", "can_edit_permissions")
 
     def get_can_edit_permissions(self, obj):
         request = self.context.get('request')
