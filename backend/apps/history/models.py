@@ -66,4 +66,4 @@ class HistoryTransfer(models.Model):
     goal_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     collected = models.DecimalField(max_digits=12, decimal_places=2, null=True)
     father_space = models.ForeignKey(Space, verbose_name='father_space', on_delete=models.CASCADE)
-    created = models.DateTimeField(auto_created=True)
+    created = models.DateTimeField(auto_now=True)

@@ -16,10 +16,9 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from backend.apps.converter.utils import convert_currencies
-
 from backend.apps.goal.models import Goal
-
 from backend.apps.total_balance.models import TotalBalance
+from backend.apps.cards.views import DeleteUserSpaceData
 
 from django.db import transaction
 
@@ -183,7 +182,7 @@ class ListOfUsersInSpace(generics.ListAPIView):
 
 class EditSpace(generics.RetrieveUpdateAPIView):
     serializer_class = SpaceSerializer
-    permission_classes = (IsSpaceMember, IsSpaceOwner, UserRolePermision)
+    permission_classes = (IsSpaceMember, IsSpaceOwner)
 
     def get_queryset(self):
         return Space.objects.filter(pk=self.kwargs.get("pk"))
@@ -198,22 +197,22 @@ class EditSpace(generics.RetrieveUpdateAPIView):
         serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         currency = self.request.data.get("currency")
-        for category in Category.objects.filter(father_space=instance):
-            category.spent = convert_currencies(amount=category.spent,
-                                                from_currency=instance.currency,
-                                                to_currency=currency)
-            category.save()
-        total_balance = TotalBalance.objects.get(father_space=instance)
-        if total_balance:
-            total_balance.balance = convert_currencies(amount=total_balance.balance,
-                                                       from_currency=instance.currency,
-                                                       to_currency=currency)
-            total_balance.save()
-        for goal in Goal.objects.filter(father_space=instance):
-            goal.collected = convert_currencies(amount=goal.collected,
-                                                from_currency=instance.currency,
-                                                to_currency=currency)
-            goal.save()
+        # for category in Category.objects.filter(father_space=instance):
+        #     category.spent = convert_currencies(amount=category.spent,
+        #                                         from_currency=instance.currency,
+        #                                         to_currency=currency)
+        #     category.save()
+        # total_balance = TotalBalance.objects.get(father_space=instance)
+        # if total_balance:
+        #     total_balance.balance = convert_currencies(amount=total_balance.balance,
+        #                                                from_currency=instance.currency,
+        #                                                to_currency=currency)
+        #     total_balance.save()
+        # for goal in Goal.objects.filter(father_space=instance):
+        #     goal.collected = convert_currencies(amount=goal.collected,
+        #                                         from_currency=instance.currency,
+        #                                         to_currency=currency)
+        #     goal.save()
         instance.currency = currency
         instance.title = request.data.get("title")
         instance.save()
@@ -304,7 +303,7 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
 
     @staticmethod
     def put(request, *args, **kwargs):
-        user_email = request.data.get("user_email", )
+        user_email = request.data.get("user_email")
         space = Space.objects.get(pk=kwargs.get("pk"))
 
         try:
@@ -314,14 +313,23 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
 
         if user not in space.members.all():
             return Response({"error": "User is not member of the space already."},
-                            status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_400_BAD_REQUEST)
         elif space.memberpermissions_set.filter(member=user, owner=True).exists():
             return Response({"error": "You cannot remove this member from the space"})
 
+        # Сначала удаляем данные пользователя в пространстве
+        delete_endpoint = DeleteUserSpaceData()
+        delete_response = delete_endpoint.delete(space_pk=space.pk, user_id=user.id)
+        
+        # Проверяем, была ли ошибка при удалении данных
+        if delete_response.status_code != status.HTTP_200_OK:
+            return delete_response  # Возвращаем оригинальный ответ с ошибкой
+
+        # Если удаление данных прошло успешно, продолжаем удаление пользователя из пространства
         space.members.remove(user)
 
         try:
-            if user.roles and 'business_member_plan' in user.roles or 'business_member_lic' in user.roles:
+            if user.roles and ('business_member_plan' in user.roles or 'business_member_lic' in user.roles):
                 user.roles = ['free']
                 user.save()
                 print(f"User role updated to 'free' for user {user.username}")
@@ -330,7 +338,8 @@ class RemoveMemberFromSpace(generics.GenericAPIView):
         except Exception as e:
             print(f"Error updating user role: {str(e)}")
 
-        return Response({"success": "User successfully removed from the space."}, status=status.HTTP_200_OK)
+        return Response({"success": "User successfully removed from the space and all their data was deleted."}, 
+                    status=status.HTTP_200_OK)
 
 
 class MemberPermissionsEdit(generics.RetrieveUpdateAPIView):
