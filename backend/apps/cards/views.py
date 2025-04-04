@@ -653,8 +653,9 @@ class BankTransactionsAndBalanceWebhook(APIView):
                                         to_currency=space.currency) 
 
                                 # Обновляем значение spent в категории
-                                category.spent += Decimal(str(abs(converted_amount)))  
-                                category.save()
+                                if booking_date.month == timezone.now().month and booking_date.year == timezone.now().year:
+                                    category.spent += Decimal(str(abs(converted_amount)))  
+                                    category.save()
 
                                 # Формируем JSON для категории
                                 category_json = {
@@ -1084,8 +1085,9 @@ class RefreshAccountView(APIView):
                         to_currency=space.currency) 
 
                 # Обновляем значение spent в категории
-                category.spent += Decimal(str(abs(converted_amount)))  
-                category.save()
+                if booking_date.month == timezone.now().month and booking_date.year == timezone.now().year:
+                    category.spent += Decimal(str(abs(converted_amount)))  
+                    category.save()
 
                 if existing_record:
                     # Если запись существует, проверяем, нужно ли её обновить

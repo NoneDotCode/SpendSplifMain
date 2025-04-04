@@ -462,20 +462,20 @@ class GoogleLoginApi(APIView):
                 TotalBalance.objects.create(father_space=space, balance=0)
 
                 Category.objects.create(
-                    title="Food",
-                    limit=1000,
+                    title="Salaries",
+                    limit=10000,
                     spent=0,
                     father_space=space,
                     color="#FF9800",
-                    icon="Donut"
+                    icon="Hand_Money"
                 )
 
                 Category.objects.create(
-                    title="Home",
+                    title="Rent",
                     spent=0,
                     father_space=space,
                     color="#FF5050",
-                    icon="Home"
+                    icon="Three Buildings"
                 )
 
                 Account.objects.create(
