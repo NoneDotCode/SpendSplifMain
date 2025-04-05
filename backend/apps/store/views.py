@@ -26,11 +26,9 @@ class SubscribePricesView(generics.ListAPIView):
         return Response(result, status=status.HTTP_200_OK)
 
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
-
-
 class CreatePaymentSessionView(generics.GenericAPIView):
     def post(self, request):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         print("Stripe key:", stripe.api_key)
         user = request.user
         plan = request.data.get('plan')
@@ -97,6 +95,7 @@ class CreatePaymentSessionView(generics.GenericAPIView):
 
 class CreatePaymentServiceView(generics.GenericAPIView):
     def get(self, request, space_pk):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         user = request.user
 
         try:
@@ -168,6 +167,7 @@ class WebhookAPIView(generics.GenericAPIView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
         webhook_secret = settings.STRIPE_WEBHOOK_SECRET
@@ -354,6 +354,7 @@ class SubscribeCancel(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         user = request.user
 
         # Проверка роли business_lic
