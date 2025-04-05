@@ -31,6 +31,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class CreatePaymentSessionView(generics.GenericAPIView):
     def post(self, request):
+        print("Stripe key:", stripe.api_key)
         user = request.user
         plan = request.data.get('plan')
         count = request.data.get('count', 1)
@@ -86,6 +87,7 @@ class CreatePaymentSessionView(generics.GenericAPIView):
                     "description": plan,  # Передача значения переменной plan
                 },
             )
+            print(checkout_session)
 
             return Response({"session_id": checkout_session.id}, status=status.HTTP_200_OK)
         except Exception as e:
