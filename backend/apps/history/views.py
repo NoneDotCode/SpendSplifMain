@@ -844,20 +844,31 @@ class GoalTransferStatisticView(generics.ListAPIView):
     def _init_goal_amounts(transfers: List[HistoryTransfer]) -> Dict[str, Dict[str, Decimal]]:
         goal_amounts = {}
         for transfer in transfers:
-            # Проверяем, является ли to_goal словарем, и если нет, пропускаем эту итерацию
-            if not isinstance(transfer.to_goal, dict):
+            # Получаем цель (может быть моделью, словарём или строкой)
+            goal = transfer.to_goal
+            if goal is None:
                 continue
                 
-            goal = transfer.to_goal or {}  # Проверка на None
-            goal_id = goal.get('id')  # Используем уникальный идентификатор цели
+            # Получаем идентификатор цели
+            goal_id = None
+            if hasattr(goal, 'id'):  # Если цель - это модель Django
+                goal_id = str(goal.id)
+            elif isinstance(goal, dict):  # Если цель - это словарь
+                goal_id = str(goal.get('id'))
+            elif isinstance(goal, str):  # Если цель - это строка (например, название цели)
+                goal_id = goal  # Используем саму строку как идентификатор
+            
             if goal_id is None:
-                continue  # Пропускаем записи без идентификатора
+                continue
 
             goal_amount = transfer.goal_amount
             collected = transfer.amount_in_default_currency
 
-            goal_amounts.setdefault(goal_id, {'Goal_amount': goal_amount, 'Collected': Decimal('0')})
-            goal_amounts[goal_id]['Collected'] += collected
+            if goal_amount is None:
+                continue
+
+            goal_amounts.setdefault(goal_id, {'Goal_amount': Decimal(goal_amount), 'Collected': Decimal('0')})
+            goal_amounts[goal_id]['Collected'] += Decimal(collected) if collected else Decimal('0')
 
         return goal_amounts
 
