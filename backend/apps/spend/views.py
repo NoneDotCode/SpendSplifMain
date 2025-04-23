@@ -136,7 +136,16 @@ class PeriodicSpendCreateView(generics.GenericAPIView):
         except Space.DoesNotExist:
             return Response({"error": "Space does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-        periodic_spends_count = PeriodicSpendCounter.objects.filter(user=request.user).count()
+        periodic_tasks = PeriodicTask.objects.filter(name__startswith="periodic_spend_")
+        periodic_spends_count = 0
+
+        for task in periodic_tasks:
+            try:
+                args = json.loads(task.args)
+                if isinstance(args, list) and len(args) > 2 and args[2] == space_pk:
+                    periodic_spends_count += 1
+            except json.JSONDecodeError:
+                continue
         highest_role = request.user.roles[0]
 
         if (highest_role == "business_lic" or highest_role == "premium/pre") and periodic_spends_count >= 150:
