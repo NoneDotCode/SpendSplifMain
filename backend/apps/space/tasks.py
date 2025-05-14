@@ -2,6 +2,7 @@ from celery import shared_task
 from django.utils import timezone
 import json
 from decimal import Decimal
+from datetime import timedelta
 
 from backend.apps.account.serializers import AccountSerializer
 from backend.apps.category.serializers import CategorySerializer
@@ -21,7 +22,7 @@ class DecimalEncoder(json.JSONEncoder):
 def create_space_backup():
     spaces = Space.objects.all()
     for space in spaces:
-        backup_date = timezone.now().date()
+        backup_date = timezone.now().date() - timedelta(days=1)  
 
         accounts = json.loads(json.dumps(
             AccountSerializer(space.account_set.all(), many=True).data,
