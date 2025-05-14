@@ -16,7 +16,7 @@ class GoogleAuthSerializer(serializers.Serializer):
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ("id", "username", "email", "password", "language", "tag", "roles")
+        fields = ("id", "company", "username", "email", "password", "language", "tag", "roles")
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
