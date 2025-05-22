@@ -7,7 +7,7 @@
 # @shared_task
 # def update_finapi_tokens():
 #     """Update FinAPI tokens every hour"""
-#     url = "https://sandbox.finapi.io/api/v2/oauth/token"
+#     url = "https://live.finapi.io/api/v2/oauth/token"
 #
 #     headers = {
 #         'Content-Type': 'application/x-www-form-urlencoded'

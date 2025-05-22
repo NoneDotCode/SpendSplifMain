@@ -46,7 +46,7 @@ def generate_secure_password(length=12):
 
 
 class FinAPIClient:
-    BASE_URL_API = "https://sandbox.finapi.io"
+    BASE_URL_API = "https://live.finapi.io"
     BASE_URL_WEB = "https://webform-live.finapi.io"
 
     def __init__(self):
@@ -770,7 +770,7 @@ class BanksView(APIView):
 
     def get(self, request, space_pk=None):
         """Получение списка чешских банков из FinAPI."""
-        finapi_url = "https://sandbox.finapi.io/api/v2/banks"
+        finapi_url = "https://live.finapi.io/api/v2/banks"
         token = self.get_finapi_token()
         headers = {
             "Authorization": f"Bearer {token}",
