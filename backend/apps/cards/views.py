@@ -47,7 +47,7 @@ def generate_secure_password(length=12):
 
 class FinAPIClient:
     BASE_URL_API = "https://sandbox.finapi.io"
-    BASE_URL_WEB = "https://webform-sandbox.finapi.io"
+    BASE_URL_WEB = "https://webform-live.finapi.io"
 
     def __init__(self):
         self.token = self.get_finapi_token()
