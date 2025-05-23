@@ -496,7 +496,7 @@ class BankConnectionWebhook(APIView):
 
 
 # Data Decryption Key (DDK)
-DDK = 'fe80104d205f15f3654c30db3d2605ad'
+DDK = 'b2e264c50833fdf2d4dd9bb551103083'
 
 def decrypt_data(encrypted_text, ddk):
     """
