@@ -24,8 +24,12 @@ class CustomUserSerializer(serializers.ModelSerializer):
         normalized_email = data.get('email', '').lower()
         
         # Check if an account with this normalized email already exists
-        if CustomUser.objects.filter(email__iexact=normalized_email).exists():
-            raise serializers.ValidationError("An account with this email already exists")
+        existing_user = CustomUser.objects.filter(email__iexact=normalized_email).first()
+        if existing_user:
+            if getattr(existing_user, 'verify_code', '') != 'verified':
+                raise serializers.ValidationError("Account is not verified")
+            else:
+                raise serializers.ValidationError("An account with this email already exists")
         
         # Rest of your existing password validation
         password = data.get("password")
