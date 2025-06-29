@@ -14,10 +14,16 @@ class GoogleAuthSerializer(serializers.Serializer):
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+
     class Meta:
         model = CustomUser
         fields = ("id", "company", "username", "email", "password", "language", "tag", "roles")
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {
+            "password": {"write_only": True},
+            # Удаляем автоматическую проверку unique
+            "email": {"validators": []},
+        }
 
     def validate(self, data):
         # Normalize email before checking
@@ -26,6 +32,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         # Check if an account with this normalized email already exists
         existing_user = CustomUser.objects.filter(email__iexact=normalized_email).first()
         if existing_user:
+            print(getattr(existing_user, 'verify_code', ''))
             if getattr(existing_user, 'verify_code', '') != 'verified':
                 raise serializers.ValidationError("Account is not verified")
             else:
