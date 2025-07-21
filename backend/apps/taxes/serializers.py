@@ -171,35 +171,232 @@ class VetaDSerializer(serializers.Serializer):
         return value
 
 class VetaPSerializer(serializers.Serializer):
-    jmeno = serializers.CharField()
-    prijmeni = serializers.CharField()
-    dic = serializers.CharField()
-    email = serializers.EmailField()
-    c_pracufo = serializers.IntegerField()
-    naz_obce = serializers.CharField()
-    psc = serializers.CharField()
-    ulice = serializers.CharField()
-    c_pop = serializers.IntegerField()
-    c_orient = serializers.CharField(allow_blank=True, required=False)
-    k_stat = serializers.CharField()
-    stat = serializers.CharField()
+    jmeno = serializers.CharField(
+        max_length=30,
+        error_messages={
+            'max_length': 'Maximum 30 characters allowed for first name'
+        }
+    )
+    prijmeni = serializers.CharField(
+        max_length=36,
+        error_messages={
+            'max_length': 'Maximum 36 characters allowed for last name'
+        }
+    )
+    dic = serializers.CharField(
+        max_length=10,
+        error_messages={
+            'max_length': 'Maximum 10 characters allowed for DIC'
+        }
+    )
+    email = serializers.EmailField(
+        max_length=255,
+        error_messages={
+            'max_length': 'Maximum 255 characters allowed for email',
+            'invalid': 'Enter a valid email address'
+        }
+    )
+    c_pracufo = serializers.IntegerField(
+        max_value=9999,
+        error_messages={
+            'max_value': 'Maximum 4 digits allowed for c_pracufo'
+        }
+    )
+    naz_obce = serializers.CharField(
+        max_length=48,
+        error_messages={
+            'max_length': 'Maximum 48 characters allowed for city name'
+        }
+    )
+    psc = serializers.CharField(
+        max_length=10,
+        error_messages={
+            'max_length': 'Maximum 10 characters allowed for postal code'
+        }
+    )
+    ulice = serializers.CharField(
+        max_length=38,
+        error_messages={
+            'max_length': 'Maximum 38 characters allowed for street'
+        }
+    )
+    c_pop = serializers.IntegerField(
+        max_value=999999,
+        error_messages={
+            'max_value': 'Maximum 6 digits allowed for house number'
+        }
+    )
+    c_orient = serializers.CharField(
+        max_length=4,
+        allow_blank=True,
+        required=False,
+        error_messages={
+            'max_length': 'Maximum 4 characters allowed for orientation number'
+        }
+    )
+    k_stat = serializers.CharField(
+        max_length=2,
+        error_messages={
+            'max_length': 'Maximum 2 characters allowed for country code'
+        }
+    )
+    stat = serializers.CharField(
+        max_length=25,
+        error_messages={
+            'max_length': 'Maximum 25 characters allowed for country name'
+        }
+    )
+
+    def validate_dic(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("DIC must contain only digits")
+        return value
+
+    def validate_psc(self, value):
+        if not value.replace(' ', '').isdigit():
+            raise serializers.ValidationError("Postal code must contain only digits and spaces")
+        return value
 
 class VetaOSerializer(serializers.Serializer):
-    kc_zd7 = serializers.DecimalField(max_digits=15, decimal_places=2)
-    kc_zakldan8 = serializers.DecimalField(max_digits=15, decimal_places=2)
-    kc_zd9 = serializers.DecimalField(max_digits=15, decimal_places=2)
-    kc_zd10 = serializers.DecimalField(max_digits=15, decimal_places=2)
-    kc_uhrn = serializers.DecimalField(max_digits=15, decimal_places=2)
+    kc_zd7 = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_zd7',
+            'invalid': 'Enter a valid number'
+        }
+    )
+    kc_zakldan23 = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_zakldan23',
+            'invalid': 'Enter a valid number'
+        }
+    )
+    kc_zakldan = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_zakldan',
+            'invalid': 'Enter a valid number'
+        }
+    )
+    kc_uhrn = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_uhrn',
+            'invalid': 'Enter a valid number'
+        }
+    )
 
 class VetaSSerializer(serializers.Serializer):
-    c_nace = serializers.CharField()
+    kc_zdsniz = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed',
+            'invalid': 'Enter a valid number'
+        }
+    )
+    kc_zdzaokr = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed',
+            'invalid': 'Enter a valid number'
+        }
+    )
+    da_dan16 = serializers.DecimalField(
+        max_digits=25,
+        decimal_places=11,
+        error_messages={
+            'max_digits': 'Maximum 14 digits before decimal point allowed',
+            'max_decimal_places': 'Maximum 11 decimal places allowed',
+            'invalid': 'Enter a valid number'
+        }
+    )
+
+    def validate_da_dan16(self, value):
+        integer_part = str(value).split('.')[0]
+        if len(integer_part) > 14:
+            raise serializers.ValidationError("Maximum 14 digits before decimal point allowed")
+        return value
 
 class VetaBSerializer(serializers.Serializer):
     priloha1 = serializers.CharField()
+
+class VetaTSerializer(serializers.Serializer):
+    c_nace = serializers.CharField(
+        max_length=6,
+        error_messages={
+            'max_length': 'Maximum 6 digits allowed for NACE code'
+        }
+    )
+    kc_prij7 = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_prij7',
+            'invalid': 'Enter a valid number for kc_prij7'
+        }
+    )
+    kc_zd7p = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_zd7p',
+            'invalid': 'Enter a valid number for kc_zd7p'
+        }
+    )
+    kc_hosp_rozd = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_hosp_rozd',
+            'invalid': 'Enter a valid number for kc_hosp_rozd'
+        }
+    )
+    kc_cisobr = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_cisobr',
+            'invalid': 'Enter a valid number for kc_cisobr'
+        }
+    )
+    kc_vyd7 = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        error_messages={
+            'max_digits': 'Maximum 14 digits allowed for kc_vyd7',
+            'invalid': 'Enter a valid number for kc_vyd7'
+        }
+    )
+    uc_soust = serializers.CharField(
+        max_length=1,
+        error_messages={
+            'max_length': 'uc_soust must be exactly 1 character'
+        }
+    )
+
+    def validate_c_nace(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError("NACE code must contain only digits")
+        if len(value) > 6:
+            raise serializers.ValidationError("Maximum 6 digits allowed for NACE code")
+        return value
+
+    def validate_uc_soust(self, value):
+        if value not in ['A', 'N']:
+            raise serializers.ValidationError("uc_soust must be either 'A' or 'N'")
+        return value
 
 class FormDataSerializer(serializers.Serializer):
     VetaD = VetaDSerializer()
     VetaP = VetaPSerializer()
     VetaO = VetaOSerializer()
+    VetaT = VetaTSerializer()
     VetaS = VetaSSerializer()
     VetaB = VetaBSerializer()
