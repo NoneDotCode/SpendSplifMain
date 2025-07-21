@@ -20,6 +20,7 @@ urlpatterns = [
     path("api/v1/", include("apps.cryptocurrency.urls")),
     path("api/v1/", include("apps.converter.urls")),
     path("api/v1/", include("apps.messenger.urls")),
+    path("api/v1/", include("apps.taxes.urls")),
     path("api/v1/tink/", include("apps.tink.urls")),
     path(base_space_url, include("apps.account.urls")),
     path(base_space_url, include("apps.cards.urls")),
