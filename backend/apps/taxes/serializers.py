@@ -17,8 +17,7 @@ class VetaDSerializer(serializers.Serializer):
     audit = serializers.CharField(max_length=1)
     prop_zahr = serializers.CharField(max_length=1)
     dap_typ = serializers.CharField(max_length=1)
-    k_uladis = serializers.CharField(max_length=3)
-    c_ufo_cil = serializers.IntegerField(required=False, min_value=1000, max_value=9999)
+    c_ufo_cil = serializers.IntegerField(required=False, min_value=10, max_value=9999)
     zdobd_od = serializers.CharField(required=False, max_length=10)
     zdobd_do = serializers.CharField(required=False, max_length=10)
     kc_op15_1a = serializers.DecimalField(
@@ -38,12 +37,12 @@ class VetaDSerializer(serializers.Serializer):
         }
     )
     da_slezap = serializers.DecimalField(
-        max_digits=17, 
-        decimal_places=14, 
+        max_digits=16, 
+        decimal_places=2, 
         required=False,
         error_messages={
-            'max_digits': 'Maximum 17 digits allowed',
-            'max_decimal_places': 'Maximum 14 decimal places allowed'
+            'max_digits': 'Maximum 16 digits allowed',
+            'max_decimal_places': 'Maximum 2 decimal places allowed'
         }
     )
     da_celod13 = serializers.DecimalField(
@@ -150,7 +149,7 @@ class VetaDSerializer(serializers.Serializer):
         return value
 
     def validate_c_ufo_cil(self, value):
-        if value is not None and (value < 1000 or value > 9999):
+        if value is not None and (value < 10 or value > 9999):
             raise serializers.ValidationError("c_ufo_cil must be 4 digits")
         return value
 
@@ -389,7 +388,7 @@ class VetaTSerializer(serializers.Serializer):
         return value
 
     def validate_uc_soust(self, value):
-        if value not in ['A', 'N']:
+        if value not in ['1', '2']:
             raise serializers.ValidationError("uc_soust must be either 'A' or 'N'")
         return value
 

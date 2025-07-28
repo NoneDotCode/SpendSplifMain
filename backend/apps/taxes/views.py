@@ -8,38 +8,37 @@ from xsdata.formats.dataclass.serializers import XmlSerializer
 from xsdata.formats.dataclass.serializers.config import SerializerConfig
 
 from backend.apps.taxes.xml_models.dpfdp7_epo2 import Pisemnost
+from backend.apps.taxes.serializers import FormDataSerializer
+from backend.apps.taxes.xml_models.pdf_generator import generate_pdf
+from backend.apps.taxes.xml_models.xml_generator import generate_xml
 
 class GenerateXMLAPIView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
     parser_classes = [JSONParser]
+    serializer_class = FormDataSerializer
 
     def post(self, request, *args, **kwargs):
-        data = request.data
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
 
-        try:
-            pisemnost = Pisemnost(
-                verze_sw="1.0.0",
-                nazev_sw="SpendSplif",
-                dpfdp7=Pisemnost.Dpfdp7(
-                    verze_pis="01.01",
-                    veta_d_element=Pisemnost.Dpfdp7.VetaD(**data.get("VetaD", {})),
-                    veta_p=Pisemnost.Dpfdp7.VetaP(**data.get("VetaP", {})),
-                    veta_o=Pisemnost.Dpfdp7.VetaO(**data.get("VetaO", {})),
-                    veta_s=Pisemnost.Dpfdp7.VetaS(**data.get("VetaS", {})),
-                    veta_b_element=Pisemnost.Dpfdp7.VetaB(**data.get("VetaB", {})),
-                    veta_t=Pisemnost.Dpfdp7.VetaT(**data.get("VetaT", {})),
-                ),
-                kontrola=None
-            )
+        validated_data = serializer.validated_data
+        file, filename_or_error = generate_xml(validated_data)
 
-            config = SerializerConfig(pretty_print=True, xml_declaration=True, encoding="utf-8")
-            serializer = XmlSerializer(config=config)
-            xml_content = serializer.render(pisemnost)
+        if file:
+            return FileResponse(file, as_attachment=True, filename=filename_or_error)
+        return Response({"error": filename_or_error}, status=400)
 
-            filename = f"DPFDP7-{data['VetaP']['dic']}.xml"
-            file = io.BytesIO(xml_content.encode("utf-8"))
-            response = FileResponse(file, as_attachment=True, filename=filename)
-            return response
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+class GeneratePDFAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+    parser_classes = [JSONParser]
+    serializer_class = FormDataSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = FormDataSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        pdf_buffer = generate_pdf(serializer.validated_data)
+        return FileResponse(pdf_buffer, as_attachment=True, filename="danove_priznani.pdf")
