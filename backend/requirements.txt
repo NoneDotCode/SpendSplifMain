@@ -94,3 +94,4 @@ vine==5.1.0
 virtualenv==20.25.1
 wcwidth==0.2.13
 xsdata==25.4
+reportlab==4.4.3
