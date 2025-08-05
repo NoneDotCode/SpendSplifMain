@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Pisemnost nazevSW="EPO MF ČR" verzeSW="45.9.2">
+<DPFDP7 verzePis="01.01">
+<VetaD da_slevy35ba="14160" rok="2024" pln_moc="N" dokument="DP7" audit="N" c_ufo_cil="451" k_uladis="DPF" zdobd_od="01.01.2024" kc_zbyvpred="4160" da_celod13="45000" uhrn_slevy35ba="30840" kc_op15_1a="30840" prop_zahr="N" kc_zalpred="10000" zdobd_do="31.12.2024" kc_dztrata="0" da_slevy35c="14160" da_slezap="45000.00" dap_typ="B" kc_dan_celk="14160" kc_dan_po_db="14160" kc_db_po_odpd="0" />
+<VetaP ulice="Africká" psc="16000" email="jan.novak@example.com" k_stat="CZ" c_pop="432" c_orient="17" c_pracufo="2010" prijmeni="Novák" stat="ČESKÁ REPUBLIKA" dic="7103192745" naz_obce="Praha" jmeno="Jan" />
+<VetaO kc_uhrn="300000" kc_zakldan="300000" kc_zd7="300000" kc_zakldan23="300000" />
+<VetaS kc_zdzaokr="300000" kc_zdsniz="300000" da_dan16="45000.00" />
+<VetaB priloha1="1" />
+<VetaT c_nace="711000" kc_prij7="600000" kc_zd7p="300000" kc_cisobr="600000" kc_hosp_rozd="300000" kc_vyd7="300000" uc_soust="1" />
+</DPFDP7>
+<Kontrola>
+<Soubor Delka="951" KC="342aab6f1fdfa56a824c8b8f8abb82e3" Nazev="DPFDP7-7103192745-20250630-110716" c_ufo="451" />
+</Kontrola>
+</Pisemnost>

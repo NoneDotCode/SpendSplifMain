@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Pisemnost verzeSW="1.0.0" nazevSW="SpendSplif">
+  <DPFDP7 verzePis="01.01">
+    <VetaD da_slevy35ba="1901036" rok="2024" pln_moc="N" dokument="DP7" audit="N" c_ufo_cil="451" k_uladis="DPF" da_slevy="11500" zdobd_od="01.01.2024" kc_zbyvpred="1901036" da_celod13="1943376" uhrn_slevy35ba="42340" kc_op15_1a="30840" prop_zahr="N" zdobd_do="31.12.2024" kc_dztrata="0" da_slevy35c="1901036" da_slezap="1943375.04" dap_typ="B" kc_dan_celk="1901036" kc_dan_po_db="1901036" kc_db_po_odpd="0"/>
+    <VetaP ulice="Africká" psc="16000" email="jan.novak@example.com" k_stat="CZ" c_pop="431" c_orient="10" c_pracufo="2010" prijmeni="Novák" stat="ČESKÁ REPUBLIKA" dic="7103192745" naz_obce="Praha" jmeno="Jan"/>
+    <VetaO kc_uhrn="9000000" kc_zakldan="9000000" kc_zd7="9000000" kc_zakldan23="9000000"/>
+    <VetaS kc_zdzaokr="9000000" kc_zdsniz="9000000" da_dan16="1943375.04"/>
+    <VetaB priloha1="1"/>
+    <VetaT c_nace="620900" kc_prij7="10000000" kc_zd7p="9000000" kc_cisobr="10000000" kc_hosp_rozd="9000000" kc_vyd7="1000000" uc_soust="1"/>
+  </DPFDP7>
+</Pisemnost>

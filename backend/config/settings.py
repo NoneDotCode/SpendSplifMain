@@ -68,7 +68,8 @@ INSTALLED_APPS = [
     "apps.tink",
     "apps.cards",
     'apps.adminpanel',
-    "apps.excel"
+    "apps.excel",
+    "apps.taxes"
 ]
 
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
