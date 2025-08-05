@@ -1,6 +1,6 @@
 # Dockerfile.celery
 
-FROM python:3.8-bullseye
+FROM python:3.9-bullseye
 
 # Установка необходимых системных пакетов
 RUN apt-get update \

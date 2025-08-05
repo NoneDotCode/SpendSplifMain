@@ -1,6 +1,6 @@
 # Dockerfile.backend
 
-FROM python:3.8-bullseye
+FROM python:3.9-bullseye
 
 # Install all needed packages
 RUN apt-get update \
