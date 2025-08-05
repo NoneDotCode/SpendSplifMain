@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
 from typing import Optional
+from typing import Dict
 
 
 class ObecnaPrilohaKodovani(Enum):
@@ -45,7 +46,7 @@ class Pisemnost:
             "type": "Attribute",
         },
     )
-    any_attributes: dict[str, str] = field(
+    any_attributes: Dict[str, str] = field(
         default_factory=dict,
         metadata={
             "type": "Attributes",
@@ -5290,7 +5291,7 @@ class Pisemnost:
                 "namespace": "##any",
             },
         )
-        any_attributes: dict[str, str] = field(
+        any_attributes: Dict[str, str] = field(
             default_factory=dict,
             metadata={
                 "type": "Attributes",
