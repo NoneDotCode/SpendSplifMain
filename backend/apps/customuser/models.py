@@ -13,6 +13,11 @@ from backend.apps.customuser.utils import send_code_for_verify_email
 from backend.apps.customuser.constants import Language, Currency
 
 
+def generate_secure_code(length=8):
+    chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return get_random_string(length=length, allowed_chars=chars)
+
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, password, **extra_fields):
         if not email:
@@ -104,7 +109,7 @@ class CustomUser(AbstractUser):
             self.save()
 
     def send_password_reset_code(self):
-        reset_code = get_random_string(length=8)
+        reset_code = generate_secure_code(length=8)
         self.password_reset_code = reset_code
         self.save()
 
@@ -133,14 +138,14 @@ class CustomUser(AbstractUser):
             self.set_password(self.password)
 
         if self.verify_code is None:
-            verify_code = get_random_string(length=8)
+            verify_code = generate_secure_code(length=8)
             self.verify_code = verify_code
             self.is_active = False
             send_code_for_verify_email(email=self.email, code=verify_code, flag="registration", language=self.language)
 
         if self.new_email:
-            verify_code = get_random_string(length=8)
-            code_from_new_email = get_random_string(length=8)
+            verify_code = generate_secure_code(length=8)
+            code_from_new_email = generate_secure_code(length=8)
             self.verify_code = verify_code
             self.code_from_new_email = code_from_new_email
 

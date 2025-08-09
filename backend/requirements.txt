@@ -95,3 +95,4 @@ virtualenv==20.25.1
 wcwidth==0.2.13
 xsdata==24.9
 reportlab==4.4.3
+
