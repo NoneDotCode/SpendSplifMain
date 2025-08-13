@@ -17,10 +17,8 @@ class Subscription(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     stripe_user = models.CharField(max_length=255)
     stripe_subscription_id = models.CharField(max_length=255, unique=True)
-    plan = models.CharField(max_length=50, choices=[
-        ("business_plan", "Business Plan"),
-        ("business_license", "Business License"),
-    ])
+    plan = models.CharField(max_length=50)
+    period = models.CharField(max_length=50, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
