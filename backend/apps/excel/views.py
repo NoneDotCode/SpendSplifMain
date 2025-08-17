@@ -504,9 +504,17 @@ class ImportHistoryView(generics.GenericAPIView):
                                     'included_in_total_balance': True
                                 }
                             )
-                            
+
                             current_account.balance += amount
                             current_account.save()
+
+                            total_balance, created_total = TotalBalance.objects.get_or_create(
+                                father_space=father_space,
+                                defaults={'balance': 0}
+                            )
+                            total_balance.balance += amount
+                            total_balance.save()
+
                             account = current_account
                             new_balance = current_account.balance
 

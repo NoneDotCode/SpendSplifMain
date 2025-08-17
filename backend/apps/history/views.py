@@ -997,7 +997,10 @@ class GeneralView(generics.GenericAPIView):
         period_data = {}
         for record in combined_records:
             date_str = record['created'].strftime('%Y-%m-%d')
-            period_data[date_str] = record['new_balance']
+            # Добавляем проверку на None для new_balance
+            balance = record['new_balance']
+            if balance is not None:
+                period_data[date_str] = balance
 
         initial_balance = self.get_initial_balance(start_date, space_pk)
 
@@ -1005,7 +1008,8 @@ class GeneralView(generics.GenericAPIView):
         start_date_str = start_date.strftime('%Y-%m-%d')
         if start_date_str not in period_data:
             last_record_before_start = self.get_last_record_before_date(start_date, space_pk)
-            period_data[start_date_str] = last_record_before_start
+            if last_record_before_start is not None:
+                period_data[start_date_str] = last_record_before_start
 
         # Сортируем данные по дате
         period_data = dict(sorted(period_data.items()))
@@ -1032,7 +1036,10 @@ class GeneralView(generics.GenericAPIView):
         elif earliest_income:
             earliest_record = earliest_income
 
-        return earliest_record.new_balance if earliest_record else Decimal('0')
+        # Добавляем проверку на None для new_balance
+        if earliest_record and earliest_record.new_balance is not None:
+            return earliest_record.new_balance
+        return Decimal('0')
 
     def get_last_record_before_date(self, date, space_pk):
         last_expense_before_start = HistoryExpense.objects.filter(
@@ -1053,11 +1060,23 @@ class GeneralView(generics.GenericAPIView):
         elif last_income_before_start:
             last_record_before_start = last_income_before_start
 
-        return last_record_before_start.new_balance if last_record_before_start else Decimal('0')
+        # Добавляем проверку на None для new_balance
+        if last_record_before_start and last_record_before_start.new_balance is not None:
+            return last_record_before_start.new_balance
+        return Decimal('0')
 
     def calculate_percentages(self, period_data, initial_balance):
         percentages = {}
+        
+        # Убеждаемся, что initial_balance не None
+        if initial_balance is None:
+            initial_balance = Decimal('0')
+            
         for date, balance in period_data.items():
+            # Убеждаемся, что balance не None
+            if balance is None:
+                balance = Decimal('0')
+                
             percentage = (balance / initial_balance) * 100 if initial_balance != Decimal('0') else 0
             percentages[date] = f"{round(percentage, 2)}%"
         return percentages
@@ -1071,6 +1090,13 @@ class GeneralView(generics.GenericAPIView):
         end_date = max(balances.keys())
         start_balance = balances[start_date]
         end_balance = balances[end_date]
+        
+        # Добавляем проверки на None
+        if start_balance is None:
+            start_balance = Decimal('0')
+        if end_balance is None:
+            end_balance = Decimal('0')
+            
         difference = end_balance - start_balance
 
         if difference > 0:
